@@ -3,6 +3,8 @@ from django.views.generic.edit import FormView
 from django.urls import reverse_lazy
 from django.shortcuts import render
 from .forms import CSVUploadForm
+from django.views.generic import ListView
+from django.db.models import Q
 from .models import Survey, RepresentedVariable, ConceptualVariable, Category, BindingSurveyRepresentedVariable, \
     Concept, BindingConcept
 
@@ -99,3 +101,19 @@ def create_new_categories(csv_category_string):
             new_categories.append(category)
 
     return new_categories
+
+
+
+class RepresentedVariableSearchView(ListView):
+    model = RepresentedVariable
+    template_name = 'representedvariable_list.html'  # Nom du template
+    context_object_name = 'variables'  # Nom du contexte utilisé dans le template
+
+    def get_queryset(self):
+        query = self.request.GET.get('q')
+        if query:
+            return RepresentedVariable.objects.filter(
+                Q(internal_label__icontains=query) |
+                Q(question_text__icontains=query)
+            ).distinct()
+        return RepresentedVariable.objects.all()
