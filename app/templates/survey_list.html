@@ -1,0 +1,75 @@
+<!-- survey_list.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Liste des Enquêtes</h1>
+    <table id="survey-table" class="table table-striped table-bordered display" style="width:100%">
+        <thead class="table-dark" style = "display:none">
+            <tr>
+                <th>Contenu personnalisé</th>
+            </tr>
+        </thead>
+    </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    console.log("test 1");  // Ceci devrait s'afficher dans la console du navigateur
+    $('#survey-table').DataTable({
+        'order': [[0, 'desc']],
+            "lengthMenu": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"] ],
+            "processing": true,
+            // "lengthChange": true,
+            "pageLength": 10,
+            "deferRender": true,
+            "serverSide": true,
+        "ajax": {
+            "url": "{% url 'app:get_surveys' %}",
+            "type": "GET",
+            "async": true,
+            "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },
+        },
+        "columns": 
+            [
+                {
+                    "data": "id",  // Vous pouvez choisir n'importe quelle donnée ici
+                    "render": function (data, type, row) {
+                        return `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">` + row.name + `</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">Référence externe: ` + row.external_ref + `</h6>
+                                <p class="card-text">Détails supplémentaires sur l'enquête...</p>
+                                <button class="btn btn-danger btn-sm" onclick="deleteSurvey(` + data + `)">
+                                    <i class="bi bi-trash"></i> Supprimer
+                                </button>
+                                <button class="btn btn-info btn-sm" onclick="viewSurvey(` + data + `)">
+                                    <i class="bi bi-eye"></i> Voir
+                                </button>
+                            </div>
+                        </div>`;
+                    }
+                },
+
+                
+            ],
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json"
+        }
+    });
+    $('#search-input').on('keyup', function() {
+        console.log("test 1")
+        // Récupère la valeur du champ de recherche et applique la recherche à DataTables
+        datatable.search(this.value).draw();
+    });
+});
+
+function deleteSurvey(id) {
+    // Code pour supprimer l'enquête
+    alert('Supprimer l\'enquête ' + id);
+}
+</script>
+{% endblock %}
