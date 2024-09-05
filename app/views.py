@@ -2,6 +2,7 @@ import csv
 from django.views.generic.edit import FormView
 from django.urls import reverse_lazy
 from django.shortcuts import render
+from django.contrib import messages
 from .forms import CSVUploadForm
 from django.views.generic import ListView
 from django.db.models import Q
@@ -10,9 +11,9 @@ from .models import Survey, RepresentedVariable, ConceptualVariable, Category, B
 
 
 class CSVUploadView(FormView):
-    template_name = 'upload_csv.html'  # Template pour le formulaire
+    template_name = 'upload_csv.html'
     form_class = CSVUploadForm
-    success_url = reverse_lazy('upload_success')  # URL de redirection après succès
+    success_url = reverse_lazy('app:upload_success')
     required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
 
     def form_valid(self, form):
@@ -23,85 +24,94 @@ class CSVUploadView(FormView):
         has_header = sniffer.has_header(sample)
         delimiter = sniffer.sniff(sample).delimiter
         reader = csv.DictReader(decoded_file, delimiter=delimiter)
-        missing_columns = [col for col in self.required_columns if col not in reader.fieldnames]
+
+        missing_columns = self.validate_columns(reader.fieldnames)
         if missing_columns:
-            return render(self.request, self.template_name, {
-                'form': form,
-                'missing_columns': missing_columns,
-            })
+            return self.render_with_errors(form, missing_columns)
 
-        for row in reader:
-            # Exemple d'insertion des données dans les modèles
-            survey, _ = Survey.objects.get_or_create(
-                external_ref=row['ddi'],
-                name=row['title']
-            )
-            name_question = row['question_text']
+        try:
+            self.process_csv(reader)
+            messages.success(self.request, "CSV file processed successfully.")
+        except Exception as e:
+            messages.error(self.request, f"An error occurred: {str(e)}")
+            return self.render_with_errors(form)
 
-            var_represented = RepresentedVariable.objects.filter(question_text=name_question).first()
-            if var_represented != None and name_question == var_represented.question_text:
-                if check_category(row['category_label'], var_represented.categories):
-                    BindingSurveyRepresentedVariable.objects.get_or_create(survey=survey, variable=var_represented,
-                                                                           variable_name=row['variable_name'])
-                else:
-                    new_categories = create_new_categories(row['category_label'])
-
-                    new_represented_var, _ = RepresentedVariable.objects.get_or_create(
-                        conceptual_var=var_represented.conceptual_var, question_text=name_question)
-                    for i in range(len(new_categories)):
-                        new_represented_var.categories.add(new_categories[i])
-
-                    BindingSurveyRepresentedVariable.objects.get_or_create(survey=survey, variable=new_represented_var,
-                                                                           variable_name=row['variable_name'])
-            else:
-
-                new_conceptual_var = ConceptualVariable.objects.create()
-                new_represented = RepresentedVariable.objects.create(conceptual_var=new_conceptual_var,
-                                                                     question_text=name_question)
-                new_categories = create_new_categories(row['category_label'])
-                for i in range(len(new_categories)):
-                    new_represented.categories.add(new_categories[i])
-                BindingSurveyRepresentedVariable.objects.get_or_create(survey=survey, variable=new_represented,
-                                                                       variable_name=row['variable_name'])
         return super().form_valid(form)
 
+    def validate_columns(self, fieldnames):
+        return [col for col in self.required_columns if col not in fieldnames]
 
-def parse_categories(csv_category_string):
-    categories = []
-    csv_category_pairs = csv_category_string.split(" | ")
-    for pair in csv_category_pairs:
-        code, label = pair.split(",", 1)
-        categories.append((code.strip(), label.strip()))
+    def render_with_errors(self, form, missing_columns=None):
+        context = {'form': form}
+        if missing_columns:
+            context['missing_columns'] = missing_columns
+        return render(self.request, self.template_name, context)
 
-    return categories
+    def process_csv(self, reader):
+        for row in reader:
+            survey = self.get_or_create_survey(row)
+            represented_variable = self.get_or_create_represented_variable(row, survey)
+            self.get_or_create_binding(survey, represented_variable, row['variable_name'])
 
+    def get_or_create_survey(self, row):
+        survey, _ = Survey.objects.get_or_create(
+            external_ref=row['ddi'],
+            name=row['title']
+        )
+        return survey
 
-def check_category(csv_category_string, existing_categories):
-    csv_categories = []
-    if csv_category_string != "":
-        csv_categories = parse_categories(csv_category_string)
+    def get_or_create_represented_variable(self, row, survey):
+        name_question = row['question_text']
+        var_represented = RepresentedVariable.objects.filter(question_text=name_question).first()
 
-    existing_categories_list = [(category.code, category.category_label) for category in existing_categories.all()]
+        if var_represented and name_question == var_represented.question_text:
+            if self.check_category(row['category_label'], var_represented.categories):
+                return var_represented
+            else:
+                return self.create_new_represented_variable(row, var_represented.conceptual_var, name_question)
+        else:
+            return self.create_new_represented_variable(row, ConceptualVariable.objects.create(), name_question)
 
-    return set(csv_categories) == set(existing_categories_list)
+    def create_new_represented_variable(self, row, conceptual_var, name_question):
+        new_represented_var = RepresentedVariable.objects.create(
+            conceptual_var=conceptual_var,
+            question_text=name_question
+        )
+        new_categories = self.create_new_categories(row['category_label'])
+        new_represented_var.categories.set(new_categories)
+        return new_represented_var
 
+    def create_new_categories(self, csv_category_string):
+        categories = []
+        if csv_category_string:
+            parsed_categories = self.parse_categories(csv_category_string)
+            for code, label in parsed_categories:
+                category, _ = Category.objects.get_or_create(
+                    code=code,
+                    category_label=label
+                )
+                categories.append(category)
+        return categories
 
-def create_new_categories(csv_category_string):
-    new_categories = []
-    if csv_category_string != "":
+    def get_or_create_binding(self, survey, represented_variable, variable_name):
+        BindingSurveyRepresentedVariable.objects.get_or_create(
+            survey=survey,
+            variable=represented_variable,
+            variable_name=variable_name
+        )
 
-        csv_categories = parse_categories(csv_category_string)
+    def check_category(self, csv_category_string, existing_categories):
+        csv_categories = self.parse_categories(csv_category_string) if csv_category_string else []
+        existing_categories_list = [(category.code, category.category_label) for category in existing_categories.all()]
+        return set(csv_categories) == set(existing_categories_list)
 
-        for code, label in csv_categories:
-            category, created = Category.objects.get_or_create(
-                code=code,
-                category_label=label,
-                type='code'  # Ajuster si besoin
-            )
-            new_categories.append(category)
-
-    return new_categories
-
+    def parse_categories(self, csv_category_string):
+        categories = []
+        csv_category_pairs = csv_category_string.split(" | ")
+        for pair in csv_category_pairs:
+            code, label = pair.split(",", 1)
+            categories.append((code.strip(), label.strip()))
+        return categories
 
 
 class RepresentedVariableSearchView(ListView):
