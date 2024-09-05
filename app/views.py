@@ -121,37 +121,34 @@ class RepresentedVariableSearchView(ListView):
     template_name = 'homepage.html'  # Nom du template
     context_object_name = 'variables'  # Nom du contexte utilisé dans le template
 
-    def get_queryset(self):
-        query = self.request.GET.get('q')
-        if query:
-            return RepresentedVariable.objects.filter(
-                Q(internal_label__icontains=query) |
-                Q(question_text__icontains=query)
-            ).distinct()
-        return RepresentedVariable.objects.all()
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['test_value'] = 'Hello, world!'
         context['surveys'] = Survey.objects.all()
         return context
 
-def survey_list_view(request):
-    return render(request, 'survey_list.html')
 
-def get_surveys(request):
-    search_value = request.GET.get('search[value]', None)
-    surveys = Survey.objects.all()
+def search_results(request):
+    # Render the template that contains the DataTable
+    return render(request, 'search_results.html')
+
+
+def search_results_data(request):
+    search_value = request.GET.get('q', '')  # Récupérer le mot clé de recherche
+    questions = RepresentedVariable.objects.all()
+    
     if search_value:
-        surveys = surveys.filter(
-            Q(name__icontains=search_value) |  # Recherche sur le nom de l'enquête
-            Q(external_ref__icontains=search_value) |  # Recherche sur la référence externe
-            Q(bindingsurveyrepresentedvariable__variable__question_text__icontains=search_value)  # Recherche sur le texte des questions
+        questions = questions.filter(
+            Q(question_text__icontains=search_value)
         ).distinct()
 
-    # Transformer les données dans le format attendu par DataTables
-    data = list(surveys.values('id', 'name', 'external_ref'))
+    # Format attendu par DataTables : une liste de dictionnaires avec les champs requis
+    data = []
+    for question in questions:
+        data.append({
+            "id": question.id,
+            "question_text": question.question_text,
+            "internal_label": question.internal_label or "N/A"  # Assure que ce champ ne soit pas null
+        })
 
-    response = {
-        "data": data
-    }
-    return JsonResponse(response)
+    # Retourner la réponse au format JSON pour DataTables
+    return JsonResponse({"data": data})

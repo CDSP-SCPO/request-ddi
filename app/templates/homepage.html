@@ -150,13 +150,13 @@
 <section class="hero">
     <h2>Bienvenue sur la plateforme</h2>
     <p>Explorez des données à travers différents projets de recherche.</p>
-    <form method="GET" action="" class="search-bar">
+    <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
         <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}">
         <button type="submit">Rechercher</button>
     </form>
 </section>
 
-<ul>
+<!-- <ul>
     {% for variable in variables %}
         <li>
             <strong>{{ variable.internal_label }}</strong>
@@ -167,7 +167,7 @@
     {% empty %}
         <li>Aucune question trouvée pour ce mot-clé.</li>
     {% endfor %}
-</ul>
+</ul> -->
 
 <section class="studies">
     <h2>Études Disponibles</h2>
