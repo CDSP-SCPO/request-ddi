@@ -1,0 +1,15 @@
+services:
+  basedequestions:
+    image: question_base-backend:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+#    env_file:
+#      - ./basedequestions/configmap.env
+    ports:
+      - "8000:8000"
+    user: "1000:1000"
+    volumes:
+      - ./:/app  # Monte tout le répertoire du projet dans /app dans le conteneur
+    entrypoint: /app/entrypoint.dev.sh
+
