@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uploader un fichier CSV</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <h1>Upload de CSV</h1>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}  <!-- Ceci affiche le formulaire avec ses champs -->
+        <button type="submit">Envoyer le fichier CSV</button>
+    </form>
+    {% if missing_columns %}
+    <script>
+        // Si des colonnes sont manquantes, on affiche une alerte avec SweetAlert
+        Swal.fire({
+            icon: 'error',
+            title: 'Colonnes manquantes',
+            text: 'Les colonnes suivantes sont manquantes: {{ missing_columns|join:", " }}'
+        });
+    </script>
+    {% endif %}
+</body>
+</html>
