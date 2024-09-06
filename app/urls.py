@@ -6,7 +6,6 @@ app_name = 'app'
 
 urlpatterns = [
     path('upload-csv/', CSVUploadView.as_view(), name='upload_csv'),
-    path('upload-success/', TemplateView.as_view(template_name='upload_success.html'), name='upload_success'),
     path('', RepresentedVariableSearchView.as_view(), name='representedvariable_search'),
     path('search-results/', search_results, name='search_results'),  
     path('api/search-results/', search_results_data, name='search_results_data'),

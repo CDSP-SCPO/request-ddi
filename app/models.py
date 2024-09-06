@@ -49,10 +49,8 @@ class RepresentedVariable(models.Model):
 class BindingSurveyRepresentedVariable(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
     variable = models.ForeignKey(RepresentedVariable, on_delete=models.CASCADE)
-
     notes = models.TextField()
-    variable_name = models.TextField(unique=True)
-
+    variable_name = models.TextField()
     universe = models.TextField()
 
 

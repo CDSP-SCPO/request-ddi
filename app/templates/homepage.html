@@ -11,38 +11,45 @@
 </head> -->
 
 
-
 {% block content %}
     <h1>Base de Questions CDSP</h1>
 
-<section class="hero">
-    <h2>Bienvenue sur la plateforme</h2>
-    <p>Explorez des données à travers différents projets de recherche.</p>
-    <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
-        <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}">
-        <button type="submit">Rechercher</button>
-    </form>
-</section>
-
-<section class="studies">
-    <h2>Études Disponibles</h2>
-    <div class="study-cards">
-        {% for survey in surveys %}
-        <div class="study-card">
-            <img src="{{ survey.image_url }}" alt="{{ survey.title }}">
-            <h3>{{ survey.name }}</h3>
-            <p>{{ survey.external_ref }}</p>
-        </div>
+    <!-- Affichage des messages -->
+   {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
         {% endfor %}
     </div>
-</section>
+{% endif %}
 
+    <section class="hero">
+        <h2>Bienvenue sur la plateforme</h2>
+        <p>Explorez des données à travers différents projets de recherche.</p>
+        <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
+            <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}">
+            <button type="submit">Rechercher</button>
+        </form>
+    </section>
 
+    <section class="studies">
+        <h2>Études Disponibles</h2>
+        <div class="study-cards">
+            {% for survey in surveys %}
+            <div class="study-card">
+                <img src="{{ survey.image_url }}" alt="{{ survey.title }}">
+                <h3>{{ survey.name }}</h3>
+                <p>{{ survey.external_ref }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
 
-
-<footer>
-    <p>&copy; 2024 Base de questions CDSP - Tous droits réservés</p>
-</footer>
+    <footer>
+        <p>&copy; 2024 Base de questions CDSP - Tous droits réservés</p>
+    </footer>
 {% endblock %}
 
 {% block extra_css %}
