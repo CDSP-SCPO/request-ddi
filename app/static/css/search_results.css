@@ -1,0 +1,126 @@
+
+header {
+    background-color: #00466b;
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+}
+header h1 {
+    margin: 0;
+}
+nav {
+    display: flex;
+    justify-content: center;
+    background-color: #0072ce;
+    padding: 10px;
+}
+nav a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+    font-weight: bold;
+}
+nav a:hover {
+    text-decoration: underline;
+}
+section.hero {
+    background-color: #005fa3;
+    color: white;
+    padding: 100px 20px;
+    text-align: center;
+}
+section.hero h2 {
+    margin-bottom: 10px;
+}
+.search-bar {
+    margin-top: 20px;
+}
+.search-bar input[type="text"] {
+    padding: 10px;
+    width: 300px;
+    border-radius: 5px;
+}
+.search-bar button {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #00396a;
+    color: white;
+    cursor: pointer;
+}
+.search-bar button:hover {
+    background-color: #002347;
+}
+section.features {
+    padding: 50px 20px;
+    display: flex;
+    justify-content: space-around;
+    background-color: white;
+}
+.feature {
+    text-align: center;
+    max-width: 300px;
+}
+.feature img {
+    max-width: 100%;
+}
+footer {
+    background-color: #00466b;
+    color: white;
+    text-align: center;
+    padding: 20px 0;
+    margin-top: 30px;
+}
+
+.studies {
+padding: 50px 20px;
+background-color: #f9f9f9;
+}
+
+.study-cards {
+display: flex;
+flex-wrap: wrap;
+gap: 20px;
+justify-content: center;
+}
+
+.study-card {
+background-color: white;
+border-radius: 10px;
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+max-width: 300px;
+padding: 20px;
+text-align: center;
+transition: transform 0.3s;
+}
+
+.study-card:hover {
+transform: scale(1.05);
+}
+
+.study-card img {
+max-width: 100%;
+border-radius: 10px;
+}
+
+.study-card h3 {
+margin: 15px 0 10px;
+}
+
+.study-card p {
+color: #666;
+font-size: 0.9em;
+}
+
+.study-card button {
+background-color: #0072ce;
+color: white;
+padding: 10px 20px;
+border: none;
+border-radius: 5px;
+cursor: pointer;
+}
+
+.study-card button:hover {
+background-color: #005fa3;
+}

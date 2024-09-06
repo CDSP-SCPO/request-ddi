@@ -134,6 +134,8 @@ def search_results(request):
 
 def search_results_data(request):
     search_value = request.GET.get('q', '')  # Récupérer le mot clé de recherche
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 10))
     questions = RepresentedVariable.objects.all()
     
     if search_value:
@@ -141,14 +143,19 @@ def search_results_data(request):
             Q(question_text__icontains=search_value)
         ).distinct()
 
-    # Format attendu par DataTables : une liste de dictionnaires avec les champs requis
+
+    total_records = RepresentedVariable.objects.count()
+    questions_paginated = questions[start:start+length]
+    filtered_records = questions.count()
     data = []
-    for question in questions:
+    for question in questions_paginated:
         data.append({
             "id": question.id,
             "question_text": question.question_text,
             "internal_label": question.internal_label or "N/A"  # Assure que ce champ ne soit pas null
         })
-
     # Retourner la réponse au format JSON pour DataTables
-    return JsonResponse({"data": data})
+    return JsonResponse({"recordsTotal": total_records,  # Total d'enregistrements
+                        "recordsFiltered": filtered_records,  # Total après filtrage
+                        "draw": int(request.GET.get('draw', 1)),
+                        "data": data})
