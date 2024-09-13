@@ -1,3 +1,5 @@
+version: '3.11'
+
 services:
   basedequestions:
     image: question_base-backend:local
@@ -10,6 +12,29 @@ services:
       - "8000:8000"
     user: "1000:1000"
     volumes:
-      - ./:/app  # Monte tout le répertoire du projet dans /app dans le conteneur
-    entrypoint: /app/entrypoint.dev.sh
+      - ./:/app
+    entrypoint: /app/entrypoint.sh
+    depends_on:
+      - elasticsearch
+    networks:
+      - default
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - default
+
+volumes:
+  elasticsearch_data:
+
+networks:
+  default:
+    driver: bridge

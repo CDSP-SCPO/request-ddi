@@ -29,7 +29,7 @@
         <h2>Bienvenue sur la plateforme</h2>
         <p>Explorez des données à travers différents projets de recherche.</p>
         <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
-            <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}">
+            <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
             <button type="submit">Rechercher</button>
         </form>
     </section>
@@ -55,3 +55,9 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/homepage.css' %}">
 {% endblock %}
+
+{% block extra_js %}
+<meta name="autocomplete-url" content="{% url 'autocomplete' %}">
+<script src="{% static 'js/search_elastic.js' %}"></script>
+{% endblock %}
+

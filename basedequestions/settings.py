@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'django_elasticsearch_dsl',
     'app',
 ]
 
@@ -122,3 +124,11 @@ STATIC_ROOT = BASE_DIR / 'static'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': ['http://elasticsearch:9200'],
+    },
+}

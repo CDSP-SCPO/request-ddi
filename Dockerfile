@@ -5,6 +5,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 RUN adduser -u 5678 --disabled-password --gecos "" appuser
 
+RUN apt-get update && apt-get install -y netcat-openbsd
+
 WORKDIR /app
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir --upgrade -r requirements.txt
