@@ -4,9 +4,18 @@
 {% block content %}
 <div class="container">
     <h1 class="mb-4">Résultats de la recherche</h1>
-    <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
-        <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
-        <button type="submit">Rechercher</button>
+    <form method="GET" action="{% url 'app:search_results' %}" class="search-bar form-inline mb-4">
+        <div class="input-group mr-2">
+            <input type="text" name="q" class="form-control" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
+        </div>
+        <div class="input-group mr-2">
+            <select name="study" id="study-filter" class="form-control selectpicker" multiple data-live-search="false" data-style="btn-outline-primary">
+                {% for study in studies %}
+                    <option value="{{ study.id }}">{{ study.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Rechercher</button>
     </form>
     <table id="survey-table" class="table table-striped table-bordered display" style="width:100%">
         <thead class="table-dark" style="display:none">
@@ -28,8 +37,25 @@
 <script>
 
 $(document).ready(function() {
+    function getStudyFilter() {
+        return $('#study-filter').val() || [];
+    }
+
+    $('.selectpicker').selectpicker({
+        noneSelectedText: 'Sélectionner une ou plusieurs études',
+        showTick: true,
+        liveSearch: false,
+        actionsBox: true,
+        style: 'btn-outline-primary',
+        selectedTextFormat: 'count > 1',
+        countSelectedText: function(numSelected, numTotal) {
+            return (numSelected === 1) ? "{0} étude sélectionnée" : "{0} études sélectionnées";
+        },
+    });
+    $('.selectpicker').selectpicker('refresh');
+
     $('#survey-table').DataTable({
-        "ordering":false,
+        "ordering": false,
         "dom": '<"top"i>rt<"bottom"lp><"clear">',
         'order': [[0, 'desc']],
         "lengthMenu": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"] ],
@@ -37,13 +63,17 @@ $(document).ready(function() {
         "serverSide": true,
         "pagingType": "full_numbers",
         "ajax": {
-            "url": "{% url 'app:search_results_data' %}?q={{ request.GET.q }}",  // Envoi de la requête de recherche
+            "url": "{% url 'app:search_results_data' %}",
             "type": "GET",
             "async": true,
+            "data": function(d) {
+                d.q = "{{ request.GET.q }}";
+                d.study = getStudyFilter();
+            },
             "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },
         },
         "columns": [
-            {
+        {
                 "data": "id",  
                 "render": function (data, type, row) {
                     var url = '/question/' + row.id + '/';
@@ -72,7 +102,12 @@ $(document).ready(function() {
             }
         }
     });
+
+    $('#study-filter').on('change', function() {
+        $('#survey-table').DataTable().ajax.reload();
+    });
 });
+
 
 function deleteSurvey(id) {
     // Code pour supprimer l'enquête

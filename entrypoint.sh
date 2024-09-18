@@ -18,7 +18,7 @@ python manage.py search_index --populate
 
 echo "after populate"
 
-python manage.py shell -c "from app.documents import RepresentedVariableDocument; RepresentedVariableDocument().update_index()"
+python manage.py shell -c "from app.documents import BindingSurveyDocument; BindingSurveyDocument().update_index()"
 
 echo "after shell"
 # docker-compose exec basedequestions python manage.py search_index --create

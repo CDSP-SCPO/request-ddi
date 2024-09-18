@@ -9,9 +9,9 @@ from django.db.models import Q
 from .models import Survey, RepresentedVariable, ConceptualVariable, Category, BindingSurveyRepresentedVariable
 from django.http import JsonResponse
 from django.db import transaction
-from .documents import RepresentedVariableDocument
+from .documents import BindingSurveyDocument
 
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Search, A
 
 
 class CSVUploadView(FormView):
@@ -154,49 +154,126 @@ class RepresentedVariableSearchView(ListView):
 
 
 def search_results(request):
-    # Render the template that contains the DataTable
-    return render(request, 'search_results.html')
+    studies = Survey.objects.all()
+    context = locals()
+    return render(request, 'search_results.html', context)
 
+
+# def search_results_data(request):
+#     print(BindingSurveyRepresentedVariable.objects.filter(variable_id=1121))
+#     print("Request GET data:", request.GET) 
+#     search_value = request.GET.get('q', '')  # Récupérer le mot clé de recherche
+#     start = int(request.GET.get('start', 0))
+#     length = int(request.GET.get('length', 10))
+#     study_filter = request.GET.getlist('study[]', None)
+
+#     study_filter = [int(study_id) for study_id in study_filter if study_id.isdigit()]
+
+#     print("study_filter après conversion:", study_filter)
+    
+#     if length == -1:
+#         length = BindingSurveyDocument.search().count()
+#     search = BindingSurveyDocument.search()
+#     if search_value:
+#         search = search.query('match_phrase', variable_question_text=search_value)
+#     if len(study_filter) > 0:
+#         print("study_filter :", study_filter)
+#         binding_survey_variables = BindingSurveyRepresentedVariable.objects.filter(survey_id__in=study_filter).values_list('variable_id', flat=True)
+#         search = search.filter('terms', _id=list(binding_survey_variables))
+#         print("search après filtrage :", search.to_dict())
+
+
+#     total_records = BindingSurveyDocument.search().count()
+#     print("test 3", )
+#     filtered_records = search.count()
+#     print("filtered_records", filtered_records)
+#     questions_paginated = search[start:start+length]
+#     # filtered_records = questions.count()
+#     data = []
+#     for question in questions_paginated:
+#         data.append({
+#             "id": question.meta.id,
+#             "variable_name": question.variable_name,
+#             "question_text": question.variable.question_text,
+#             "survey_name": question.survey.name,
+#             "notes": question.notes or "N/A"
+#         })
+#     # Retourner la réponse au format JSON pour DataTables
+#     return JsonResponse({"recordsTotal": total_records,  # Total d'enregistrements
+#                         "recordsFiltered": filtered_records,  # Total après filtrage
+#                         "draw": int(request.GET.get('draw', 1)),
+#                         "data": data})
 
 def search_results_data(request):
-    search_value = request.GET.get('q', '')  # Récupérer le mot clé de recherche
+    # Récupérer les valeurs de la recherche et du filtre d'études
+    search_value = request.GET.get('q', '')
     start = int(request.GET.get('start', 0))
     length = int(request.GET.get('length', 10))
-    
-    if length == -1:
-        length = RepresentedVariableDocument.search().count()
+    study_filter = request.GET.getlist('study[]', None)
+
+    # Convertir le filtre en liste d'entiers si nécessaire
+    study_filter = [int(study_id) for study_id in study_filter if study_id.isdigit()]
+
+    # Initialisation de la recherche avec Elasticsearch pour BindingSurveyRepresentedVariable
+    search = BindingSurveyDocument.search()
+
+    # Appliquer la recherche par mot-clé si nécessaire
     if search_value:
-        search = RepresentedVariableDocument.search().query('match_phrase', question_text=search_value)
-    else:
-        search = RepresentedVariableDocument.search()
+        search = search.query('multi_match', query=search_value, fields=['variable_name', 'notes', 'variable.question_text'])
 
-    total_records = RepresentedVariableDocument.search().count()
+    # Appliquer le filtre par étude si nécessaire
+    if len(study_filter) > 0:
+        search = search.filter('terms', **{"survey.id": study_filter})
 
+    # Pagination
+    total_records = BindingSurveyDocument.search().count()
     filtered_records = search.count()
-    questions_paginated = search[start:start+length]
-    # filtered_records = questions.count()
+    results_paginated = search[start:start+length]
+
+    # Formatage des résultats pour DataTables
     data = []
-    for question in questions_paginated:
+    for result in results_paginated:
         data.append({
-            "id": question.meta.id,
-            "question_text": question.question_text,
-            "internal_label": question.internal_label or "N/A"  # Assure que ce champ ne soit pas null
+            "id": result.meta.id,  # ID de la liaison
+            "variable_name": result.variable_name,
+            "question_text": result.variable.question_text,
+            "survey_name": result.survey.name,
+            "notes": result.notes or "N/A"
         })
+
     # Retourner la réponse au format JSON pour DataTables
-    return JsonResponse({"recordsTotal": total_records,  # Total d'enregistrements
-                        "recordsFiltered": filtered_records,  # Total après filtrage
-                        "draw": int(request.GET.get('draw', 1)),
-                        "data": data})
+    return JsonResponse({
+        "recordsTotal": total_records,
+        "recordsFiltered": filtered_records,
+        "draw": int(request.GET.get('draw', 1)),
+        "data": data
+    })
+
 
 def autocomplete(request):
-    search_value = request.GET.get('q', '')  # Mot clé de recherche
-    s = Search(using='default', index='represented_variables').suggest('autocomplete_suggest', search_value, completion={'field': 'suggest'})
+    search_value = request.GET.get('q', '').lower()  # Mot clé de recherche
+    
+    # Construire la requête pour matcher le `variable.question_text`
+    s = Search(using='default', index='binding_survey_variables').query(
+        "match_phrase_prefix", 
+        **{"variable.question_text": search_value}  # Requête sur le champ imbriqué `variable.question_text`
+    )
+    
     response = s.execute()
+    
+    # Extraire les résultats et supprimer les doublons
     suggestions = []
-    suggestions = [option._source['suggest']['input'][0] for option in response.suggest['autocomplete_suggest'][0].options]
+    seen = set()
+    
+    for hit in response.hits:
+        question_text = hit.variable.question_text
+        if question_text not in seen:
+            seen.add(question_text)
+            suggestions.append(question_text)
+    
+    print("suggestions", len(suggestions))
     
     return JsonResponse({"suggestions": suggestions})
-
 
 
 from django.http import HttpResponse
@@ -240,19 +317,21 @@ class ExportQuestionsCSVView(View):
 def export_page(request):
     return render(request, 'export_csv.html')
 
-class QuestionDetailView(View):
+class QuestionDetailView(View): 
     def get(self, request, id, *args, **kwargs):
         question = get_object_or_404(BindingSurveyRepresentedVariable, id=id)
         question_represented_var = question.variable
         question_conceptual_var = question_represented_var.conceptual_var
         question_survey = question.survey
+        categories = question.variable.categories.all()
         context = locals()
         return render(request, 'question_detail.html', context)
 
 def similar_representative_variable_questions(request, question_id):
-    rep_variable = RepresentedVariable.objects.get(id=question_id)
+    question = get_object_or_404(BindingSurveyRepresentedVariable, id=question_id)
 
-    questions_from_rep_variable = BindingSurveyRepresentedVariable.objects.filter(variable=rep_variable)
+    rep_variable = question.variable 
+    questions_from_rep_variable = BindingSurveyRepresentedVariable.objects.filter(variable=rep_variable).exclude(id=question_id)
 
     data = []
     for similar_question in questions_from_rep_variable:
@@ -271,11 +350,12 @@ def similar_representative_variable_questions(request, question_id):
 
 
 def similar_conceptual_variable_questions(request, question_id):
-    rep_variable = RepresentedVariable.objects.get(id=question_id)
+    question = get_object_or_404(BindingSurveyRepresentedVariable, id=question_id)
+    rep_variable = question.variable 
 
     conceptual_variable = rep_variable.conceptual_var
 
-    questions_from_conceptual_variable = BindingSurveyRepresentedVariable.objects.filter(variable__conceptual_var=conceptual_variable)
+    questions_from_conceptual_variable = BindingSurveyRepresentedVariable.objects.filter(variable__conceptual_var=conceptual_variable).exclude(id=question_id)
 
     data = []
     for similar_question in questions_from_conceptual_variable:

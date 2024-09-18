@@ -5,12 +5,32 @@
     <h1>Détails de la Question</h1>
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">{{ question.question_text }}</h5>
+            <h5 class="card-title">{{ question_represented_var.question_text }}</h5>
             <h6 class="card-subtitle mb-2 text-muted">Référence externe: {{ question.internal_label }}</h6>
+            <h6 class="card-subtitle mb-2 text-muted">Enquête: {{ question_survey.name }}</h6>
             <p class="card-text">Détails supplémentaires ici...</p>
             <a href="{% url 'app:representedvariable_search' %}" class="btn btn-primary">Retour à la recherche</a>
         </div>
     </div>
+    <div class="card mt-4">
+        <div class="card-body">
+            <h4>Options de la question (Catégories associées)</h4>
+            {% if categories %}
+                <ul class="list-group">
+                    {% for category in categories %}
+                        <li class="list-group-item">
+                            <strong>Type :</strong> {{ category.type }}<br>
+                            <strong>Code :</strong> {{ category.code }}<br>
+                            <strong>Label :</strong> {{ category.category_label }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Aucune catégorie associée.</p>
+            {% endif %}
+        </div>
+    </div>
+
     <h2 class="mt-5">Questions avec la même variable représentative</h2>
     <table id="similar-representative-questions-table" class="table table-striped table-bordered display" style="width:100%">
         <thead class="table-dark">
