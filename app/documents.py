@@ -6,12 +6,17 @@ from elasticsearch.helpers import BulkIndexError, bulk
 @registry.register_document
 class BindingSurveyDocument(Document):
     survey = fields.ObjectField(properties={
+        'id': fields.IntegerField(),
         'name': fields.TextField(),
         'external_ref': fields.TextField(),
     })
     variable = fields.ObjectField(properties={
-        'question_text': fields.TextField(),
+        'question_text': fields.TextField(analyzer='custom_analyzer'),
         'internal_label': fields.TextField(),
+        'categories': fields.NestedField(properties={
+            'code': fields.TextField(),
+            'category_label': fields.TextField(analyzer='custom_analyzer'),
+        }),
     })
 
     class Index:
@@ -19,7 +24,26 @@ class BindingSurveyDocument(Document):
         settings = {
             'number_of_shards': 1,
             'number_of_replicas': 0,
+            'analysis': {  # Ajoute une configuration d'analyse personnalisée
+                'filter': {
+                    'asciifolding_filter': {
+                        'type': 'asciifolding',
+                        'preserve_original': False  # Ignore les accents
+                    }
+                },
+                'analyzer': {
+                    'custom_analyzer': {  # Définir un analyseur personnalisé
+                        'type': 'custom',
+                        'tokenizer': 'standard',
+                        'filter': [
+                            'lowercase',  # Convertir en minuscules
+                            'asciifolding_filter'  # Supprimer les accents
+                        ]
+                    }
+                }
+            }
         }
+
 
     class Django:
         model = BindingSurveyRepresentedVariable  # Le modèle Django associé
@@ -54,10 +78,20 @@ class BindingSurveyDocument(Document):
             print(f"An unexpected error occurred: {ex}")
     def get_queryset(self):
         """Retourne le queryset pour les instances à indexer."""
-        return super(BindingSurveyDocument, self).get_queryset().select_related('survey', 'variable')
+        return super(BindingSurveyDocument, self).get_queryset().select_related('survey', 'variable').prefetch_related('variable__categories')
+    def get_indexing_queryset(self):
+        """Retourne un générateur (iterator) pour l'indexation avec un chunk_size."""
+        return self.get_queryset().iterator(chunk_size=1000)
 
     def serialize(self, instance):
         """Prépare les données du document pour Elasticsearch."""
+        categories = [
+            {
+                "code": category.code,
+                "category_label": category.category_label
+            }
+            for category in instance.variable.categories.all()
+        ]
         return {
             "variable_name": instance.variable_name,
             "notes": instance.notes,
@@ -65,11 +99,12 @@ class BindingSurveyDocument(Document):
             "survey": {
             "id": instance.survey.id,
             "name": instance.survey.name,
-            "external_ref": instance.survey.external_ref
+            "external_ref": instance.survey.external_ref,
         },
             "variable": {
                 "question_text": instance.variable.question_text,
-                "internal_label": instance.variable.internal_label
+                "internal_label": instance.variable.internal_label,
+                "categories": categories
             }
         }
 

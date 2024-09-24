@@ -15,6 +15,12 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="input-group mr-2">
+            <select name="search_location" id="search-location" class="form-control selectpicker">
+                <option value="questions" {% if search_location == 'questions' %}selected{% endif %}>Questions</option>
+                <option value="categories" {% if search_location == 'categories' %}selected{% endif %}>Catégories</option>
+            </select>
+        </div>
         <button type="submit" class="btn btn-primary">Rechercher</button>
     </form>
     <table id="survey-table" class="table table-striped table-bordered display" style="width:100%">
@@ -29,6 +35,63 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
+<style>
+    .badge-category {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #007bff;
+        color: white;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 0.8em;
+        cursor: pointer;
+        z-index: 1; /* S'assurer que le badge est au-dessus du texte */
+    }
+
+    .category-dropdown {
+        display: none;
+        position: absolute;
+        top: 30px;
+        right: 10px;
+        background-color: white;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        z-index: 1;
+        width: 200px;
+        padding: 10px;
+        border-radius: 3px;
+    }
+
+    .category-item {
+        padding: 5px;
+    }
+
+    /* Surlignement de la catégorie correspondante */
+    .highlight-category {
+        background-color: yellow;
+        font-weight: bold;
+    }
+
+    /* Style pour le dropdown */
+    .category-dropdown a {
+        display: block;
+        padding: 5px;
+        text-decoration: none;
+        color: black;
+    }
+
+    .category-dropdown a:hover {
+        background-color: #f1f1f1;
+    }
+
+    .card {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .card-body {
+        padding-right: 20rem;  /* Ajoute un espace pour laisser de la place au badge */
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -37,8 +100,36 @@
 <script>
 
 $(document).ready(function() {
+
+    $(document).on('click', '.badge-category', function() {
+        var dropdown = $(this).siblings('.category-dropdown');
+        $('.category-dropdown').not(dropdown).hide();  // Fermer les autres dropdowns
+        dropdown.toggle();  // Afficher/masquer la dropdown
+    });
+
+    // Fermer la dropdown si on clique en dehors
+    $(document).click(function(event) {
+        if (!$(event.target).closest('.badge-category, .category-dropdown').length) {
+            $('.category-dropdown').hide();
+        }
+    });
+    $(document).on('click', '.badge-category', function() {
+        var matchedCategory = $(this).text().trim();  // La catégorie correspondante (le texte du badge)
+        var dropdown = $(this).siblings('.category-dropdown');  // Le dropdown associé
+        dropdown.find('.category-item').each(function() {
+            if ($(this).text().trim() === matchedCategory) {
+                $(this).addClass('highlight-category');
+            } else {
+                $(this).removeClass('highlight-category');
+            }
+        });
+    });
     function getStudyFilter() {
         return $('#study-filter').val() || [];
+    }
+
+    function getSearchLocation() {
+        return $('#search-location').val() || 'questions';
     }
 
     $('.selectpicker').selectpicker({
@@ -69,6 +160,7 @@ $(document).ready(function() {
             "data": function(d) {
                 d.q = "{{ request.GET.q }}";
                 d.study = getStudyFilter();
+                d.search_location = getSearchLocation();
             },
             "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },
         },
@@ -77,11 +169,17 @@ $(document).ready(function() {
                 "data": "id",  
                 "render": function (data, type, row) {
                     var url = '/question/' + row.id + '/';
+                    var categoryBadge = row.category_matched ? `<span class="badge-category">` + row.category_matched + `</span>` : '';
+                    var otherCategories = row.other_categories.map(function(category) {
+                        var highlightClass = category === row.category_matched ? 'highlight-category' : '';
+                        return `<div class="category-item ` + highlightClass + `">` + category + `</div>`;
+                    }).join("");
+                    var dropdown = `<div class="category-dropdown">` + otherCategories + `</div>`;
                     return `
                     <div class="card mb-3">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <a href="` + url + `">` + row.question_text + `</a>
+                                <a href="` + url + `">` + row.question_text + `</a>` + categoryBadge + dropdown + `
                             </h5>
                             <h6 class="card-subtitle mb-2 text-muted">Référence externe: ` + row.internal_label + `</h6>
                             <p class="card-text">Détails supplémentaires sur l'enquête...</p>

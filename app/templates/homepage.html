@@ -3,7 +3,13 @@
 
 
 {% block content %}
-    <h1>Base de Questions CDSP</h1>
+    <div style="display:flex; justify-content: space-between;">
+        <h1>Base de Questions CDSP</h1>
+        <div class="csv-buttons">
+            <a href="{% url 'app:upload_csv' %}" class="btn btn-primary">Importer CSV</a>
+            <a href="{% url 'app:export_page' %}" class="btn btn-secondary">Exporter CSV</a>
+        </div>
+    </div>
 
     <!-- Affichage des messages -->
    {% if messages %}
@@ -21,6 +27,10 @@
         <p>Explorez des données à travers différents projets de recherche.</p>
         <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
             <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
+            <select name="search_location" id="search-location" class="selectpicker">
+                <option value="questions" {% if request.GET.search_location == 'questions' %}selected{% endif %}>Questions</option>
+                <option value="categories" {% if request.GET.search_location == 'categories' %}selected{% endif %}>Catégories</option>
+            </select>
             <button type="submit">Rechercher</button>
         </form>
     </section>

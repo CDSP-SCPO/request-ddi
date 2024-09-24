@@ -13,8 +13,7 @@ done
 
 echo "Elasticsearch is up - executing command"
 
-python manage.py search_index --create
-python manage.py search_index --populate
+python manage.py search_index --rebuild -f
 
 echo "after populate"
 

@@ -1,10 +1,69 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uploader un fichier CSV</title>
+{% extends 'base.html' %}
+{% load static %}
+
+    {% block content %}
+    <div>
+        <a href="{% url 'app:representedvariable_search' %}" class="btn btn-primary">Retour</a>
+        <h1>Upload de CSV</h1>
+
+        <!-- Cellule d'aide sur les champs attendus -->
+        <div class="help-box">
+            <h2>Aide pour le fichier CSV</h2>
+            <p>Votre fichier CSV doit contenir les colonnes suivantes :</p>
+            <ul>
+                <li>ddi</li>
+                <li>title</li>
+                <li>variable_name</li>
+                <li>variable_label</li>
+                <li>question_text</li>
+                <li>category_label</li>
+            </ul>
+            <p>Assurez-vous que ces colonnes sont présentes et correctement orthographiées dans le fichier.</p>
+        </div>
+
+        <!-- Affichage des messages d'erreur -->
+        {% if messages %}
+            <div class="error-box">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Formulaire d'upload -->
+        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" id="submitBtn">Envoyer le fichier CSV</button>
+        </form>
+
+        <!-- Superposition et spinner de chargement -->
+        <div class="overlay" id="overlay">
+            <div class="spinner-container">
+                <div class="spinner"></div>
+                <div class="spinner-text">Traitement en cours...</div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+    {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            document.getElementById('overlay').classList.add('show');
+        });
+
+        {% if missing_columns %}
+        Swal.fire({
+            icon: 'error',
+            title: 'Colonnes manquantes',
+            text: 'Les colonnes suivantes sont manquantes: {{ missing_columns|join:", " }}'
+        });
+        {% endif %}
+    </script>
+    {% endblock %}
+    
+    {% block extra_css %}
     <style>
         /* Style global */
         body {
@@ -144,65 +203,7 @@
             font-size: 1.2em;
             margin-top: 10px;
         }
+
     </style>
-</head>
-<body>
-    <div>
-        <h1>Upload de CSV</h1>
-
-        <!-- Cellule d'aide sur les champs attendus -->
-        <div class="help-box">
-            <h2>Aide pour le fichier CSV</h2>
-            <p>Votre fichier CSV doit contenir les colonnes suivantes :</p>
-            <ul>
-                <li>ddi</li>
-                <li>title</li>
-                <li>variable_name</li>
-                <li>variable_label</li>
-                <li>question_text</li>
-                <li>category_label</li>
-            </ul>
-            <p>Assurez-vous que ces colonnes sont présentes et correctement orthographiées dans le fichier.</p>
-        </div>
-
-        <!-- Affichage des messages d'erreur -->
-        {% if messages %}
-            <div class="error-box">
-                {% for message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        <!-- Formulaire d'upload -->
-        <form method="POST" enctype="multipart/form-data" id="uploadForm">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" id="submitBtn">Envoyer le fichier CSV</button>
-        </form>
-
-        <!-- Superposition et spinner de chargement -->
-        <div class="overlay" id="overlay">
-            <div class="spinner-container">
-                <div class="spinner"></div>
-                <div class="spinner-text">Traitement en cours...</div>
-            </div>
-        </div>
-    </div>
-
+    {% endblock %}
     <!-- Script pour le spinner et les alertes SweetAlert -->
-    <script>
-        document.getElementById('uploadForm').addEventListener('submit', function() {
-            document.getElementById('overlay').classList.add('show');
-        });
-
-        {% if missing_columns %}
-        Swal.fire({
-            icon: 'error',
-            title: 'Colonnes manquantes',
-            text: 'Les colonnes suivantes sont manquantes: {{ missing_columns|join:", " }}'
-        });
-        {% endif %}
-    </script>
-</body>
-</html>

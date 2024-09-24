@@ -3,10 +3,12 @@ $(document).ready(function() {
 
     $("#autocomplete-input").autocomplete({
         source: function(request, response) {
+            var searchLocation = $('#search-location').val();
             $.ajax({
                 url: autocompleteUrl,
                 data: {
-                    q: request.term
+                    q: request.term,
+                    location: searchLocation,
                 },
                 success: function(data) {
                     response(data.suggestions);

@@ -154,59 +154,16 @@ class RepresentedVariableSearchView(ListView):
 
 
 def search_results(request):
+    search_location = request.GET.get('search_location', 'questions')
     studies = Survey.objects.all()
     context = locals()
     return render(request, 'search_results.html', context)
 
 
-# def search_results_data(request):
-#     print(BindingSurveyRepresentedVariable.objects.filter(variable_id=1121))
-#     print("Request GET data:", request.GET) 
-#     search_value = request.GET.get('q', '')  # Récupérer le mot clé de recherche
-#     start = int(request.GET.get('start', 0))
-#     length = int(request.GET.get('length', 10))
-#     study_filter = request.GET.getlist('study[]', None)
-
-#     study_filter = [int(study_id) for study_id in study_filter if study_id.isdigit()]
-
-#     print("study_filter après conversion:", study_filter)
-    
-#     if length == -1:
-#         length = BindingSurveyDocument.search().count()
-#     search = BindingSurveyDocument.search()
-#     if search_value:
-#         search = search.query('match_phrase', variable_question_text=search_value)
-#     if len(study_filter) > 0:
-#         print("study_filter :", study_filter)
-#         binding_survey_variables = BindingSurveyRepresentedVariable.objects.filter(survey_id__in=study_filter).values_list('variable_id', flat=True)
-#         search = search.filter('terms', _id=list(binding_survey_variables))
-#         print("search après filtrage :", search.to_dict())
-
-
-#     total_records = BindingSurveyDocument.search().count()
-#     print("test 3", )
-#     filtered_records = search.count()
-#     print("filtered_records", filtered_records)
-#     questions_paginated = search[start:start+length]
-#     # filtered_records = questions.count()
-#     data = []
-#     for question in questions_paginated:
-#         data.append({
-#             "id": question.meta.id,
-#             "variable_name": question.variable_name,
-#             "question_text": question.variable.question_text,
-#             "survey_name": question.survey.name,
-#             "notes": question.notes or "N/A"
-#         })
-#     # Retourner la réponse au format JSON pour DataTables
-#     return JsonResponse({"recordsTotal": total_records,  # Total d'enregistrements
-#                         "recordsFiltered": filtered_records,  # Total après filtrage
-#                         "draw": int(request.GET.get('draw', 1)),
-#                         "data": data})
-
 def search_results_data(request):
     # Récupérer les valeurs de la recherche et du filtre d'études
-    search_value = request.GET.get('q', '')
+    search_value = request.GET.get('q', '').strip().lower()
+    search_location = request.GET.get('search_location', 'questions')
     start = int(request.GET.get('start', 0))
     length = int(request.GET.get('length', 10))
     study_filter = request.GET.getlist('study[]', None)
@@ -217,28 +174,75 @@ def search_results_data(request):
     # Initialisation de la recherche avec Elasticsearch pour BindingSurveyRepresentedVariable
     search = BindingSurveyDocument.search()
 
-    # Appliquer la recherche par mot-clé si nécessaire
     if search_value:
-        search = search.query('multi_match', query=search_value, fields=['variable_name', 'notes', 'variable.question_text'])
+        if search_location == 'questions':
+            # Priorité aux correspondances exactes via 'should'
+            search = search.query(
+                'bool',
+                should=[
+                    # Recherche exacte avec un boost élevé
+                    {"term": {"variable.question_text.keyword": {"value": search_value, "boost": 10}}},
+                    # Recherche par phrase pour des correspondances proches
+                    {"match_phrase": {"variable.question_text": {"query": search_value, "boost": 5}}},
+                    # Recherche par préfixe avec le boost le plus bas
+                    {"match_phrase_prefix": {"variable.question_text": {"query": search_value, "boost": 1}}}
+                ],
+                minimum_should_match=1
+            )
+        elif search_location == 'categories':
+            search = search.query('nested', path='variable.categories', query={
+                'bool': {
+                    'should': [
+                        # Correspondance exacte sur la catégorie avec un boost élevé
+                        {"term": {"variable.categories.category_label.keyword": {"value": search_value, "boost": 10}}},
+                        # Correspondance par phrase pour des résultats proches
+                        {"match_phrase": {"variable.categories.category_label": {"query": search_value, "boost": 5}}},
+                        # Correspondance par préfixe avec un boost plus bas
+                        {"match_phrase_prefix": {"variable.categories.category_label": {"query": search_value, "boost": 1}}}
+                    ],
+                    "minimum_should_match": 1
+                }
+            })
 
+        # Ajout du highlighting pour mettre en valeur les termes recherchés
+        search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"], post_tags=["</mark>"]) \
+                       .highlight('variable.question_text', fragment_size=150) \
+                       .highlight('variable.categories.category_label', fragment_size=150)
     # Appliquer le filtre par étude si nécessaire
     if len(study_filter) > 0:
         search = search.filter('terms', **{"survey.id": study_filter})
 
-    # Pagination
+    # Exécuter la recherche pour obtenir les résultats paginés
+    response = search[start:start+length].execute()
+    # Récupérer le nombre total de documents correspondants avant et après filtrage
     total_records = BindingSurveyDocument.search().count()
-    filtered_records = search.count()
-    results_paginated = search[start:start+length]
+    filtered_records = response.hits.total.value  # Nombre de documents filtrés
 
     # Formatage des résultats pour DataTables
     data = []
-    for result in results_paginated:
+    for result in response.hits:
+        highlighted_question = result.variable.question_text if hasattr(result.variable, 'question_text') else "N/A"
+        if 'highlight' in result.meta and 'variable.question_text' in result.meta.highlight:
+            highlighted_question = result.meta.highlight['variable.question_text'][0]
+
+        category_matched = None
+        other_categories = []
+        if search_location == 'categories':
+            if 'highlight' in result.meta and 'variable.categories.category_label' in result.meta.highlight:
+                category_matched = result.meta.highlight['variable.categories.category_label'][0]
+
+            if hasattr(result.variable, 'categories'):
+                for category in result.variable.categories:
+                        other_categories.append(category.category_label)
+
         data.append({
             "id": result.meta.id,  # ID de la liaison
-            "variable_name": result.variable_name,
-            "question_text": result.variable.question_text,
-            "survey_name": result.survey.name,
-            "notes": result.notes or "N/A"
+            "variable_name": result.variable_name if hasattr(result, 'variable_name') else "N/A",
+            "question_text": highlighted_question,  # Texte de la question avec surbrillance si disponible
+            "survey_name": result.survey.name if hasattr(result, 'survey') else "N/A",
+            "notes": result.notes if hasattr(result, 'notes') else "N/A",
+            "category_matched": category_matched,
+            "other_categories": other_categories,
         })
 
     # Retourner la réponse au format JSON pour DataTables
@@ -250,30 +254,61 @@ def search_results_data(request):
     })
 
 
+
+
+
+import re
 def autocomplete(request):
-    search_value = request.GET.get('q', '').lower()  # Mot clé de recherche
+    search_value = request.GET.get('q', '').lower()
+    search_location = request.GET.get('location', 'questions')
     
-    # Construire la requête pour matcher le `variable.question_text`
-    s = Search(using='default', index='binding_survey_variables').query(
-        "match_phrase_prefix", 
-        **{"variable.question_text": search_value}  # Requête sur le champ imbriqué `variable.question_text`
-    )
-    
+    s = Search(using='default', index='binding_survey_variables')
+
+    if search_location == 'questions':
+        s = s.query(
+            "match",
+            variable__question_text={
+                "query": search_value,
+                "fuzziness": "AUTO",  # Autorise la recherche floue
+                "operator": "and"  # Rend la recherche plus stricte pour les multi-mots
+            }
+        )
+    elif search_location == 'categories':
+        s = s.query(
+            "nested",
+            path="variable.categories",
+            query={
+                "match": {
+                    "variable.categories.category_label": {
+                        "query": search_value,
+                        "fuzziness": "AUTO"  # Active la recherche floue dans les catégories également
+                    }
+                }
+            }
+        )
+
+    # Log de la requête et de la réponse
     response = s.execute()
-    
-    # Extraire les résultats et supprimer les doublons
+
     suggestions = []
     seen = set()
-    
     for hit in response.hits:
-        question_text = hit.variable.question_text
-        if question_text not in seen:
-            seen.add(question_text)
-            suggestions.append(question_text)
-    
-    print("suggestions", len(suggestions))
-    
+        if search_location == 'questions':
+            text = hit.variable.question_text.lower()
+            if text not in seen:
+                seen.add(text)
+                suggestions.append(text)
+        elif search_location == 'categories' and hit.variable.categories:
+            for category in hit.variable.categories:
+                if search_value in category.category_label.lower():
+                    text = category.category_label.lower()
+                    if text not in seen:
+                        seen.add(text)
+                        suggestions.append(text)
+
     return JsonResponse({"suggestions": suggestions})
+
+
 
 
 from django.http import HttpResponse
