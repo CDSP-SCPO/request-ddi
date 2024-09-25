@@ -33,7 +33,8 @@
                 </div>
 
                 <h2>Uploader un fichier CSV</h2>
-                <form method="POST" enctype="multipart/form-data" id="csvUploadForm">
+                <form method="POST" enctype="multipart/form-data" id="csvUploadForm"
+                      action="{% url 'app:upload_csv' %}">
                     {% csrf_token %}
                     {{ csv_form.as_p }}
                 </form>
@@ -65,10 +66,12 @@
 
 
                 <h2>Uploader un fichier XML</h2>
-                <form method="POST" enctype="multipart/form-data" id="xmlUploadForm">
+                <form method="POST" enctype="multipart/form-data" id="xmlUploadForm"
+                      action="{% url 'app:upload_xml' %}">
                     {% csrf_token %}
                     {{ xml_form.as_p }}
                 </form>
+
 
                 <!-- Bouton d'envoi XML -->
                 <button type="submit" form="xmlUploadForm" id="submitXmlBtn">Envoyer le fichier XML</button>

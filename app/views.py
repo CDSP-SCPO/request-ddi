@@ -26,9 +26,15 @@ class BaseUploadView(FormView):
         question_datas = list(self.convert_data(data))
 
         try:
-            num_records = self.process_data(question_datas)
+            num_records, num_new_surveys, num_new_variables, num_new_bindings = self.process_data(question_datas)
             messages.success(self.request,
-                             f"Le fichier a été traité avec succès. {num_records} lignes ont été analysées.")
+                             "Le fichier a été traité avec succès :<br/>"
+                             "<ul>"
+                             f"<li>{num_records} lignes ont été analysées.</li>"
+                             f"<li>{num_new_surveys} nouvelles enquêtes créées.</li>"
+                             f"<li>{num_new_variables} nouvelles variables représentées créées.</li>"
+                             "</ul>",
+                             extra_tags='safe')  # Assurez-vous que le HTML est interprété
             return super().form_valid(form)
 
         except Exception as e:
@@ -51,11 +57,13 @@ class BaseUploadView(FormView):
         survey, _ = Survey.objects.get_or_create(external_ref=doi, name=title)
         return survey
 
-    def get_or_create_binding(self, survey, represented_variable, variable_name):
+    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
         BindingSurveyRepresentedVariable.objects.get_or_create(
             survey=survey,
             variable=represented_variable,
-            variable_name=variable_name
+            variable_name=variable_name,
+            notes=notes,
+            universe=universe
         )
 
     def check_category(self, category_string, existing_categories):
@@ -85,34 +93,52 @@ class CSVUploadView(BaseUploadView):
 
     def process_data(self, question_datas):
         num_records = 0
+        num_new_surveys = 0
+        num_new_variables = 0
+        num_new_bindings = 0
+
         for line_number, row in enumerate(question_datas, start=1):
             try:
-                survey = self.get_or_create_survey(row['ddi'], row['title'])
-                represented_variable = self.get_or_create_represented_variable(row, survey)
-                self.get_or_create_binding(survey, represented_variable, row['variable_name'])
+                # Création ou récupération d'une enquête (Survey)
+                survey, created_survey = self.get_or_create_survey(row['ddi'], row['title'])
+                if created_survey:
+                    num_new_surveys += 1
+
+                # Création ou récupération d'une variable représentée (RepresentedVariable)
+                represented_variable, created_variable = self.get_or_create_represented_variable(row)
+                if created_variable:
+                    num_new_variables += 1
+
+                # Création ou récupération d'une liaison (BindingSurveyRepresentedVariable)
+                _, created_binding = self.get_or_create_binding(survey, represented_variable, row['variable_name'], row['univers'], row['notes'])
+                if created_binding:
+                    num_new_bindings += 1
+
                 num_records += 1
             except Exception as e:
                 error_message = f"Erreur à la ligne {line_number}: {row}. Détail de l'erreur: {str(e)}"
                 print(error_message)
-                raise Exception(error_message)  # Relève l'exception pour annuler la transaction
-        return num_records
+                raise Exception(error_message)
 
-    def get_or_create_represented_variable(self, row, survey):
+        return num_records, num_new_surveys, num_new_variables, num_new_bindings
+
+    def get_or_create_represented_variable(self, row):
         name_question = row['question_text']
         var_represented = RepresentedVariable.objects.filter(question_text=name_question)
 
         if var_represented.exists():
             for var in var_represented:
                 if self.check_category(row['category_label'], var.categories):
-                    return var
-            return self.create_new_represented_variable(row, var_represented[0].conceptual_var, name_question)
+                    return var, False  # False = pas de nouvelle variable créée
+            return self.create_new_represented_variable(row, var_represented[0].conceptual_var, name_question, row['variable_label']), True
         else:
-            return self.create_new_represented_variable(row, ConceptualVariable.objects.create(), name_question)
+            return self.create_new_represented_variable(row, ConceptualVariable.objects.create(), name_question, row['variable_label']), True
 
-    def create_new_represented_variable(self, row, conceptual_var, name_question):
+    def create_new_represented_variable(self, row, conceptual_var, name_question, variable_label):
         new_represented_var = RepresentedVariable.objects.create(
             conceptual_var=conceptual_var,
-            question_text=name_question
+            question_text=name_question,
+            internal_label=variable_label
         )
         new_categories = self.create_new_categories(row['category_label'])
         new_represented_var.categories.set(new_categories)
@@ -123,12 +149,23 @@ class CSVUploadView(BaseUploadView):
         if csv_category_string:
             parsed_categories = self.parse_categories(csv_category_string)
             for code, label in parsed_categories:
-                category, _ = Category.objects.get_or_create(
-                    code=code,
-                    category_label=label
-                )
+                category, _ = Category.objects.get_or_create(code=code, category_label=label)
                 categories.append(category)
         return categories
+
+    def get_or_create_survey(self, doi, title):
+        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title)
+        return survey, created  # Retourne l'indicateur de création
+
+    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
+        binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
+            survey=survey,
+            variable=represented_variable,
+            variable_name=variable_name,
+            notes=notes,
+            universe=universe
+        )
+        return binding, created
 
 
 class XMLUploadView(BaseUploadView):
@@ -163,32 +200,50 @@ class XMLUploadView(BaseUploadView):
 
     def process_data(self, question_datas):
         num_records = 0
+        num_new_surveys = 0
+        num_new_variables = 0
+        num_new_bindings = 0
+
         for question_data in question_datas:
             doi, title, variable_name, variable_label, question_text, category_label, universe, notes = question_data
-            survey = self.get_or_create_survey(doi, title)
-            represented_variable = self.get_or_create_represented_variable(variable_name, question_text, category_label)
-            self.get_or_create_binding(survey, represented_variable, variable_name)
+
+            # Création ou récupération d'une enquête (Survey)
+            survey, created_survey = self.get_or_create_survey(doi, title)
+            if created_survey:
+                num_new_surveys += 1
+
+            # Création ou récupération d'une variable représentée (RepresentedVariable)
+            represented_variable, created_variable = self.get_or_create_represented_variable(variable_name, question_text, category_label, variable_label)
+            if created_variable:
+                num_new_variables += 1
+
+            # Création ou récupération d'une liaison (BindingSurveyRepresentedVariable)
+            _, created_binding = self.get_or_create_binding(survey, represented_variable, variable_name, universe, notes)
+            if created_binding:
+                num_new_bindings += 1
+
             num_records += 1
 
-        return num_records
+        return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
-    def get_or_create_represented_variable(self, variable_name, question_text, category_label):
+    def get_or_create_represented_variable(self, variable_name, question_text, category_label, variable_label):
         var_represented = RepresentedVariable.objects.filter(question_text=question_text)
 
         if var_represented.exists():
             for var in var_represented:
                 if self.check_category(category_label, var.categories):
-                    return var
+                    return var, False  # False = pas de nouvelle variable créée
             return self.create_new_represented_variable(variable_name, var_represented[0].conceptual_var, question_text,
-                                                        category_label)
+                                                        category_label, variable_label), True
         else:
             return self.create_new_represented_variable(variable_name, ConceptualVariable.objects.create(),
-                                                        question_text, category_label)
+                                                        question_text, category_label, variable_label), True
 
-    def create_new_represented_variable(self, variable_name, conceptual_var, question_text, category_label):
+    def create_new_represented_variable(self, variable_name, conceptual_var, question_text, category_label, variable_label):
         new_represented_var = RepresentedVariable.objects.create(
             conceptual_var=conceptual_var,
-            question_text=question_text
+            question_text=question_text,
+            internal_label=variable_label
         )
         self.create_new_categories(category_label, new_represented_var)
         return new_represented_var
@@ -199,6 +254,20 @@ class XMLUploadView(BaseUploadView):
             for code, label in parsed_categories:
                 category, _ = Category.objects.get_or_create(code=code, category_label=label)
                 represented_variable.categories.add(category)
+
+    def get_or_create_survey(self, doi, title):
+        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title)
+        return survey, created
+
+    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
+        binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
+            survey=survey,
+            variable=represented_variable,
+            variable_name=variable_name,
+            notes=notes,
+            universe=universe
+        )
+        return binding, created
 
 
 
