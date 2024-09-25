@@ -20,10 +20,15 @@ class Survey(models.Model):
     external_ref = models.CharField(max_length=255)
     name = models.TextField()
 
+    def __str__(self):
+        return f"Survey: {self.name} ({self.external_ref})"
+
 class ConceptualVariable(models.Model):
     internal_label = models.TextField()
-
     concepts = models.ManyToManyField("Concept",symmetrical=False, related_name="conceptual_variables")  # plutot faire une class binding ?
+
+    def __str__(self):
+        return f"Conceptual Variable: {self.internal_label}"
 
 
 class Category(models.Model):
@@ -31,6 +36,9 @@ class Category(models.Model):
     type = models.CharField(max_length=255, choices=(('code', 'code'), ('text', 'text'), ('numerical', 'numerical'), ('date', 'date')))
     code = models.CharField(max_length=255)  # code if type code, else conditions / limitation ?
     category_label = models.TextField(null=True)  # pas de label si pas type==code?
+
+    def __str__(self):
+        return f"Category: {self.type} - {self.code} ({self.category_label})"
 
 
 class RepresentedVariable(models.Model):
@@ -45,6 +53,11 @@ class RepresentedVariable(models.Model):
 
     categories = models.ManyToManyField(Category, related_name="variables")  # plutot faire une autre class ? (BindingCategory)
 
+    def __str__(self):
+        return f"Represented Variable: {self.internal_label or 'N/A'} ({self.type}, {self.question_text})"
+
+
+
 
 class BindingSurveyRepresentedVariable(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
@@ -53,10 +66,16 @@ class BindingSurveyRepresentedVariable(models.Model):
     variable_name = models.TextField()
     universe = models.TextField()
 
+    def __str__(self):
+        return f"Binding: {self.variable_name} - Survey: {self.survey.name}"
+
 
 class Concept(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
+
+    def __str__(self):
+        return f"Concept: {self.name}"
 
 
 class BindingConcept(models.Model):
@@ -65,3 +84,7 @@ class BindingConcept(models.Model):
 
     class Meta:
         unique_together = ('parent', 'child')
+
+    def __str__(self):
+        return f"Binding Concept: {self.parent.name} -> {self.child.name}"
+

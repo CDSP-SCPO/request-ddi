@@ -3,91 +3,127 @@ from django.views.generic.edit import FormView
 from django.urls import reverse_lazy
 from django.shortcuts import render, get_object_or_404
 from django.contrib import messages
-from .forms import CSVUploadForm
+from .forms import CSVUploadForm, XMLUploadForm
 from django.views.generic import ListView
 from django.db.models import Q
 from .models import Survey, RepresentedVariable, ConceptualVariable, Category, BindingSurveyRepresentedVariable
 from django.http import JsonResponse
 from django.db import transaction
 from .documents import BindingSurveyDocument
+from bs4 import BeautifulSoup
 
 from elasticsearch_dsl import Search, A
 
 
-class CSVUploadView(FormView):
-    template_name = 'upload_csv.html'
-    form_class = CSVUploadForm
-    success_url = reverse_lazy('app:representedvariable_search')  # Redirection vers la vue de recherche
-    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
+from abc import ABC, abstractmethod
+from django.views.generic.edit import FormView
+from django.contrib import messages
+from django.urls import reverse_lazy
+from django.db import transaction
+import csv
+from bs4 import BeautifulSoup
+
+class BaseUploadView(FormView, ABC):
+    template_name = ''
+    form_class = None
+    success_url = reverse_lazy('app:representedvariable_search')
 
     @transaction.atomic
     def form_valid(self, form):
         print("Formulaire valide, début du traitement")
-        csv_file = form.cleaned_data['csv_file']
-        decoded_file = csv_file.read().decode('utf-8').splitlines()
-        sample = '\n'.join(decoded_file[:2])
-        sniffer = csv.Sniffer()
-        delimiter = sniffer.sniff(sample).delimiter
-        reader = csv.DictReader(decoded_file, delimiter=delimiter)
-
-        missing_columns = self.validate_columns(reader.fieldnames)
-        if missing_columns:
-            print(f"Colonnes manquantes: {missing_columns}")
-            return self.render_with_errors(form, missing_columns)
+        data = self.get_data(form)
+        question_datas = list(self.convert_data(data))
 
         try:
-            num_records = self.process_csv(reader)  # Traiter le fichier et obtenir le nombre d'enregistrements
-            messages.success(self.request,
-                             f"Le fichier CSV a été traité avec succès. {num_records} lignes ont été analysées.")
+            num_records = self.process_data(question_datas)
+            messages.success(self.request, f"Le fichier a été traité avec succès. {num_records} lignes ont été analysées.")
             return super().form_valid(form)
 
         except Exception as e:
-            error_message = f"Une erreur s'est produite lors du traitement du fichier CSV : {str(e)}"
-            messages.error(self.request, error_message)
-            return self.render_with_errors(form)
+            messages.error(self.request, f"Erreur lors du traitement des données : {str(e)}")
+            return self.form_invalid(form)
 
-    def validate_columns(self, fieldnames):
-        """Retourne une liste des colonnes manquantes."""
-        return [col for col in self.required_columns if col not in fieldnames]
+    @abstractmethod
+    def get_data(self, form):
+        """Méthode pour obtenir les données du formulaire."""
+        pass
 
-    def render_with_errors(self, form, missing_columns=None):
-        context = {'form': form}
-        if missing_columns:
-            context['missing_columns'] = missing_columns
-        return render(self.request, self.template_name, context)
+    @abstractmethod
+    def convert_data(self, content):
+        """Méthode pour extraire les données."""
+        pass
 
-    def process_csv(self, reader):
+    @abstractmethod
+    def process_data(self, question_datas):
+        """Méthode pour traiter les données."""
+        pass
+
+    def get_or_create_survey(self, doi, title):
+        """Retourne une instance de Survey, créant une nouvelle instance si nécessaire."""
+        survey, _ = Survey.objects.get_or_create(external_ref=doi, name=title)
+        return survey
+
+    def get_or_create_binding(self, survey, represented_variable, variable_name):
+        """Crée ou récupère une instance de BindingSurveyRepresentedVariable."""
+        BindingSurveyRepresentedVariable.objects.get_or_create(
+            survey=survey,
+            variable=represented_variable,
+            variable_name=variable_name
+        )
+
+    def check_category(self, category_string, existing_categories):
+        """Vérifie si les catégories correspondent aux catégories existantes."""
+        csv_categories = self.parse_categories(category_string) if category_string else []
+        existing_categories_list = [(category.code, category.category_label) for category in existing_categories.all()]
+        return set(csv_categories) == set(existing_categories_list)
+
+    def parse_categories(self, category_string):
+        """Parse une chaîne de catégories en une liste de tuples (code, label)."""
+        categories = []
+        csv_category_pairs = category_string.split(" | ")
+        for pair in csv_category_pairs:
+            code, label = pair.split(",", 1)
+            categories.append((code.strip(), label.strip()))
+        return categories
+
+
+
+class CSVUploadView(BaseUploadView):
+    template_name = 'upload_csv.html'
+    form_class = CSVUploadForm
+    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
+
+    def get_data(self, form):
+        return form.cleaned_data['csv_file']  # Données CSV
+
+    def convert_data(self, content):
+        """Convertit le contenu CSV en un format traité."""
+        return csv.DictReader(content)  # Convertir directement en DictReader
+
+    def process_data(self, question_datas):
         num_records = 0
-        for line_number, row in enumerate(reader, start=1):
+        for line_number, row in enumerate(question_datas, start=1):
             try:
-                survey = self.get_or_create_survey(row)
+                survey = self.get_or_create_survey(row['ddi'], row['title'])
                 represented_variable = self.get_or_create_represented_variable(row, survey)
                 self.get_or_create_binding(survey, represented_variable, row['variable_name'])
-                num_records += 1  # Incrémentez le compteur pour chaque ligne traitée
+                num_records += 1
             except Exception as e:
                 error_message = f"Erreur à la ligne {line_number}: {row}. Détail de l'erreur: {str(e)}"
                 print(error_message)
                 raise Exception(error_message)  # Relève l'exception pour annuler la transaction
-        return num_records  # R
-
-    def get_or_create_survey(self, row):
-        """Retourne une instance de Survey, créant une nouvelle instance si nécessaire."""
-        survey, _ = Survey.objects.get_or_create(
-            external_ref=row['ddi'],
-            name=row['title']
-        )
-        return survey
+        return num_records
 
     def get_or_create_represented_variable(self, row, survey):
         """Retourne une instance de RepresentedVariable, créant une nouvelle instance si nécessaire."""
         name_question = row['question_text']
-        var_represented = RepresentedVariable.objects.filter(question_text=name_question).first()
+        var_represented = RepresentedVariable.objects.filter(question_text=name_question)
 
-        if var_represented and name_question == var_represented.question_text:
-            if self.check_category(row['category_label'], var_represented.categories):
-                return var_represented
-            else:
-                return self.create_new_represented_variable(row, var_represented.conceptual_var, name_question)
+        if var_represented.exists():
+            for var in var_represented:
+                if self.check_category(row['category_label'], var.categories):
+                    return var
+            return self.create_new_represented_variable(row, var_represented[0].conceptual_var, name_question)
         else:
             return self.create_new_represented_variable(row, ConceptualVariable.objects.create(), name_question)
 
@@ -114,28 +150,79 @@ class CSVUploadView(FormView):
                 categories.append(category)
         return categories
 
-    def get_or_create_binding(self, survey, represented_variable, variable_name):
-        """Crée ou récupère une instance de BindingSurveyRepresentedVariable."""
-        BindingSurveyRepresentedVariable.objects.get_or_create(
-            survey=survey,
-            variable=represented_variable,
-            variable_name=variable_name
+
+
+class XMLUploadView(BaseUploadView):
+    template_name = 'upload_xml.html'
+    form_class = XMLUploadForm
+
+    def get_data(self, form):
+        return form.cleaned_data['xml_file']  # Données XML
+
+    def convert_data(self, content):
+        """Extrait les données du contenu XML."""
+        soup = BeautifulSoup(content, "xml")
+        doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={"agency": "DataCite"}) else soup.find("IDNo").text.strip()
+        title = soup.find("titl").text.strip()
+
+        for line in soup.find_all("var"):
+            cat_to_add = " | ".join([','.join([cat.find("catValu").text.strip() if cat.find("catValu") else '',
+                                               cat.find("labl").text.strip() if cat.find("labl") else ''])
+                                     for cat in line.find_all("catgry")
+                                     ])
+            question_data = [
+                doi,
+                title,
+                line["name"].strip(),
+                line.find("labl").text.strip() if line.find("labl") else "",
+                line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
+                cat_to_add,
+                line.find("universe").text.strip() if line.find("universe") else "",
+                line.find("notes").text.strip() if line.find("notes") else "",
+            ]
+            yield question_data
+
+    def process_data(self, question_datas):
+        num_records = 0
+        for question_data in question_datas:
+            doi, title, variable_name, variable_label, question_text, category_label, universe, notes = question_data
+            survey = self.get_or_create_survey(doi, title)
+            represented_variable = self.get_or_create_represented_variable(variable_name, question_text, category_label)
+            self.get_or_create_binding(survey, represented_variable, variable_name)
+            num_records += 1  # Incrémentez le compteur pour chaque ligne traitée
+
+        return num_records
+
+    def get_or_create_represented_variable(self, variable_name, question_text, category_label):
+        """Retourne une instance de RepresentedVariable, créant une nouvelle instance si nécessaire."""
+        var_represented = RepresentedVariable.objects.filter(question_text=question_text)
+
+        if var_represented.exists():
+            for var in var_represented:
+                if self.check_category(category_label, var.categories):
+                    return var
+            return self.create_new_represented_variable(variable_name, var_represented[0].conceptual_var, question_text, category_label)
+        else:
+            return self.create_new_represented_variable(variable_name, ConceptualVariable.objects.create(), question_text, category_label)
+
+    def create_new_represented_variable(self, variable_name, conceptual_var, question_text, category_label):
+        """Crée une nouvelle instance de RepresentedVariable et l'associe à des catégories."""
+        new_represented_var = RepresentedVariable.objects.create(
+            conceptual_var=conceptual_var,
+            question_text=question_text
         )
+        self.create_new_categories(category_label, new_represented_var)
+        return new_represented_var
 
-    def check_category(self, csv_category_string, existing_categories):
-        """Vérifie si les catégories CSV correspondent aux catégories existantes."""
-        csv_categories = self.parse_categories(csv_category_string) if csv_category_string else []
-        existing_categories_list = [(category.code, category.category_label) for category in existing_categories.all()]
-        return set(csv_categories) == set(existing_categories_list)
+    def create_new_categories(self, category_string, represented_variable):
+        """Crée et associe de nouvelles catégories à une variable représentée."""
+        if category_string:
+            parsed_categories = self.parse_categories(category_string)
+            for code, label in parsed_categories:
+                category, _ = Category.objects.get_or_create(code=code, category_label=label)
+                represented_variable.categories.add(category)
 
-    def parse_categories(self, csv_category_string):
-        """Parse une chaîne de catégories CSV en une liste de tuples (code, label)."""
-        categories = []
-        csv_category_pairs = csv_category_string.split(" | ")
-        for pair in csv_category_pairs:
-            code, label = pair.split(",", 1)
-            categories.append((code.strip(), label.strip()))
-        return categories
+
 
 
 class RepresentedVariableSearchView(ListView):

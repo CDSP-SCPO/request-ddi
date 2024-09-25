@@ -168,6 +168,7 @@ $(document).ready(function() {
         {
                 "data": "id",  
                 "render": function (data, type, row) {
+                    console.log(row)
                     var url = '/question/' + row.id + '/';
                     var categoryBadge = row.category_matched ? `<span class="badge-category">` + row.category_matched + `</span>` : '';
                     var otherCategories = row.other_categories.map(function(category) {
@@ -182,6 +183,8 @@ $(document).ready(function() {
                                 <a href="` + url + `">` + row.question_text + `</a>` + categoryBadge + dropdown + `
                             </h5>
                             <h6 class="card-subtitle mb-2 text-muted">Référence externe: ` + row.internal_label + `</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Nom de l'enquête: ` + row.survey_name + `</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: ` + row.variable_name + `</h6>
                             <p class="card-text">Détails supplémentaires sur l'enquête...</p>
                         </div>
                     </div>`;
