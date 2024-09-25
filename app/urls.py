@@ -1,10 +1,11 @@
 from django.urls import path
-from .views import CSVUploadView,XMLUploadView, RepresentedVariableSearchView, search_results, search_results_data, autocomplete, export_page, QuestionDetailView, similar_representative_variable_questions, similar_conceptual_variable_questions
-from django.views.generic import TemplateView
+from .views import CSVUploadView, XMLUploadView, CombinedUploadView, RepresentedVariableSearchView, search_results, search_results_data, autocomplete, export_page, QuestionDetailView, similar_representative_variable_questions, similar_conceptual_variable_questions
+
 
 app_name = 'app'
 
 urlpatterns = [
+    path('upload/', CombinedUploadView.as_view(), name='combined_upload'),
     path('upload-csv/', CSVUploadView.as_view(), name='upload_csv'),
     path('upload-xml/', XMLUploadView.as_view(), name='upload_xml'),
     path('', RepresentedVariableSearchView.as_view(), name='representedvariable_search'),

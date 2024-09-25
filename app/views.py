@@ -5,27 +5,18 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib import messages
 from .forms import CSVUploadForm, XMLUploadForm
 from django.views.generic import ListView
-from django.db.models import Q
 from .models import Survey, RepresentedVariable, ConceptualVariable, Category, BindingSurveyRepresentedVariable
 from django.http import JsonResponse
 from django.db import transaction
 from .documents import BindingSurveyDocument
 from bs4 import BeautifulSoup
+from django.views.generic import TemplateView
 
 from elasticsearch_dsl import Search, A
 
 
-from abc import ABC, abstractmethod
-from django.views.generic.edit import FormView
-from django.contrib import messages
-from django.urls import reverse_lazy
-from django.db import transaction
-import csv
-from bs4 import BeautifulSoup
 
-class BaseUploadView(FormView, ABC):
-    template_name = ''
-    form_class = None
+class BaseUploadView(FormView):
     success_url = reverse_lazy('app:representedvariable_search')
 
     @transaction.atomic
@@ -36,35 +27,31 @@ class BaseUploadView(FormView, ABC):
 
         try:
             num_records = self.process_data(question_datas)
-            messages.success(self.request, f"Le fichier a été traité avec succès. {num_records} lignes ont été analysées.")
+            messages.success(self.request,
+                             f"Le fichier a été traité avec succès. {num_records} lignes ont été analysées.")
             return super().form_valid(form)
 
         except Exception as e:
             messages.error(self.request, f"Erreur lors du traitement des données : {str(e)}")
             return self.form_invalid(form)
 
-    @abstractmethod
     def get_data(self, form):
         """Méthode pour obtenir les données du formulaire."""
         pass
 
-    @abstractmethod
     def convert_data(self, content):
         """Méthode pour extraire les données."""
         pass
 
-    @abstractmethod
     def process_data(self, question_datas):
         """Méthode pour traiter les données."""
         pass
 
     def get_or_create_survey(self, doi, title):
-        """Retourne une instance de Survey, créant une nouvelle instance si nécessaire."""
         survey, _ = Survey.objects.get_or_create(external_ref=doi, name=title)
         return survey
 
     def get_or_create_binding(self, survey, represented_variable, variable_name):
-        """Crée ou récupère une instance de BindingSurveyRepresentedVariable."""
         BindingSurveyRepresentedVariable.objects.get_or_create(
             survey=survey,
             variable=represented_variable,
@@ -72,13 +59,11 @@ class BaseUploadView(FormView, ABC):
         )
 
     def check_category(self, category_string, existing_categories):
-        """Vérifie si les catégories correspondent aux catégories existantes."""
         csv_categories = self.parse_categories(category_string) if category_string else []
         existing_categories_list = [(category.code, category.category_label) for category in existing_categories.all()]
         return set(csv_categories) == set(existing_categories_list)
 
     def parse_categories(self, category_string):
-        """Parse une chaîne de catégories en une liste de tuples (code, label)."""
         categories = []
         csv_category_pairs = category_string.split(" | ")
         for pair in csv_category_pairs:
@@ -87,18 +72,16 @@ class BaseUploadView(FormView, ABC):
         return categories
 
 
-
 class CSVUploadView(BaseUploadView):
     template_name = 'upload_csv.html'
     form_class = CSVUploadForm
     required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
 
     def get_data(self, form):
-        return form.cleaned_data['csv_file']  # Données CSV
+        return form.cleaned_data['csv_file']
 
     def convert_data(self, content):
-        """Convertit le contenu CSV en un format traité."""
-        return csv.DictReader(content)  # Convertir directement en DictReader
+        return csv.DictReader(content)
 
     def process_data(self, question_datas):
         num_records = 0
@@ -115,7 +98,6 @@ class CSVUploadView(BaseUploadView):
         return num_records
 
     def get_or_create_represented_variable(self, row, survey):
-        """Retourne une instance de RepresentedVariable, créant une nouvelle instance si nécessaire."""
         name_question = row['question_text']
         var_represented = RepresentedVariable.objects.filter(question_text=name_question)
 
@@ -128,7 +110,6 @@ class CSVUploadView(BaseUploadView):
             return self.create_new_represented_variable(row, ConceptualVariable.objects.create(), name_question)
 
     def create_new_represented_variable(self, row, conceptual_var, name_question):
-        """Crée une nouvelle instance de RepresentedVariable et l'associe à des catégories."""
         new_represented_var = RepresentedVariable.objects.create(
             conceptual_var=conceptual_var,
             question_text=name_question
@@ -138,7 +119,6 @@ class CSVUploadView(BaseUploadView):
         return new_represented_var
 
     def create_new_categories(self, csv_category_string):
-        """Crée et retourne une liste de nouvelles instances de Category basées sur une chaîne CSV."""
         categories = []
         if csv_category_string:
             parsed_categories = self.parse_categories(csv_category_string)
@@ -151,18 +131,17 @@ class CSVUploadView(BaseUploadView):
         return categories
 
 
-
 class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
     def get_data(self, form):
-        return form.cleaned_data['xml_file']  # Données XML
+        return form.cleaned_data['xml_file']
 
     def convert_data(self, content):
-        """Extrait les données du contenu XML."""
         soup = BeautifulSoup(content, "xml")
-        doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={"agency": "DataCite"}) else soup.find("IDNo").text.strip()
+        doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={
+            "agency": "DataCite"}) else soup.find("IDNo").text.strip()
         title = soup.find("titl").text.strip()
 
         for line in soup.find_all("var"):
@@ -189,24 +168,24 @@ class XMLUploadView(BaseUploadView):
             survey = self.get_or_create_survey(doi, title)
             represented_variable = self.get_or_create_represented_variable(variable_name, question_text, category_label)
             self.get_or_create_binding(survey, represented_variable, variable_name)
-            num_records += 1  # Incrémentez le compteur pour chaque ligne traitée
+            num_records += 1
 
         return num_records
 
     def get_or_create_represented_variable(self, variable_name, question_text, category_label):
-        """Retourne une instance de RepresentedVariable, créant une nouvelle instance si nécessaire."""
         var_represented = RepresentedVariable.objects.filter(question_text=question_text)
 
         if var_represented.exists():
             for var in var_represented:
                 if self.check_category(category_label, var.categories):
                     return var
-            return self.create_new_represented_variable(variable_name, var_represented[0].conceptual_var, question_text, category_label)
+            return self.create_new_represented_variable(variable_name, var_represented[0].conceptual_var, question_text,
+                                                        category_label)
         else:
-            return self.create_new_represented_variable(variable_name, ConceptualVariable.objects.create(), question_text, category_label)
+            return self.create_new_represented_variable(variable_name, ConceptualVariable.objects.create(),
+                                                        question_text, category_label)
 
     def create_new_represented_variable(self, variable_name, conceptual_var, question_text, category_label):
-        """Crée une nouvelle instance de RepresentedVariable et l'associe à des catégories."""
         new_represented_var = RepresentedVariable.objects.create(
             conceptual_var=conceptual_var,
             question_text=question_text
@@ -215,7 +194,6 @@ class XMLUploadView(BaseUploadView):
         return new_represented_var
 
     def create_new_categories(self, category_string, represented_variable):
-        """Crée et associe de nouvelles catégories à une variable représentée."""
         if category_string:
             parsed_categories = self.parse_categories(category_string)
             for code, label in parsed_categories:
@@ -223,6 +201,15 @@ class XMLUploadView(BaseUploadView):
                 represented_variable.categories.add(category)
 
 
+
+class CombinedUploadView(TemplateView):
+    template_name = 'upload_files.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['csv_form'] = CSVUploadForm()
+        context['xml_form'] = XMLUploadForm()
+        return context
 
 
 class RepresentedVariableSearchView(ListView):

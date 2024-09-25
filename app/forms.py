@@ -33,7 +33,7 @@ class XMLUploadForm(forms.Form):
     xml_file = forms.FileField(label='Select an XML file')
 
     # Liste des balises obligatoires et attributs
-    required_tags = ['IDNo', 'titl', 'var', 'catValu', 'labl', 'catgry', 'qstnLit', 'universe', 'notes']
+    required_tags = ['IDNo', 'titl', 'var', 'catValu', 'labl', 'catgry', 'qstnLit']
     required_attributes = {'var': 'name'}  # Vérification de l'attribut 'name' dans la balise 'var'
 
     def clean_xml_file(self):

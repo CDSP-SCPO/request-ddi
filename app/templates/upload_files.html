@@ -1,0 +1,34 @@
+<!-- upload_combined.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uploader CSV et XML</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+    <h1>Uploader des fichiers CSV et XML</h1>
+
+    <h2>Uploader un fichier CSV</h2>
+    <form method="post" action="{% url 'app:upload_csv' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ csv_form.as_p }}
+        <button type="submit">Uploader CSV</button>
+    </form>
+
+    <h2>Uploader un fichier XML</h2>
+    <form method="post" action="{% url 'app:upload_xml' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ xml_form.as_p }}
+        <button type="submit">Uploader XML</button>
+    </form>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+</body>
+</html>
