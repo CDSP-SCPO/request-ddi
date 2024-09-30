@@ -1,0 +1,5 @@
+# Ignore PyCharm files
+.idea/
+
+# Ignore SQLite database file
+db.sqlite3
