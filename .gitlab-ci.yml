@@ -32,8 +32,10 @@ deploy:
   dependencies:
     - build
   before_script:
-    # Configuration de KUBECONFIG pour se connecter au cluster Kubernetes
     - export KUBECONFIG=$kubeconfig_file
+    - echo "kubectl_context: $kubectl_context"
+    - if [ -z "$kubectl_context" ]; then echo "La variable kubectl_context est vide."; exit 1; fi
+
   script:
     # Utiliser le contexte Kubernetes approprié
     - bash
