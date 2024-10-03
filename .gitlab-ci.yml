@@ -36,6 +36,7 @@ deploy:
     - export KUBECONFIG=$kubeconfig_file
   script:
     # Utiliser le contexte Kubernetes approprié
+    - bash
     - kubectl config use-context $kubectl_context
 
     # Déployer le backend
