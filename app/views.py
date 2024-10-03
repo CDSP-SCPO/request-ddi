@@ -14,6 +14,11 @@ from django.views.generic import TemplateView
 
 from elasticsearch_dsl import Search, A
 
+# views.py
+from django.views import View
+from import_export import resources
+from .utils.csvimportexport import BindingSurveyResource
+
 
 
 class BaseUploadView(FormView):
@@ -166,6 +171,18 @@ class CSVUploadView(BaseUploadView):
             universe=universe
         )
         return binding, created
+
+
+
+class ExportQuestionsView(View):
+    def get(self, request, *args, **kwargs):
+        resource = BindingSurveyResource()
+        dataset = resource.export()
+
+        # Créer une réponse HTTP avec le bon type de contenu pour CSV
+        response = HttpResponse(dataset.csv, content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
+        return response
 
 
 class XMLUploadView(BaseUploadView):

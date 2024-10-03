@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CSVUploadView, XMLUploadView, CombinedUploadView, RepresentedVariableSearchView, search_results, search_results_data, autocomplete, export_page, QuestionDetailView, similar_representative_variable_questions, similar_conceptual_variable_questions
+from .views import CSVUploadView, XMLUploadView, CombinedUploadView, RepresentedVariableSearchView, search_results, search_results_data, autocomplete, ExportQuestionsView, QuestionDetailView, similar_representative_variable_questions, similar_conceptual_variable_questions
 
 
 app_name = 'app'
@@ -12,7 +12,7 @@ urlpatterns = [
     path('search-results/', search_results, name='search_results'),  
     path('api/search-results/', search_results_data, name='search_results_data'),
 
-    path('export-csv/', export_page, name='export_page'),
+    path('export-csv/', ExportQuestionsView.as_view(), name='export_page'),
 
     path('question/<int:id>/', QuestionDetailView.as_view(), name='question_detail'),
 
