@@ -1,0 +1,5 @@
+resources:
+  - backend/deployment.yml
+  - backend/service.yml
+  - elasticsearch/deployment.yml
+  - elasticsearch/service.yml

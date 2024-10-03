@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: basedequestions
+spec:
+  replicas: 2  # Vous pouvez ajuster le nombre de réplicas selon vos besoins
+  selector:
+    matchLabels:
+      app: basedequestions
+  template:
+    metadata:
+      labels:
+        app: basedequestions
+    spec:
+      containers:
+        - name: basedequestions
+          image: $CI_REGISTRY_IMAGE/basedequestions-backend:$CI_COMMIT_REF_SLUG  # Image Docker à utiliser
+          ports:
+            - containerPort: 8000
+          env:
+            - name: ELASTICSEARCH_HOST
+              value: "http://elasticsearch:9200"  # Nom du service Elasticsearch
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config  # Chemin où le ConfigMap sera monté
+      volumes:
+        - name: config-volume
+          configMap:
+            name: basedequestions-config  # Assurez-vous que ce ConfigMap existe
