@@ -34,24 +34,26 @@ deploy:
   before_script:
     - export KUBECONFIG=$kubeconfig_file
     - echo "kubectl_context: $kubectl_context"
-    - if [ -z "$kubectl_context" ]; then echo "La variable kubectl_context est vide."; exit 1; fi
+    - '[ -z "$kubectl_context" ] && echo "La variable kubectl_context est vide." && exit 1 || echo "Contexte Kubernetes valide."'
 
   script:
     # Utiliser le contexte Kubernetes approprié
-    - bash
-    - kubectl config use-context $kubectl_context
+    - kubectl config use-context "$kubectl_context"
 
     # Déployer le backend
-    - echo "Deploying backend...";
+    - echo "Deploying backend..."
     - kubectl apply -f k8s/base/backend/configmap.env
     - kubectl apply -f k8s/overlays/$CI_COMMIT_REF_SLUG/namespace.yml
     - kubectl apply -k k8s/overlays/$CI_COMMIT_REF_SLUG
 
     # Déployer Elasticsearch si nécessaire
-    - echo "Deploying Elasticsearch...";
+    - echo "Deploying Elasticsearch..."
     - kubectl apply -f k8s/base/elasticsearch/deployment.yml
     - kubectl apply -f k8s/base/elasticsearch/service.yml
-      echo "${CI_COMMIT_REF_SLUG} overlay done."
+
+    # Fin du déploiement
+    - echo "${CI_COMMIT_REF_SLUG} overlay done."
+
   environment:
     name: $CI_COMMIT_REF_SLUG
   only:
