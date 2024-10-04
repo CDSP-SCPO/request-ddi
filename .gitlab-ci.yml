@@ -27,7 +27,7 @@ build:
 deploy:
   image:
     name: bitnami/kubectl:1.24
-    entrypoint: [""]
+    entrypoint: [ "" ]
   stage: deploy
   dependencies:
     - build
@@ -40,16 +40,16 @@ deploy:
     - kubectl config use-context $kubectl_context
 
     # Déployer le backend
-    - echo "Deploying backend..."
-    - kubectl apply -f k8s/base/backend/configmap.env
+    - echo "Deploying backend...";
     - kubectl apply -f k8s/overlays/$CI_COMMIT_REF_SLUG/namespace.yml
     - kubectl apply -k k8s/overlays/$CI_COMMIT_REF_SLUG
 
     # Déployer Elasticsearch si nécessaire
-    - echo "Deploying Elasticsearch..."
+    - echo "Deploying Elasticsearch...";
     - kubectl apply -f k8s/base/elasticsearch/deployment.yml
     - kubectl apply -f k8s/base/elasticsearch/service.yml
     - echo "${CI_COMMIT_REF_SLUG} overlay done."
+
   environment:
     name: $CI_COMMIT_REF_SLUG
   only:
