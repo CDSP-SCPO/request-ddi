@@ -27,18 +27,17 @@ build:
 deploy:
   image:
     name: bitnami/kubectl:1.24
-    entrypoint: [ "" ]
+    entrypoint: [""]
   stage: deploy
   dependencies:
     - build
   before_script:
     - export KUBECONFIG=$kubeconfig_file
-    - echo "kubectl_context: $kubectl_context"
-    - '[ -z "$kubectl_context" ] && echo "La variable kubectl_context est vide." && exit 1 || echo "Contexte Kubernetes valide."'
+    - if [ -z "$kubectl_context" ]; then echo "La variable kubectl_context est vide."; exit 1; fi
 
   script:
     # Utiliser le contexte Kubernetes approprié
-    - kubectl config use-context "$kubectl_context"
+    - kubectl config use-context $kubectl_context
 
     # Déployer le backend
     - echo "Deploying backend..."
@@ -50,10 +49,7 @@ deploy:
     - echo "Deploying Elasticsearch..."
     - kubectl apply -f k8s/base/elasticsearch/deployment.yml
     - kubectl apply -f k8s/base/elasticsearch/service.yml
-
-    # Fin du déploiement
     - echo "${CI_COMMIT_REF_SLUG} overlay done."
-
   environment:
     name: $CI_COMMIT_REF_SLUG
   only:
