@@ -1,10 +1,8 @@
 namespace: pprd  # Change en fonction de ton besoin, si c'est basé sur "basedequestions"
 
 resources:
-  - ../../base/basedequestions/deployment.yml  # Ajoute le chemin vers le fichier de déploiement de basedequestions
-  - ../../base/basedequestions/service.yml  # Service pour basedequestions
-  - ../../base/elasticsearch/deployment.yml  # Ajoute le déploiement pour Elasticsearch
-  - ../../base/elasticsearch/service.yml  # Service pour Elasticsearch
+  - ../../base/basedequestions  # Référence le dossier complet pour basedequestions
+  - ../../base/elasticsearch  # Référence le dossier complet pour elasticsearch
   - ingress.yml  # Ingress pour redirection du trafic
 
 commonLabels:
