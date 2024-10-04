@@ -1,14 +1,15 @@
-namespace: pprd  # Assurez-vous que le namespace est défini ici
+namespace: pprd  # Change en fonction de ton besoin, si c'est basé sur "basedequestions"
 
 resources:
-  - ../../base  # Répertoire de base avec des configurations partagées, si nécessaire
-  - deployment.yaml  # Fichier pour le déploiement de l'application
-  - service.yaml  # Fichier pour le service
-  - ingress.yml  # Fichier pour l'ingress
+  - ../../base/basedequestions/deployment.yml  # Ajoute le chemin vers le fichier de déploiement de basedequestions
+  - ../../base/basedequestions/service.yml  # Service pour basedequestions
+  - ../../base/elasticsearch/deployment.yml  # Ajoute le déploiement pour Elasticsearch
+  - ../../base/elasticsearch/service.yml  # Service pour Elasticsearch
+  - ingress.yml  # Ingress pour redirection du trafic
 
 commonLabels:
   stage: pprd  # Étiquette commune pour le déploiement
 
 images:
-  - name: gitlab.sciences-po.fr:4567/cdspit/base-de-questions
+  - name: gitlab.sciences-po.fr:4567/cdspit/base-de-questions  # Lien vers l'image de ton application
     newTag: 'pprd'  # Tag d'image à utiliser
