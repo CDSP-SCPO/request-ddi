@@ -5,7 +5,7 @@ stages:
   - deploy
 
 variables:
-  IMAGE_NAME_TAG_BACK: $CI_REGISTRY_IMAGE/basedequestions-backend:$CI_COMMIT_REF_SLUG
+  IMAGE_NAME_TAG_BACK: $CI_REGISTRY_IMAGE/basedequestions-basedequestions:$CI_COMMIT_REF_SLUG
 
 build:
   stage: build
@@ -34,7 +34,7 @@ deploy:
   script:
     - kubectl config use-context $kubectl_context
 
-    - echo "Deploying backend...";
+    - echo "Deploying basedequestions...";
     - kubectl apply -f k8s/overlays/$CI_COMMIT_REF_SLUG/namespace.yml
     - kubectl apply -k k8s/overlays/$CI_COMMIT_REF_SLUG
 

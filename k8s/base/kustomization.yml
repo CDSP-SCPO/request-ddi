@@ -1,5 +1,5 @@
 resources:
-  - backend/deployment.yml
-  - backend/service.yml
+  - basedequestions/deployment.yml
+  - basedequestions/service.yml
   - elasticsearch/deployment.yml
   - elasticsearch/service.yml

@@ -1,5 +1,14 @@
-bases:
-  - ../../base
+namespace: pprd  # Assurez-vous que le namespace est défini ici
+
 resources:
-  - ingress.yml
-  - namespace.yml
+  - ../../base  # Répertoire de base avec des configurations partagées, si nécessaire
+  - deployment.yaml  # Fichier pour le déploiement de l'application
+  - service.yaml  # Fichier pour le service
+  - ingress.yml  # Fichier pour l'ingress
+
+commonLabels:
+  stage: pprd  # Étiquette commune pour le déploiement
+
+images:
+  - name: gitlab.sciences-po.fr:4567/cdspit/base-de-questions
+    newTag: 'pprd'  # Tag d'image à utiliser

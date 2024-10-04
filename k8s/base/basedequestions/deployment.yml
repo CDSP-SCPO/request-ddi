@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: basedequestions
-          image: $CI_REGISTRY_IMAGE/basedequestions-backend:$CI_COMMIT_REF_SLUG  # Image Docker à utiliser
+          image: $CI_REGISTRY_IMAGE/basedequestions-basedequestions:$CI_COMMIT_REF_SLUG  # Image Docker à utiliser
           ports:
             - containerPort: 8000
           env:
