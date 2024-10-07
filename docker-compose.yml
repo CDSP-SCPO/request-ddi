@@ -6,8 +6,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-#    env_file:
-#      - ./basedequestions/configmap.env
     ports:
       - "8000:8000"
     user: "1000:1000"
@@ -18,6 +16,11 @@ services:
       - elasticsearch
     networks:
       - default
+    environment:
+      - SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DEBUG=${DJANGO_DEBUG}
+      - ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0

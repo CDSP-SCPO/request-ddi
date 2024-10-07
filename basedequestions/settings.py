@@ -11,7 +11,12 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from get_docker_secret import get_docker_secret
+import os
+from dotenv import load_dotenv
 
+# Charger les variables d'environnement depuis le fichier .env
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,12 +25,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-j%xx90rg^4z#*$55u(gsnaxn8cbss@81j%r(tb0-hoh!as_e*b'
+SECRET_KEY = get_docker_secret('DJANGO_SECRET_KEY', autocast_name=False)
+ELASTICSEARCH_HOST = get_docker_secret('ELASTICSEARCH_HOST', autocast_name=False)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '0.0.0.0,localhost,127.0.0.1').split(',')
 
-ALLOWED_HOSTS = ["0.0.0.0", "localhost", "127.0.0.1"]
 
 # Application definition
 
@@ -75,10 +81,11 @@ WSGI_APPLICATION = 'basedequestions.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.sqlite3',  # Utilisation de SQLite par défaut
+        'NAME': BASE_DIR / 'db.sqlite3',         # Chemin vers la base de données
     }
 }
 
@@ -126,9 +133,8 @@ STATIC_ROOT = BASE_DIR / 'static'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': ['http://elasticsearch:9200'],
+        'hosts': ELASTICSEARCH_HOST,
     },
 }

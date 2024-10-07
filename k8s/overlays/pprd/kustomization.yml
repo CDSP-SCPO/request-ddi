@@ -1,13 +1,40 @@
-namespace: pprd
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: basedequestions-pprd  # Namespace spécifique à la préproduction
+
+bases:
+  - ../../../base/
 
 resources:
-  - ../../base/basedequestions  # Ce répertoire doit contenir un fichier kustomization.yaml
-  - ../../base/elasticsearch  # Ce répertoire doit également contenir un fichier kustomization.yaml
-  - ingress.yml  # Assurez-vous que ce fichier existe également
+  - pvc.yml     # Persistent Volume Claim, si nécessaire
+  - ingress.yml # Ingress pour l'accès externe
 
+# Patches pour l'environnement pprd, par exemple pour ajouter des variables spécifiques
+patchesStrategicMerge:
+  - env.yml
+
+# Labels communs à toutes les ressources dans cet overlay
 commonLabels:
-  stage: pprd
+  environment: pprd  # On identifie cet environnement comme étant "préproduction"
 
+# Configuration des secrets si nécessaire
+secretGenerator:
+  - name: basedequestions
+    envs:
+      - basedequestions.env
+
+# Images à utiliser pour cet environnement (staging)
 images:
   - name: gitlab.sciences-po.fr:4567/cdspit/base-de-questions
-    newTag: 'pprd'
+    newTag: 'staging'
+
+# Autres patches si nécessaire (ex: CronJob)
+patches:
+  - target:
+      kind: Deployment
+      name: basedequestions
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1  # Réduire les réplicas pour la préprod si besoin

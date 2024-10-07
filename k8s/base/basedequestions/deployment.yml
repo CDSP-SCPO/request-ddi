@@ -2,8 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: basedequestions
+  labels:
+    app: basedequestions
 spec:
-  replicas: 2  # Vous pouvez ajuster le nombre de réplicas selon vos besoins
+  replicas: 2
   selector:
     matchLabels:
       app: basedequestions
@@ -13,17 +15,23 @@ spec:
         app: basedequestions
     spec:
       containers:
-        - name: basedequestions
-          image: $CI_REGISTRY_IMAGE/basedequestions-basedequestions:$CI_COMMIT_REF_SLUG  # Image Docker à utiliser
-          ports:
-            - containerPort: 8000
-          env:
-            - name: ELASTICSEARCH_HOST
-              value: "http://elasticsearch:9200"  # Nom du service Elasticsearch
-          volumeMounts:
-            - name: config-volume
-              mountPath: /app/config  # Chemin où le ConfigMap sera monté
+      - name: basedequestions
+        image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DJANGO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: basedequestions-secret
+              key: DJANGO_SECRET_KEY
+        - name: DJANGO_DEBUG
+          value: "False"  # A changer selon l'environnement
+        - name: DATABASE_URL
+          value: "sqlite:///app/db.sqlite3"  # Garde SQLite pour l'instant
+        volumeMounts:
+        - name: app-volume
+          mountPath: /app
       volumes:
-        - name: config-volume
-          configMap:
-            name: basedequestions-config  # Assurez-vous que ce ConfigMap existe
+      - name: app-volume
+        emptyDir: {}  # Volume temporaire pour le conteneur (remplacer par PVC si nécessaire)

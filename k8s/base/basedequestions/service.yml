@@ -3,9 +3,8 @@ kind: Service
 metadata:
   name: basedequestions
 spec:
-  type: ClusterIP
   ports:
     - port: 8000
-      targetPort: 8000
   selector:
-    app: basedequestions
+    component: basedequestions
+  clusterIP: None

@@ -7,4 +7,4 @@ spec:
     - port: 9200
   selector:
     component: elasticsearch
-  clusterIP: None  # Utilise un service headless
+  clusterIP: None
