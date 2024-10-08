@@ -20,12 +20,4 @@ images:
   - name: gitlab.sciences-po.fr:4567/cdspit/base-de-questions
     newTag: 'pprd'
 
-# Autres patches si nécessaire (ex: CronJob)
-patches:
-  - target:
-      kind: Deployment
-      name: basedequestions
-    patch: |-
-      - op: replace
-        path: /spec/replicas
-        value: 1  # Réduire les réplicas pour la préprod si besoin
+
