@@ -4,7 +4,7 @@ kind: Kustomization
 namespace: basedequestions-pprd  # Namespace spécifique à la préproduction
 
 bases:
-  - ../../../base/
+  - ../../base/
 
 resources:
   - ingress.yml # Ingress pour l'accès externe
