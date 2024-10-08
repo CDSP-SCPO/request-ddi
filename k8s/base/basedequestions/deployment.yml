@@ -18,7 +18,7 @@ spec:
         - name: gitlab-reg
       containers:
         - name: basedequestions
-          image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions:pprd  # Assurez-vous que l'image est correcte
+          image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:pprd
           env:
             - name: DATABASE_URL
               value: "sqlite:///app/db.sqlite3"
