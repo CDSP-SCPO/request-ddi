@@ -13,4 +13,5 @@ RUN python -m pip install --no-cache-dir --upgrade -r requirements.txt
 COPY --chown=appuser:appuser . .
 
 USER appuser
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
+
