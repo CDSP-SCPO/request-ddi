@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: basedequestions
-        image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions
+        image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions-basedequestions:pprd
         ports:
         - containerPort: 8000
         env:
