@@ -14,11 +14,6 @@ resources:
 commonLabels:
   environment: pprd  # On identifie cet environnement comme étant "préproduction"
 
-# Configuration des secrets si nécessaire
-secretGenerator:
-  - name: basedequestions
-    envs:
-      - basedequestions.env
 
 # Images à utiliser pour cet environnement (staging)
 images:
