@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 RUN adduser -u 5678 --disabled-password --gecos "" appuser
 
 # Installe netcat pour les vérifications de connexion
-RUN apt-get update && apt-get install -y netcat-openbsd
+RUN apt-get update && apt-get install -y netcat-openbsd && apt-get clean
 
 # Définit le répertoire de travail
 WORKDIR /app
