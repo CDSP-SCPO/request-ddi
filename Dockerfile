@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y netcat-openbsd && apt-get clean
 # Définit le répertoire de travail
 WORKDIR /app
 
+# Crée le répertoire pour les fichiers statiques et ajuste les permissions
+RUN mkdir -p /app/static && chown -R appuser:appuser /app/static
+
 # Copie le fichier requirements.txt et installe les dépendances
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir --upgrade -r requirements.txt
