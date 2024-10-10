@@ -10,6 +10,8 @@ resources:
   - basedequestions/service.yml
   - elasticsearch/deployment.yml
   - elasticsearch/service.yml
+  - db/deployment.yml
+  - db/service.yml
 
 # Gestion des secrets (ex : clé secrète de Django)
 secretGenerator:
@@ -21,5 +23,3 @@ secretGenerator:
 commonLabels:
   app: basedequestions
 
-# Ajouter des patches pour modifier ou ajuster certains objets si nécessaire
-patchesStrategicMerge: []
