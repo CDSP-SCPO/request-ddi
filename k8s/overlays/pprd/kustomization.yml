@@ -7,6 +7,7 @@ bases:
   - ../../base/
 
 resources:
+  - pvc.yml
   - ingress.yml # Ingress pour l'accès externe
 
 
