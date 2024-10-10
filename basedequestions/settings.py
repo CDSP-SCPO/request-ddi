@@ -12,11 +12,6 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # Définir l'environnement : développement ou production
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 
-# Charger le fichier .env spécifique à l'environnement (dev ou prod)
-if ENVIRONMENT == 'development':
-    load_dotenv(os.path.join(BASE_DIR, 'dev.env'))
-elif ENVIRONMENT == 'production':
-    load_dotenv(os.path.join(BASE_DIR, 'prod.env'))
 
 # Clé secrète Django (utiliser des secrets en prod)
 SECRET_KEY = get_docker_secret('DJANGO_SECRET_KEY', autocast_name=False)
