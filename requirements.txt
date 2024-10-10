@@ -8,3 +8,4 @@ django-import-export==4.1.1
 get-docker-secret==1.0.2
 python-dotenv
 psycopg2-binary
+gunicorn==20.1.0
