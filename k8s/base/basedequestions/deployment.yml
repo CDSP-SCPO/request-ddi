@@ -2,8 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: basedequestions
-  labels:
-    app: basedequestions
 spec:
   replicas: 1
   selector:
@@ -19,9 +17,10 @@ spec:
       containers:
         - name: basedequestions
           image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:pprd
+          command: ["./entrypoint.sh"]
           env:
             - name: DATABASE_URL
-              value: "sqlite:///app/db.sqlite3"
+              value: "postgres://$(POSTGRES_USER):$(QXSMS_POSTGRES_PASSWORD)@db:5432/$(POSTGRES_DB)"
             - name: DJANGO_DEBUG
               value: "False"
             - name: DJANGO_SECRET_KEY
@@ -29,6 +28,21 @@ spec:
                 secretKeyRef:
                   name: basedequestions-secret
                   key: DJANGO_SECRET_KEY
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: db_name
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: user_name
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: user_password
           ports:
             - containerPort: 8000
           imagePullPolicy: Always

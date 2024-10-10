@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: basedequestions
+  name: db
 spec:
   ports:
-    - port: 8000
+    - port: 5432
   selector:
-    app: basedequestions
+    component: db
   clusterIP: None

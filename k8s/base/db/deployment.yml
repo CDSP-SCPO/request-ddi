@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment  # Nom plus descriptif
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:13-alpine
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: db_name
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: user_name
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: user_password
+          ports:
+            - containerPort: 5432  # Expose le port de PostgreSQL
+          volumeMounts:
+            - name: db-vol
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: db-vol
+          persistentVolumeClaim:
+            claimName: db-pvc
