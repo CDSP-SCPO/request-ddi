@@ -20,7 +20,7 @@ spec:
           command: ["./entrypoint.sh"]
           env:
             - name: DATABASE_URL
-              value: "postgres://$(POSTGRES_USER):$(QXSMS_POSTGRES_PASSWORD)@db:5432/$(POSTGRES_DB)"
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@db:5432/$(POSTGRES_DB)"
             - name: DJANGO_DEBUG
               value: "False"
             - name: DJANGO_SECRET_KEY
@@ -32,17 +32,17 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: postgres
-                  key: db_name
+                  key: POSTGRES_DB
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: postgres
-                  key: user_name
+                  key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres
-                  key: user_password
+                  key: POSTGRES_PASSWORD
           ports:
             - containerPort: 8000
           imagePullPolicy: Always
