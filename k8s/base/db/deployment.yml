@@ -24,17 +24,17 @@ spec:
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: basedequestions-secret
+                  name: postgres
                   key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: basedequestions-secret
+                  name: postgres
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
-                  name: basedequestions-secret
+                  name: postgres
                   key: POSTGRES_DB
           ports:
             - containerPort: 5432     # Expose le port de PostgreSQL
