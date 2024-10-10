@@ -43,6 +43,11 @@ spec:
                 secretKeyRef:
                   name: postgres
                   key: POSTGRES_PASSWORD
+            - name: ELASTICSEARCH_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: ELASTICSEARCH_HOST
           ports:
             - containerPort: 8000
           imagePullPolicy: Always
