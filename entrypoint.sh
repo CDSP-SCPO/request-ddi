@@ -27,4 +27,4 @@ echo "after shell"
 python manage.py collectstatic --noinput
 
 # Démarrer le serveur Django
-gunicorn app.wsgi:application --bind 0.0.0.0:8000 --workers 3
+gunicorn basedequestions.wsgi:application --bind 0.0.0.0:8000
