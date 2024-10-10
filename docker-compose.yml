@@ -14,6 +14,7 @@ services:
     entrypoint: /app/entrypoint.sh
     depends_on:
       - elasticsearch
+      - db
     networks:
       - default
     environment:
@@ -21,6 +22,21 @@ services:
       - DEBUG=${DJANGO_DEBUG}
       - ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
       - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
@@ -37,6 +53,7 @@ services:
       - default
 
 volumes:
+  postgres_data:
   elasticsearch_data:
 
 networks:

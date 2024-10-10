@@ -2,6 +2,8 @@ version: '3.11'
 
 services:
   basedequestions:
+    env_file:
+      - add env .env
     image: question_base-backend:local
     build:
       context: .
@@ -14,13 +16,24 @@ services:
     entrypoint: /app/entrypoint.dev.sh
     depends_on:
       - elasticsearch
+      - db_dev
     networks:
       - default
+
+
+
+  db_dev:
+    image: postgres:13
+    env_file:
+      - .env
     environment:
-      - SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DEBUG=${DJANGO_DEBUG}
-      - ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
-      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - default
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
@@ -37,6 +50,7 @@ services:
       - default
 
 volumes:
+  postgres_data_dev:
   elasticsearch_data_dev:
 
 networks:
