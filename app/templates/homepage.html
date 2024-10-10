@@ -6,7 +6,9 @@
     <div style="display:flex; justify-content: space-between;">
         <h1>Base de Questions CDSP</h1>
         <div class="csv-buttons">
-            <a href="{% url 'app:combined_upload' %}" class="btn btn-primary">Importer CSV</a>
+            {% if user.is_authenticated and user.is_staff %}
+                <a href="{% url 'app:upload_files' %}" class="btn btn-primary">Importer CSV</a>
+            {% endif %}
             <a href="{% url 'app:export_page' %}" class="btn btn-secondary">Exporter CSV</a>
         </div>
     </div>
@@ -30,6 +32,7 @@
             <select name="search_location" id="search-location" class="selectpicker">
                 <option value="questions" {% if request.GET.search_location == 'questions' %}selected{% endif %}>Questions</option>
                 <option value="categories" {% if request.GET.search_location == 'categories' %}selected{% endif %}>Catégories</option>
+                <option value="variable_name" {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la variable</option>
             </select>
             <button type="submit">Rechercher</button>
         </form>
@@ -39,11 +42,13 @@
         <h2>Études Disponibles</h2>
         <div class="study-cards">
             {% for survey in surveys %}
-            <div class="study-card">
-                <img src="{{ survey.image_url }}" alt="{{ survey.title }}">
-                <h3>{{ survey.name }}</h3>
-                <p>{{ survey.external_ref }}</p>
-            </div>
+            <a href="https://data.sciencespo.fr/dataset.xhtml?persistentId={{ survey.external_ref }}" target="_blank" class="study-card-link">
+                <div class="study-card">
+                    <img src="{{ survey.image_url }}" alt="{{ survey.title }}">
+                    <h3>{{ survey.name }}</h3>
+                    <!-- <p>{{ survey.external_ref }}</p> -->
+                </div>
+            </a>
             {% endfor %}
         </div>
     </section>

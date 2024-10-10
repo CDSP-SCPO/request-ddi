@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from app.models import BindingConcept, BindingSurveyRepresentedVariable, Category, Concept, RepresentedVariable, ConceptualVariable, Survey
+from app.models import BindingConcept, BindingSurveyRepresentedVariable, Category, Concept, RepresentedVariable, ConceptualVariable, Survey, Serie
 
 class Command(BaseCommand):
     help = 'Supprime toutes les données de la base de données dans un ordre spécifique'
@@ -26,5 +26,8 @@ class Command(BaseCommand):
 
         Survey.objects.all().delete()
         self.stdout.write(self.style.SUCCESS('Deleted Survey'))
+
+        Serie.objects.all().delete()
+        self.stdout.write(self.style.SUCCESS('Deleted Serie'))
 
         self.stdout.write(self.style.SUCCESS('All data cleared successfully!'))
