@@ -1,42 +1,47 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres-deployment  # Nom plus descriptif
+  name: postgres-deployment
+  namespace: basedequestions-pprd  # Assurez-vous d'inclure le namespace
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres
+      app: basedequestions        # Correspond au label du service
+      component: db               # Label pour le composant de base de données
+      environment: pprd           # Correspond à l'environnement
   template:
     metadata:
       labels:
-        app: postgres
+        app: basedequestions      # Labels pour le pod
+        component: db             # Label pour le composant de base de données
+        environment: pprd         # Correspond à l'environnement
     spec:
       containers:
         - name: postgres
-          image: postgres:13-alpine
+          image: postgres:13-alpine  # Version de PostgreSQL
           env:
-            - name: POSTGRES_DB
-              valueFrom:
-                secretKeyRef:
-                  name: postgres
-                  key: POSTGRES_DB
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: postgres
+                  name: postgres       # Assurez-vous que le secret existe
                   key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres
+                  name: postgres       # Assurez-vous que le secret existe
                   key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres       # Assurez-vous que le secret existe
+                  key: POSTGRES_DB
           ports:
-            - containerPort: 5432  # Expose le port de PostgreSQL
+            - containerPort: 5432     # Expose le port de PostgreSQL
           volumeMounts:
             - name: db-vol
-              mountPath: /var/lib/postgresql/data
+              mountPath: /var/lib/postgresql/data  # Répertoire pour les données
       volumes:
         - name: db-vol
           persistentVolumeClaim:
-            claimName: db-pvc
+            claimName: db-pvc            # Assurez-vous que ce PVC existe

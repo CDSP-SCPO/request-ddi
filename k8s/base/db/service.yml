@@ -2,9 +2,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: db
+  namespace: basedequestions-pprd  # Assurez-vous d'inclure le namespace
 spec:
-  ports:
-    - port: 5432
   selector:
-    component: db
-  clusterIP: None
+    app: basedequestions      # Cela doit correspondre aux labels du pod PostgreSQL
+    component: db             # Label pour le composant de base de données
+    environment: pprd         # Correspondre à l'environnement
+  ports:
+    - protocol: TCP
+      port: 5432               # Port exposé par le service
+      targetPort: 5432         # Port du conteneur PostgreSQL
+  clusterIP: None              # Permet la découverte de service via le DNS
