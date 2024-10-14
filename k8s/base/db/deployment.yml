@@ -2,20 +2,20 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres-deployment
-  namespace: basedequestions-pprd  # Assurez-vous d'inclure le namespace
+  namespace: basedequestions
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: basedequestions        # Correspond au label du service
-      component: db               # Label pour le composant de base de données
-      environment: pprd           # Correspond à l'environnement
+      app: basedequestions
+      component: db
+      environment: pprd
   template:
     metadata:
       labels:
-        app: basedequestions      # Labels pour le pod
-        component: db             # Label pour le composant de base de données
-        environment: pprd         # Correspond à l'environnement
+        app: basedequestions
+        component: db
+        environment: pprd
     spec:
       containers:
         - name: postgres
