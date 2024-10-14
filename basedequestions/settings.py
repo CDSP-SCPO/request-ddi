@@ -20,7 +20,7 @@ SECRET_KEY = get_docker_secret('DJANGO_SECRET_KEY', autocast_name=False)
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
 # Hôtes autorisés (en production, utiliser des domaines spécifiques)
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '0.0.0.0,localhost,127.0.0.1,base-de-questions-pprd.cdsp.sciences-po.fr,basedequestions').split(',')
+ALLOWED_HOSTS = ['*']
 
 # Elasticsearch host
 ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
@@ -126,19 +126,3 @@ ELASTICSEARCH_DSL = {
         'hosts': ELASTICSEARCH_HOST,
     },
 }
-
-
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '0.0.0.0,localhost,127.0.0.1,base-de-questions-pprd.cdsp.sciences-po.fr,basedequestions').split(',')
-
-# Environnement de production : paramètres de sécurité
-if ENVIRONMENT == 'production':
-    DEBUG = False
-    SECURE_SSL_REDIRECT = True
-    CSRF_COOKIE_SECURE = True
-    SESSION_COOKIE_SECURE = True
-    ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'base-de-questions-pprd.cdsp.sciences-po.fr,basedequestions').split(',')
-
-# Environnement de développement : configuration spécifique
-elif ENVIRONMENT == 'development':
-    DEBUG = True
-    ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
