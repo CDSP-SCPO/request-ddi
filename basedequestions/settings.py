@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Définir l'environnement : développement ou production
-ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
+ENVIRONMENT = os.getenv('DJANGO_ENV', 'production')
 
 
 # Clé secrète Django (utiliser des secrets en prod)
@@ -127,13 +127,16 @@ ELASTICSEARCH_DSL = {
     },
 }
 
+
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '0.0.0.0,localhost,127.0.0.1,base-de-questions-pprd.cdsp.sciences-po.fr,basedequestions').split(',')
+
 # Environnement de production : paramètres de sécurité
 if ENVIRONMENT == 'production':
     DEBUG = False
     SECURE_SSL_REDIRECT = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
-    ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'your-production-domain.com').split(',')
+    ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'base-de-questions-pprd.cdsp.sciences-po.fr,basedequestions').split(',')
 
 # Environnement de développement : configuration spécifique
 elif ENVIRONMENT == 'development':
