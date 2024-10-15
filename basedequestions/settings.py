@@ -129,6 +129,5 @@ ELASTICSEARCH_DSL = {
 }
 
 
-CSRF_TRUSTED_ORIGINS = ['https://base-de-questions-pprd.cdsp.sciences-po.fr/']  # Remplace par ton domaine
+CSRF_TRUSTED_ORIGINS = ['https://base-de-questions-pprd.cdsp.sciences-po.fr']
 CSRF_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'None'
