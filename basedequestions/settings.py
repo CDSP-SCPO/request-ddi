@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware'
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -107,14 +108,13 @@ USE_I18N = True
 
 USE_TZ = True
 
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # Ajout pour Whitenoise
+
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'staticfiles/'
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
+STATIC_URL = '/static/'  # Vérifie qu'il a une barre oblique à la fin
+STATIC_ROOT = os.path.join(BASE_DIR, 'collected_static')  # Dossier pour les fichiers collectés
 STATICFILES_DIRS = [
-    BASE_DIR / 'app/static',
-    BASE_DIR / 'static',
+    os.path.join(BASE_DIR, 'static'),  # Dossier pour les fichiers statiques de l'application
 ]
 
 

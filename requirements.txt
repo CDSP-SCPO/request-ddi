@@ -9,3 +9,4 @@ get-docker-secret==1.0.2
 python-dotenv
 psycopg2-binary
 gunicorn==20.1.0
+whitenoise==6.4.0
