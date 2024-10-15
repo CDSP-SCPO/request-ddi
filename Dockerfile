@@ -14,7 +14,8 @@ WORKDIR /app
 
 # Crée les répertoires pour les fichiers statiques et ajuste les permissions
 RUN mkdir -p /app/static && chown -R appuser:appuser /app/static
-RUN mkdir -p /app/staticfiles && chown -R appuser:appuser /app/staticfiles
+RUN mkdir -p /app/collected_static && chown -R appuser:appuser /app/collected_static
+
 
 # Copie le fichier requirements.txt et installe les dépendances
 COPY requirements.txt .
