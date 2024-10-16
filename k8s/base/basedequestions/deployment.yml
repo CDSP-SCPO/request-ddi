@@ -33,6 +33,11 @@ spec:
                 secretKeyRef:
                   name: basedequestions-secret
                   key: DJANGO_ALLOWED_HOSTS
+            - name: CSRF_TRUSTED_ORIGINS
+              valueFrom:
+                secretKeyRef:
+                  name: basedequestions-secret
+                  key: CSRF_TRUSTED_ORIGINS
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
