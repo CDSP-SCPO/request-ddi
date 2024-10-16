@@ -142,3 +142,4 @@ if ENVIRONMENT == 'production':
     CSRF_COOKIE_SECURE = True
 else:
     CSRF_COOKIE_SECURE = False
+    CSRF_TRUSTED_ORIGINS = ["http://localhost:8000"]
