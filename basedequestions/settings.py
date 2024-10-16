@@ -6,24 +6,29 @@ from dotenv import load_dotenv
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Charger le fichier .env commun par défaut
+# Charger le fichier .env
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-# Définir l'environnement : développement ou production
+# Définir l'environnement : développement ou production (par défaut : production)
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'production')
 
-
-# Clé secrète Django (utiliser des secrets en prod)
-SECRET_KEY = get_docker_secret('DJANGO_SECRET_KEY', autocast_name=False)
+# Clé secrète Django (utiliser des secrets pour la production)
+if ENVIRONMENT == 'production':
+    SECRET_KEY = get_docker_secret('DJANGO_SECRET_KEY', autocast_name=False)
+else:
+    SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'changeme-in-dev')
 
 # Debug mode : activé uniquement en dev
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
 # Hôtes autorisés (en production, utiliser des domaines spécifiques)
-ALLOWED_HOSTS = ['*']
+if ENVIRONMENT == 'production':
+    ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
 # Elasticsearch host
-ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
+ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST', 'localhost:9200')
 
 # Application definition
 INSTALLED_APPS = [
@@ -108,15 +113,18 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # Ajout pour Whitenoise
-
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'  # Vérifie qu'il a une barre oblique à la fin
 STATIC_ROOT = os.path.join(BASE_DIR, 'collected_static')  # Dossier pour les fichiers collectés
+
+if ENVIRONMENT == 'production':
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # Utilisé en production
+else:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'  # Utilisé en dev
+
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),  # Dossier pour les fichiers statiques de l'application
 ]
-
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -128,6 +136,9 @@ ELASTICSEARCH_DSL = {
     },
 }
 
-
-CSRF_TRUSTED_ORIGINS = ['https://base-de-questions-pprd.cdsp.sciences-po.fr']
-CSRF_COOKIE_SECURE = True
+# Sécurités en production
+if ENVIRONMENT == 'production':
+    CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+    CSRF_COOKIE_SECURE = True
+else:
+    CSRF_COOKIE_SECURE = False

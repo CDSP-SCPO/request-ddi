@@ -28,6 +28,11 @@ spec:
                 secretKeyRef:
                   name: basedequestions-secret
                   key: DJANGO_SECRET_KEY
+            - name: DJANGO_ALLOWED_HOSTS
+              valueFrom:
+                secretKeyRef:
+                  name: basedequestions-secret
+                  key: DJANGO_ALLOWED_HOSTS
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
@@ -46,7 +51,7 @@ spec:
             - name: ELASTICSEARCH_HOST
               valueFrom:
                 secretKeyRef:
-                  name: postgres
+                  name: elasticsearch-secret
                   key: ELASTICSEARCH_HOST
           ports:
             - containerPort: 8000
