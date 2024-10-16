@@ -1,0 +1,47 @@
+image: docker:stable
+
+stages:
+  - build
+  - deploy
+
+variables:
+  IMAGE_NAME_TAG_BACK: $CI_REGISTRY_IMAGE/basedequestions:$CI_COMMIT_REF_SLUG
+
+build:
+  stage: build
+  script:
+    - docker build -t $IMAGE_NAME_TAG_BACK -f Dockerfile .
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - docker push $IMAGE_NAME_TAG_BACK
+  only:
+    - tags
+    - pprd
+    - prod
+  environment:
+    name: $CI_COMMIT_REF_SLUG
+
+deploy:
+  image:
+    name: bitnami/kubectl:1.24
+    entrypoint: [ "" ]
+  stage: deploy
+  dependencies:
+    - build
+  before_script:
+    - export KUBECONFIG=$kubeconfig_file
+    - if [ -z "$kubectl_context" ]; then echo "La variable kubectl_context est vide."; exit 1; fi
+
+  script:
+    - kubectl config use-context $kubectl_context
+
+    - echo "Deploying basedequestions...";
+    - kubectl apply -f k8s/overlays/$CI_COMMIT_REF_SLUG/namespace.yml
+    - kubectl apply -k k8s/overlays/$CI_COMMIT_REF_SLUG
+
+    - echo "${CI_COMMIT_REF_SLUG} overlay done."
+
+  environment:
+    name: $CI_COMMIT_REF_SLUG
+  only:
+    - pprd
+    - prod

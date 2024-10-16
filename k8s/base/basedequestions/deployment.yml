@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: basedequestions
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: basedequestions
+  template:
+    metadata:
+      labels:
+        app: basedequestions
+    spec:
+      imagePullSecrets:
+        - name: gitlab-reg
+      containers:
+        - name: basedequestions
+          image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:pprd
+          command: ["./entrypoint.sh"]
+          env:
+            - name: DATABASE_URL
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@db:5432/$(POSTGRES_DB)"
+            - name: DJANGO_DEBUG
+              value: "False"
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: basedequestions-secret
+                  key: DJANGO_SECRET_KEY
+            - name: DJANGO_ALLOWED_HOSTS
+              valueFrom:
+                secretKeyRef:
+                  name: basedequestions-secret
+                  key: DJANGO_ALLOWED_HOSTS
+            - name: CSRF_TRUSTED_ORIGINS
+              valueFrom:
+                secretKeyRef:
+                  name: basedequestions-secret
+                  key: CSRF_TRUSTED_ORIGINS
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: POSTGRES_PASSWORD
+            - name: ELASTICSEARCH_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-secret
+                  key: ELASTICSEARCH_HOST
+          ports:
+            - containerPort: 8000
+          imagePullPolicy: Always
