@@ -143,3 +143,7 @@ if ENVIRONMENT == 'production':
 else:
     CSRF_COOKIE_SECURE = False
     CSRF_TRUSTED_ORIGINS = ["http://localhost:8000"]
+
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'

@@ -18,15 +18,22 @@ from elasticsearch_dsl import Search, A
 from django.views import View
 from import_export import resources
 from .utils.csvimportexport import BindingSurveyResource
+from django.shortcuts import redirect
+from django.urls import reverse
 
+def admin_required(user):
+    return user.is_authenticated and user.is_staff
 
+def normalize_string(value):
+    if isinstance(value, str):
+        return " ".join(value.split()).strip().lower()
+    return value
 
 class BaseUploadView(FormView):
     success_url = reverse_lazy('app:representedvariable_search')
 
     @transaction.atomic
     def form_valid(self, form):
-        print("Formulaire valide, début du traitement")
         data = self.get_data(form)
         question_datas = list(self.convert_data(data))
 
@@ -42,9 +49,23 @@ class BaseUploadView(FormView):
                              extra_tags='safe')  # Assurez-vous que le HTML est interprété
             return super().form_valid(form)
 
+
+        except ValueError as ve:
+            print("test value error")
+            # Gérer l'erreur spécifique et rediriger
+            messages.error(self.request, str(ve))
+            return self.form_invalid(form)
+
         except Exception as e:
+            print("test exception", e)
             messages.error(self.request, f"Erreur lors du traitement des données : {str(e)}")
             return self.form_invalid(form)
+            
+    def form_invalid(self, form):
+        # Ajout d'un message d'erreur générique si le formulaire n'est pas valide
+        
+        return redirect(reverse('app:upload_files'))
+        # return super().form_invalid(form)
 
     def get_data(self, form):
         """Méthode pour obtenir les données du formulaire."""
@@ -62,14 +83,27 @@ class BaseUploadView(FormView):
         survey, _ = Survey.objects.get_or_create(external_ref=doi, name=title)
         return survey
 
-    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
-        BindingSurveyRepresentedVariable.objects.get_or_create(
-            survey=survey,
-            variable=represented_variable,
+    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes, serie):
+        binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
             variable_name=variable_name,
-            notes=notes,
-            universe=universe
+            defaults={
+                'survey': survey,
+                'variable': represented_variable,
+                'universe': universe,
+                'notes': notes,
+                'serie': serie,
+            }
         )
+        if not created:
+            # Mise à jour des champs de la liaison si elle existe déjà
+            binding.survey = survey
+            binding.variable = represented_variable
+            binding.universe = universe
+            binding.notes = notes
+            binding.serie = serie
+            binding.save()
+
+        return binding, created
 
     def check_category(self, category_string, existing_categories):
         csv_categories = self.parse_categories(category_string) if category_string else []
@@ -89,8 +123,9 @@ class CSVUploadView(BaseUploadView):
     template_name = 'upload_csv.html'
     form_class = CSVUploadForm
     required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
-
+    
     def get_data(self, form):
+        self.selected_series = form.cleaned_data['series']
         return form.cleaned_data['csv_file']
 
     def convert_data(self, content):
@@ -105,39 +140,99 @@ class CSVUploadView(BaseUploadView):
         for line_number, row in enumerate(question_datas, start=1):
             try:
                 # Création ou récupération d'une enquête (Survey)
-                survey, created_survey = self.get_or_create_survey(row['ddi'], row['title'])
+                ddi = row['ddi'].strip()
+                if ddi and not ddi.startswith('doi:'):
+                    raise ValueError(f"Le DDI '{ddi}' à la ligne {line_number} n'est pas au bon format. Il doit commencer par 'doi:'.")
+                survey, created_survey = self.get_or_create_survey(ddi, row['title'])
                 if created_survey:
                     num_new_surveys += 1
 
-                # Création ou récupération d'une variable représentée (RepresentedVariable)
-                represented_variable, created_variable = self.get_or_create_represented_variable(row)
-                if created_variable:
-                    num_new_variables += 1
+                # Vérifier si la variable existe déjà
+                existing_variable = BindingSurveyRepresentedVariable.objects.filter(variable_name=row['variable_name']).first()
+                if existing_variable:
+                    # Mettre à jour la variable existante
+                    existing_variable.universe = row['univers']
+                    existing_variable.notes = row['notes']
+                    represented_variable = existing_variable.variable
+                    if self.should_update_represented_variable(represented_variable, row):
+                        associated_variables_count = BindingSurveyRepresentedVariable.objects.filter(variable=represented_variable).count()
+                        if associated_variables_count > 1:
+                            # Création d'une nouvelle RepresentedVariable car il y a plusieurs associations
+                            new_represented_variable = self.create_new_represented_variable(row, represented_variable.conceptual_var, row['question_text'], row['variable_label'])
+                            existing_variable.variable = new_represented_variable
+                        else:
+                            # Mettre à jour directement la RepresentedVariable
+                            represented_variable.question_text = row['question_text']
+                            represented_variable.internal_label = row['variable_label']
+                            if row['category_label']:
+                                self.update_categories(represented_variable, row['category_label'])
+                            represented_variable.save()
+                    existing_variable.save()
+                else:
+                    # Créer une nouvelle variable
+                    represented_variable, created_variable = self.get_or_create_represented_variable(row)
+                    if created_variable:
+                        num_new_variables += 1
 
-                # Création ou récupération d'une liaison (BindingSurveyRepresentedVariable)
-                _, created_binding = self.get_or_create_binding(survey, represented_variable, row['variable_name'], row['univers'], row['notes'])
-                if created_binding:
-                    num_new_bindings += 1
+                    # Créer une nouvelle liaison
+                    _, created_binding = self.get_or_create_binding(survey, represented_variable, row['variable_name'], row['univers'], row['notes'], self.selected_series)
+                    if created_binding:
+                        num_new_bindings += 1
 
                 num_records += 1
+            except ValueError as e:
+                raise e
             except Exception as e:
-                error_message = f"Erreur à la ligne {line_number}: {row}. Détail de l'erreur: {str(e)}"
+                error_message = f"Erreur à la ligne {line_number} : {str(e)}"
                 print(error_message)
                 raise Exception(error_message)
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
+    def should_update_represented_variable(self, represented_variable, row):
+        # Comparer les champs de la RepresentedVariable avec les nouvelles données
+        normalized_question_text = normalize_string(row['question_text'])
+        normalized_internal_label = normalize_string(row['variable_label'])
+        if normalize_string(represented_variable.question_text) != normalized_question_text or  normalize_string(represented_variable.internal_label) != normalized_internal_label:
+            return True
+        # FAIRE LE NORMALIZE STRING SUR LA SUITE
+        row_categories =row['category_label']
+
+        if row_categories != "":
+            current_categories = represented_variable.categories.all()
+
+            new_categories = self.parse_categories(row['category_label'])
+            current_category_set = set((cat.code, cat.category_label) for cat in current_categories)
+            new_category_set = set(new_categories)
+
+            if current_category_set != new_category_set:
+                return True
+        return False
+
+    def update_categories(self, represented_variable, new_category_string):
+        current_categories = represented_variable.categories.all()
+        new_categories = self.parse_categories(new_category_string)
+        current_category_set = set((cat.code, cat.category_label) for cat in current_categories)
+        new_category_set = set(new_categories)
+        if current_category_set != new_category_set:
+            represented_variable.categories.clear()
+        for code, label in new_categories:
+            category, _ = Category.objects.get_or_create(code=code, category_label=label)
+            represented_variable.categories.add(category)
+
     def get_or_create_represented_variable(self, row):
         name_question = row['question_text']
+        variable_label = row['variable_label']
+        category_label = row['category_label']
         var_represented = RepresentedVariable.objects.filter(question_text=name_question)
 
         if var_represented.exists():
             for var in var_represented:
-                if self.check_category(row['category_label'], var.categories):
+                if self.check_category(category_label, var.categories):
                     return var, False  # False = pas de nouvelle variable créée
-            return self.create_new_represented_variable(row, var_represented[0].conceptual_var, name_question, row['variable_label']), True
+            return self.create_new_represented_variable(row, var_represented[0].conceptual_var, name_question, variable_label), True
         else:
-            return self.create_new_represented_variable(row, ConceptualVariable.objects.create(), name_question, row['variable_label']), True
+            return self.create_new_represented_variable(row, ConceptualVariable.objects.create(), name_question, variable_label), True
 
     def create_new_represented_variable(self, row, conceptual_var, name_question, variable_label):
         new_represented_var = RepresentedVariable.objects.create(
@@ -162,15 +257,15 @@ class CSVUploadView(BaseUploadView):
         survey, created = Survey.objects.get_or_create(external_ref=doi, name=title)
         return survey, created  # Retourne l'indicateur de création
 
-    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
-        binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
-            survey=survey,
-            variable=represented_variable,
-            variable_name=variable_name,
-            notes=notes,
-            universe=universe
-        )
-        return binding, created
+    # def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
+    #     binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
+    #         survey=survey,
+    #         variable=represented_variable,
+    #         variable_name=variable_name,
+    #         notes=notes,
+    #         universe=universe
+    #     )
+    #     return binding, created
 
 
 
@@ -190,6 +285,7 @@ class XMLUploadView(BaseUploadView):
     form_class = XMLUploadForm
 
     def get_data(self, form):
+        self.selected_series = form.cleaned_data['series']
         return form.cleaned_data['xml_file']
 
     def convert_data(self, content):
@@ -223,7 +319,8 @@ class XMLUploadView(BaseUploadView):
 
         for question_data in question_datas:
             doi, title, variable_name, variable_label, question_text, category_label, universe, notes = question_data
-
+            if not doi.startswith('doi:'):
+                raise ValueError(f"Le DDI '{doi}' n'est pas au bon format. Il doit commencer par 'doi:'.")
             # Création ou récupération d'une enquête (Survey)
             survey, created_survey = self.get_or_create_survey(doi, title)
             if created_survey:
@@ -235,7 +332,7 @@ class XMLUploadView(BaseUploadView):
                 num_new_variables += 1
 
             # Création ou récupération d'une liaison (BindingSurveyRepresentedVariable)
-            _, created_binding = self.get_or_create_binding(survey, represented_variable, variable_name, universe, notes)
+            _, created_binding = self.get_or_create_binding(survey, represented_variable, variable_name, universe, notes, self.selected_series)
             if created_binding:
                 num_new_bindings += 1
 
@@ -276,15 +373,15 @@ class XMLUploadView(BaseUploadView):
         survey, created = Survey.objects.get_or_create(external_ref=doi, name=title)
         return survey, created
 
-    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
-        binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
-            survey=survey,
-            variable=represented_variable,
-            variable_name=variable_name,
-            notes=notes,
-            universe=universe
-        )
-        return binding, created
+    # def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes, serie):
+    #     binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
+    #         survey=survey,
+    #         variable=represented_variable,
+    #         variable_name=variable_name,
+    #         notes=notes,
+    #         universe=universe
+    #     )
+    #     return binding, created
 
 
 
@@ -319,6 +416,11 @@ def search_results(request):
     context = locals()
     return render(request, 'search_results.html', context)
 
+def apply_highlight(full_text, highlights):
+    for highlight in highlights:
+        # Remplacer chaque partie du texte original par la version surlignée
+        full_text = full_text.replace(highlight.replace("<mark style='background-color: yellow;'>", "").replace("</mark>", ""), highlight)
+    return full_text
 
 def search_results_data(request):
     # Récupérer les valeurs de la recherche et du filtre d'études
@@ -335,20 +437,21 @@ def search_results_data(request):
     search = BindingSurveyDocument.search()
 
     if search_value:
+        # Recherche sur les questions
         if search_location == 'questions':
-            # Priorité aux correspondances exactes via 'should'
             search = search.query(
                 'bool',
                 should=[
-                    # Recherche exacte avec un boost élevé
+                    # Correspondance exacte avec un boost élevé
                     {"term": {"variable.question_text.keyword": {"value": search_value, "boost": 10}}},
-                    # Recherche par phrase pour des correspondances proches
+                    # Correspondance par phrase pour des résultats proches
                     {"match_phrase": {"variable.question_text": {"query": search_value, "boost": 5}}},
-                    # Recherche par préfixe avec le boost le plus bas
+                    # Correspondance par préfixe avec le boost le plus bas
                     {"match_phrase_prefix": {"variable.question_text": {"query": search_value, "boost": 1}}}
                 ],
                 minimum_should_match=1
             )
+        # Recherche sur les catégories
         elif search_location == 'categories':
             search = search.query('nested', path='variable.categories', query={
                 'bool': {
@@ -363,11 +466,27 @@ def search_results_data(request):
                     "minimum_should_match": 1
                 }
             })
+        # Recherche sur le nom de la variable
+        elif search_location == 'variable_name':
+            search = search.query(
+                'bool',
+                should=[
+                    # Correspondance exacte sur `variable_name`
+                    {"term": {"variable_name.keyword": {"value": search_value, "boost": 10}}},
+                    # Correspondance par phrase sur `variable_name`
+                    {"match_phrase": {"variable_name": {"query": search_value, "boost": 5}}},
+                    # Correspondance par préfixe sur `variable_name`
+                    {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 1}}}
+                ],
+                minimum_should_match=1
+            )
 
         # Ajout du highlighting pour mettre en valeur les termes recherchés
         search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"], post_tags=["</mark>"]) \
-                       .highlight('variable.question_text', fragment_size=150) \
-                       .highlight('variable.categories.category_label', fragment_size=150)
+                       .highlight('variable.question_text', fragment_size=10000) \
+                       .highlight('variable.categories.category_label', fragment_size=10000) \
+                       .highlight('variable_name', fragment_size=10000)
+
     # Appliquer le filtre par étude si nécessaire
     if len(study_filter) > 0:
         search = search.filter('terms', **{"survey.id": study_filter})
@@ -381,9 +500,13 @@ def search_results_data(request):
     # Formatage des résultats pour DataTables
     data = []
     for result in response.hits:
-        highlighted_question = result.variable.question_text if hasattr(result.variable, 'question_text') else "N/A"
+        original_question = result.variable.question_text if hasattr(result.variable, 'question_text') else "N/A"
+        
+        # Appliquer le surlignage, ou garder le texte complet si pas de surlignage
         if 'highlight' in result.meta and 'variable.question_text' in result.meta.highlight:
             highlighted_question = result.meta.highlight['variable.question_text'][0]
+        else:
+            highlighted_question = original_question
 
         category_matched = None
         other_categories = []
@@ -393,11 +516,16 @@ def search_results_data(request):
 
             if hasattr(result.variable, 'categories'):
                 for category in result.variable.categories:
-                        other_categories.append(category.category_label)
+                    other_categories.append(category.category_label)
+
+        # Surligner le nom de la variable si nécessaire
+        variable_name = result.variable_name
+        if search_location == 'variable_name' and 'highlight' in result.meta and 'variable_name' in result.meta.highlight:
+            variable_name = result.meta.highlight['variable_name'][0]
 
         data.append({
             "id": result.meta.id,  # ID de la liaison
-            "variable_name": result.variable_name if hasattr(result, 'variable_name') else "N/A",
+            "variable_name": variable_name,  # Nom de la variable avec surlignage si disponible
             "question_text": highlighted_question,  # Texte de la question avec surbrillance si disponible
             "survey_name": result.survey.name if hasattr(result, 'survey') else "N/A",
             "notes": result.notes if hasattr(result, 'notes') else "N/A",
@@ -532,6 +660,7 @@ def similar_representative_variable_questions(request, question_id):
     for similar_question in questions_from_rep_variable:
         data.append({
             "id": similar_question.id,
+            "variable_name": similar_question.variable_name,
             "question_text": similar_question.variable.question_text,
             "internal_label": similar_question.variable.internal_label or "N/A",
             "survey" : similar_question.survey.name
@@ -556,6 +685,7 @@ def similar_conceptual_variable_questions(request, question_id):
     for similar_question in questions_from_conceptual_variable:
         data.append({
             "id": similar_question.id,
+            "variable_name": similar_question.variable_name,
             "question_text": similar_question.variable.question_text,
             "internal_label": similar_question.variable.internal_label or "N/A",
             "survey" : similar_question.survey.name
@@ -566,3 +696,54 @@ def similar_conceptual_variable_questions(request, question_id):
         "recordsFiltered": len(questions_from_conceptual_variable),
         "data": data
     })
+
+
+from django.contrib.auth.views import LoginView
+from .forms import CustomAuthenticationForm
+class CustomLoginView(LoginView):
+    template_name = 'login.html'
+    authentication_form = CustomAuthenticationForm
+    redirect_authenticated_user = True
+
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def check_duplicates(request):
+    if request.method == 'POST':
+        # Récupérer soit le fichier CSV, soit le fichier XML
+        file = request.FILES.get('csv_file') or request.FILES.get('xml_file')
+        
+        if not file:
+            return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+
+        decoded_file = file.read().decode('utf-8', errors='replace').splitlines()
+        
+        # Vérifier si c'est un fichier XML
+        if file.name.endswith('.xml'):
+            soup = BeautifulSoup("\n".join(decoded_file), 'xml')
+            existing_variables = []
+            for var in soup.find_all('var'):
+                variable_name = var.get('name', '').strip()
+                if BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name).exists():
+                    existing_variables.append(variable_name)
+
+        # Vérifier si c'est un fichier CSV
+        elif file.name.endswith('.csv'):
+            reader = csv.DictReader(decoded_file)
+            existing_variables = []
+            for row in reader:
+                variable_name = row['variable_name']
+                if BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name).exists():
+                    existing_variables.append(variable_name)
+        
+        else:
+            return JsonResponse({'error': 'Format de fichier non supporté'}, status=400)
+
+        if existing_variables:
+            return JsonResponse({'status': 'exists', 'existing_variables': existing_variables})
+        else:
+            return JsonResponse({'status': 'no_duplicates'})
+
+    return JsonResponse({'error': 'Requête invalide'}, status=400)
+

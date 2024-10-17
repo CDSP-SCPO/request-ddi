@@ -6,7 +6,11 @@ from django.db import models
 #     name
 #     affiliation
 
+class Serie(models.Model):
+    name = models.TextField()
 
+    def __str__(self):
+        return f"{self.name}"
 
 class Survey(models.Model):
     # auteur
@@ -16,7 +20,7 @@ class Survey(models.Model):
     # unite geographique
     # unite d analyse
     # methode temporel
-
+    # serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True)
     external_ref = models.CharField(max_length=255)
     name = models.TextField()
 
@@ -33,12 +37,11 @@ class ConceptualVariable(models.Model):
 
 class Category(models.Model):
     """careful when editing a category, most of the time we should be creating a new one instead"""
-    type = models.CharField(max_length=255, choices=(('code', 'code'), ('text', 'text'), ('numerical', 'numerical'), ('date', 'date')))
     code = models.CharField(max_length=255)  # code if type code, else conditions / limitation ?
     category_label = models.TextField(null=True)  # pas de label si pas type==code?
 
     def __str__(self):
-        return f"Category: {self.type} - {self.code} ({self.category_label})"
+        return f"{self.code} : {self.category_label}"
 
 
 class RepresentedVariable(models.Model):
@@ -52,6 +55,7 @@ class RepresentedVariable(models.Model):
     internal_label = models.CharField(null=True, max_length=255)  # init a variable_label le plus recent?
 
     categories = models.ManyToManyField(Category, related_name="variables")  # plutot faire une autre class ? (BindingCategory)
+    type_categories = models.CharField(max_length=255, choices=(('code', 'code'), ('text', 'text'), ('numerical', 'numerical'), ('date', 'date')))
 
     def __str__(self):
         return f"Represented Variable: {self.internal_label or 'N/A'} ({self.type}, {self.question_text})"
@@ -65,6 +69,7 @@ class BindingSurveyRepresentedVariable(models.Model):
     notes = models.TextField()
     variable_name = models.TextField()
     universe = models.TextField()
+    serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return f"Binding: {self.variable_name} - Survey: {self.survey.name}"

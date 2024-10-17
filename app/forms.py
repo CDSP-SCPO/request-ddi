@@ -3,11 +3,19 @@ from django import forms
 import csv
 from bs4 import BeautifulSoup
 
+from django.contrib.auth.forms import AuthenticationForm
+from .models import Serie
 
 class CSVUploadForm(forms.Form):
+    series = forms.ModelChoiceField(
+        queryset=Serie.objects.all(),
+        label="Sélectionnez une série",
+        required=True,
+        widget=forms.Select(attrs={'class': 'selectpicker', 'data-live-search': 'true'})
+    )
     csv_file = forms.FileField(label='Select a CSV file')
 
-    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
+    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes']
 
     def clean_csv_file(self):
         csv_file = self.cleaned_data['csv_file']
@@ -30,6 +38,12 @@ class CSVUploadForm(forms.Form):
 
 
 class XMLUploadForm(forms.Form):
+    series = forms.ModelChoiceField(
+        queryset=Serie.objects.all(),
+        label="Sélectionnez une série",
+        required=True,
+        widget=forms.Select(attrs={'class': 'selectpicker', 'data-live-search': 'true'})
+    )
     xml_file = forms.FileField(label='Select an XML file')
 
     # Liste des balises obligatoires et attributs
@@ -88,3 +102,8 @@ class XMLUploadForm(forms.Form):
         except Exception as e:
             raise forms.ValidationError(f"Erreur lors de la lecture du fichier XML : {str(e)}")
 
+
+
+class CustomAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))

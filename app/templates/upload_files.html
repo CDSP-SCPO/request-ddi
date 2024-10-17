@@ -7,13 +7,7 @@
         <h1>Upload de CSV et XML</h1>
 
         <!-- Affichage des messages d'erreur -->
-        {% if messages %}
-            <div class="error-box">
-                {% for message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
+
 
         <div class="form-container">
             <!-- Colonne gauche pour le CSV -->
@@ -21,14 +15,20 @@
                 <div class="help-box">
                     <h2>Aide pour le fichier CSV</h2>
                     <p>Votre fichier CSV doit contenir les colonnes suivantes :</p>
-                    <ul>
-                        <li>ddi</li>
-                        <li>title</li>
-                        <li>variable_name</li>
-                        <li>variable_label</li>
-                        <li>question_text</li>
-                        <li>category_label</li>
-                    </ul>
+                    <div class="d-flex justify-content-around">
+                        <ul>
+                            <li>ddi</li>
+                            <li>title</li>
+                            <li>variable_name</li>
+                            <li>variable_label</li>
+                            <li>question_text</li>
+                            <li>category_label</li>
+                        </ul>
+                        <ul>
+                            <li>univers</li>
+                            <li>notes</li>
+                        </ul>
+                    </div>
                     <p>Assurez-vous que ces colonnes sont présentes et correctement orthographiées dans le fichier.</p>
                 </div>
 
@@ -36,7 +36,14 @@
                 <form method="POST" enctype="multipart/form-data" id="csvUploadForm"
                       action="{% url 'app:upload_csv' %}">
                     {% csrf_token %}
-                    {{ csv_form.as_p }}
+                    <p class="custom-select-container">
+                        {{ csv_form.series.label_tag }}
+                        {{ csv_form.series }}
+                    </p>
+                    <p>
+                        {{ csv_form.csv_file.label_tag }}
+                        {{ csv_form.csv_file }}
+                    </p>
                 </form>
 
                 <!-- Bouton d'envoi CSV -->
@@ -47,18 +54,25 @@
             <div class="xml-section">
                 <div class="help-box">
                     <h2>Balises attendues pour le XML</h2>
-                    <ul>
-                        <li>IDNo</li>
-                        <li>titl</li>
-                        <li>var
-                            <ul>
-                                <li>catValu</li>
-                                <li>labl</li>
-                                <li>catgry</li>
-                                <li>qstnLit</li>
-                            </ul>
-                        </li>
-                    </ul>
+                    <div class="d-flex justify-content-around">
+                        <ul>
+                            <li>var
+                                <ul>
+                                    <li>catValu</li>
+                                    <li>labl</li>
+                                    <li>catgry</li>
+                                    <li>qstnLit</li>
+                                    <li>universe</li>
+                                    <li>notes</li>
+                                </ul>
+                            </li>
+                        </ul>
+                        <ul>
+                            <li>IDNo</li>
+                            <li>titl</li>
+                            
+                        </ul>
+                    </div>
 
                     <p>Assurez-vous que ces balises et attributs sont présents dans votre fichier XML pour garantir une
                         structure valide.</p>
@@ -69,7 +83,14 @@
                 <form method="POST" enctype="multipart/form-data" id="xmlUploadForm"
                       action="{% url 'app:upload_xml' %}">
                     {% csrf_token %}
-                    {{ xml_form.as_p }}
+                    <p class="custom-select-container">
+                        {{ xml_form.series.label_tag }}
+                        {{ xml_form.series }}
+                    </p>
+                    <p>
+                        {{ xml_form.xml_file.label_tag }}
+                        {{ xml_form.xml_file }}
+                    </p>
                 </form>
 
 
@@ -91,6 +112,120 @@
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        $('document').ready(function(){
+            {% if messages %}
+                {% for message in messages %}
+                    {% if message.tags == "success" %}
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Succès',
+                            html: '{{ message|safe }}'  // Utilise `safe` pour rendre le HTML
+                        }).then(function() {
+                            document.getElementById('overlay').classList.remove('show');
+                        });
+                    {% elif "error" in message.tags %}
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            html: "{{ message|safe }}"  // Utilise aussi `safe` pour les erreurs
+                        }).then(function() {
+                            document.getElementById('overlay').classList.remove('show');
+                        });
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        });
+        document.getElementById('csvUploadForm').addEventListener('submit', function (event) {
+            event.preventDefault(); // Empêcher l'envoi par défaut
+
+            // Envoi d'une requête AJAX pour vérifier les doublons avant de soumettre le formulaire
+            var formData = new FormData(this);
+
+            fetch('{% url "app:check_duplicates" %}', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'exists') {
+                    Swal.fire({
+                        title: 'Doublons détectés',
+                        text: 'Certaines variables de ce document existent déjà. Voulez-vous les mettre à jour ?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Oui, mettre à jour',
+                        cancelButtonText: 'Annuler',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Si l'utilisateur confirme, soumettre le formulaire
+                            document.getElementById('csvUploadForm').submit();
+                        }
+                        else if (result.isDismissed) {
+                            document.getElementById('overlay').classList.remove('show');
+                        }
+                    });
+                } else {
+                    // Si aucun doublon, soumettre directement le formulaire
+                    document.getElementById('csvUploadForm').submit();
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Une erreur s\'est produite lors de la vérification des doublons.',
+                });
+                console.error('Erreur lors de la vérification des doublons:', error);
+                document.getElementById('overlay').classList.remove('show');
+            });
+        });
+
+        document.getElementById('xmlUploadForm').addEventListener('submit', function (event) {
+            event.preventDefault(); // Empêcher l'envoi par défaut
+
+            // Envoi d'une requête AJAX pour vérifier les doublons avant de soumettre le formulaire
+            var formData = new FormData(this);
+
+            fetch('{% url "app:check_duplicates" %}', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'exists') {
+                    Swal.fire({
+                        title: 'Doublons détectés',
+                        text: 'Certaines variables de ce document existent déjà. Voulez-vous les mettre à jour ?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Oui, mettre à jour',
+                        cancelButtonText: 'Annuler',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Si l'utilisateur confirme, soumettre le formulaire
+                            document.getElementById('xmlUploadForm').submit();
+                        } else if (result.isDismissed) {
+                            // Si l'utilisateur annule, cacher l'overlay
+                            document.getElementById('overlay').classList.remove('show');
+                        }
+                    });
+                } else {
+                    // Si aucun doublon, soumettre directement le formulaire
+                    document.getElementById('xmlUploadForm').submit();
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Une erreur s\'est produite lors de la vérification des doublons.',
+                });
+
+                console.error('Erreur lors de la vérification des doublons:', error);
+                document.getElementById('overlay').classList.remove('show'); // Cacher l'overlay en cas d'erreur
+            });
+        });
+
         document.getElementById('csvUploadForm').addEventListener('submit', function () {
             document.getElementById('overlay').classList.add('show');
         });

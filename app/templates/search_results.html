@@ -3,6 +3,8 @@
 
 {% block content %}
 <div class="container">
+    <a href="{% url 'app:representedvariable_search' %}" class="btn btn-primary">Retour à la page d'accueil
+    </a>
     <h1 class="mb-4">Résultats de la recherche</h1>
     <form method="GET" action="{% url 'app:search_results' %}" class="search-bar form-inline mb-4">
         <div class="input-group mr-2">
@@ -19,6 +21,7 @@
             <select name="search_location" id="search-location" class="form-control selectpicker">
                 <option value="questions" {% if search_location == 'questions' %}selected{% endif %}>Questions</option>
                 <option value="categories" {% if search_location == 'categories' %}selected{% endif %}>Catégories</option>
+                <option value="variable_name" {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la variable</option>
             </select>
         </div>
         <button type="submit" class="btn btn-primary">Rechercher</button>
@@ -44,9 +47,10 @@
         color: white;
         padding: 2px 5px;
         border-radius: 3px;
-        font-size: 0.8em;
+        font-size: 0.8em;  /* Taille des lettres du badge */
         cursor: pointer;
         z-index: 1; /* S'assurer que le badge est au-dessus du texte */
+        width: 15rem;
     }
 
     .category-dropdown {
@@ -57,13 +61,18 @@
         background-color: white;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         z-index: 1;
-        width: 200px;
+        width: 15rem;
         padding: 10px;
         border-radius: 3px;
+
+        /* Limiter la hauteur du dropdown à la hauteur de la carte */
+        max-height: calc(100% - 40px); /* Limite à la hauteur de la carte parent, en laissant 40px de marge */
+        overflow-y: auto; /* Scroll si nécessaire */
     }
 
     .category-item {
         padding: 5px;
+        font-size: 0.75em;  /* Réduit la taille du texte dans les catégories */
     }
 
     /* Surlignement de la catégorie correspondante */
@@ -78,20 +87,22 @@
         padding: 5px;
         text-decoration: none;
         color: black;
+        font-size: 0.75em; /* Réduit la taille du texte dans les liens */
     }
 
     .category-dropdown a:hover {
         background-color: #f1f1f1;
     }
 
+    /* Le conteneur de la carte doit être positionné */
     .card {
-        position: relative;
+        position: relative; /* Important pour confiner le dropdown à la carte */
         margin-bottom: 20px;
-    }
-    .card-body {
-        padding-right: 20rem;  /* Ajoute un espace pour laisser de la place au badge */
+        max-height: 400px; /* Limite de la hauteur de la carte si nécessaire */
+        overflow: hidden; /* Empêche le dépassement du contenu */
     }
 </style>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -168,7 +179,6 @@ $(document).ready(function() {
         {
                 "data": "id",  
                 "render": function (data, type, row) {
-                    console.log(row)
                     var url = '/question/' + row.id + '/';
                     var categoryBadge = row.category_matched ? `<span class="badge-category">` + row.category_matched + `</span>` : '';
                     var otherCategories = row.other_categories.map(function(category) {
@@ -182,9 +192,8 @@ $(document).ready(function() {
                             <h5 class="card-title">
                                 <a href="` + url + `">` + row.question_text + `</a>` + categoryBadge + dropdown + `
                             </h5>
-                            <h6 class="card-subtitle mb-2 text-muted">Référence externe: ` + row.internal_label + `</h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Nom de l'enquête: ` + row.survey_name + `</h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: ` + row.variable_name + `</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
                             <p class="card-text">Détails supplémentaires sur l'enquête...</p>
                         </div>
                     </div>`;

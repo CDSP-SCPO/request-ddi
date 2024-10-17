@@ -50,13 +50,9 @@ section.hero h2 {
     padding: 10px;
     border: none;
     border-radius: 5px;
-    background-color: #00396a;
-    color: white;
     cursor: pointer;
 }
-.search-bar button:hover {
-    background-color: #002347;
-}
+
 section.features {
     padding: 50px 20px;
     display: flex;
