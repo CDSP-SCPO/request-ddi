@@ -2,6 +2,8 @@ version: '3.11'
 
 services:
   basedequestions:
+    env_file:
+      - .env
     image: question_base-backend:local
     build:
       context: .
@@ -11,30 +13,25 @@ services:
     user: "1000:1000"
     volumes:
       - ./:/app
-    entrypoint: /app/entrypoint.sh
+    entrypoint: /app/entrypoint.dev.sh
     depends_on:
       - elasticsearch
-      - db
+      - db_dev
     networks:
       - default
-    environment:
-      - SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DEBUG=${DJANGO_DEBUG}
-      - ALLOWED_HOSTS=[*]
-      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
 
-  db:
+
+
+  db_dev:
     image: postgres:13
+    env_file:
+      - .env
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_dev:/var/lib/postgresql/data
     networks:
       - default
 
@@ -48,14 +45,14 @@ services:
     ports:
       - "9200:9200"
     volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
+      - elasticsearch_data_dev:/usr/share/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          memory: 6G
     networks:
       - default
 
 volumes:
-  postgres_data:
-  elasticsearch_data:
-
-networks:
-  default:
-    driver: bridge
+  postgres_data_dev:
+  elasticsearch_data_dev:

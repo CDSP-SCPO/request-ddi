@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>Détails de la Question</h1>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">{{ question_represented_var.question_text }}</h5>
+            <h6 class="card-subtitle mb-2 text-muted">Référence externe: {{ question.internal_label }}</h6>
+            <h6 class="card-subtitle mb-2 text-muted">Enquête: {{ question_survey.name }}</h6>
+            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: {{ question.variable_name }}</h6>
+            <h6 class="card-subtitle mb-2 text-muted">Type des catégories: {{ question_represented_var.type_categories }}</h6>
+            <h6 class="card-subtitle mb-2 text-muted">Internal Label: {{ question_represented_var.internal_label }}</h6>
+            <!-- <h6 class="card-subtitle mb-2 text-muted">Type des catégories: {{ question.variable_name }}</h6> -->
+            <p class="card-text">Détails supplémentaires ici...</p>
+            <a href="{% url 'app:representedvariable_search' %}" class="btn btn-primary">Retour à la recherche</a>
+        </div>
+    </div>
+    <div class="card mt-4">
+        <div class="card-body">
+            <h4>Options de la question (Catégories associées)</h4>
+            {% if categories %}
+                <ul class="list-group">
+                    {% for category in categories %}
+                        <li class="list-group-item">
+                            <strong>Code :</strong> {{ category.code }}<br>
+                            <strong>Label :</strong> {{ category.category_label }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Aucune catégorie associée.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <h2 class="mt-5">Questions avec la même variable représentative</h2>
+    <table id="similar-representative-questions-table" class="table table-striped table-bordered display" style="width:100%">
+        <thead class="table-dark">
+            <tr>
+                <th>Question</th>
+            </tr>
+        </thead>
+    </table>
+    <h2 class="mt-5">Questions avec la même variable conceptuelle</h2>
+    <table id="similar-conceptual-questions-table" class="table table-striped table-bordered display" style="width:100%">
+        <thead class="table-dark">
+            <tr>
+                <th>Question</th>
+            </tr>
+        </thead>
+    </table>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+
+$(document).ready(function() {
+    $('#similar-representative-questions-table').DataTable({
+        "ordering": false,
+        "dom": '<"top"i>rt<"bottom"lp><"clear">',
+        'order': [[0, 'desc']],
+        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"]],
+        "processing": true,
+        "serverSide": true,
+        "pagingType": "full_numbers",
+        "ajax": {
+            "url": "{% url 'app:similar_representative' question.id %}",  // URL pour récupérer les questions similaires
+            "type": "GET",
+            "async": true,
+            "headers": { 'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val() },
+        },
+        "columns": [
+            {
+                "data": "id",
+                "render": function (data, type, row) {
+                    var url = '/question/' + row.id + '/';
+                    return `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="` + url + `">` + row.question_text + `</a>
+                            </h5>
+                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: ` + row.variable_name + ` </h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Référence externe: ` + row.internal_label + `</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Survey: ` + row.survey + `</h6>
+                        </div>
+                    </div>`;
+                }
+            },
+        ],
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
+            "processing": "",
+            "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
+            "paginate": {
+                "first": "Première",
+                "last": "Dernière",
+                "next": "Suivante",
+                "previous": "Précédente"
+            }
+        }
+    });
+    $('#similar-conceptual-questions-table').DataTable({
+        "ordering": false,
+        "dom": '<"top"i>rt<"bottom"lp><"clear">',
+        'order': [[0, 'desc']],
+        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"]],
+        "processing": true,
+        "serverSide": true,
+        "pagingType": "full_numbers",
+        "ajax": {
+            "url": "{% url 'app:similar_conceptual' question.id %}",  // URL pour récupérer les questions similaires
+            "type": "GET",
+            "async": true,
+            "headers": { 'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val() },
+        },
+        "columns": [
+            {
+                "data": "id",
+                "render": function (data, type, row) {
+                    var url = '/question/' + row.id + '/';
+                    return `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="` + url + `">` + row.question_text + `</a>
+                            </h5>
+                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: ` + row.variable_name + ` </h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Référence externe: ` + row.internal_label + `</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Survey: ` + row.survey + `</h6>
+                        </div>
+                    </div>`;
+                }
+            },
+        ],
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
+            "processing": "",
+            "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
+            "paginate": {
+                "first": "Première",
+                "last": "Dernière",
+                "next": "Suivante",
+                "previous": "Précédente"
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
