@@ -16,7 +16,7 @@ spec:
         - name: gitlab-reg
       containers:
         - name: basedequestions
-          image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:pprd
+          image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:latest
           command: ["./entrypoint.sh"]
           env:
             - name: DATABASE_URL

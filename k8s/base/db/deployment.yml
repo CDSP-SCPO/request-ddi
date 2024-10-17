@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: postgres:13-alpine  # Version de PostgreSQL
+          image: postgres:13-alpine
           env:
             - name: POSTGRES_USER
               valueFrom:
@@ -37,11 +37,11 @@ spec:
                   name: postgres
                   key: POSTGRES_DB
           ports:
-            - containerPort: 5432     # Expose le port de PostgreSQL
+            - containerPort: 5432
           volumeMounts:
             - name: db-vol
-              mountPath: /var/lib/postgresql/data  # Répertoire pour les données
+              mountPath: /var/lib/postgresql/data
       volumes:
         - name: db-vol
           persistentVolumeClaim:
-            claimName: db-pvc            # Assurez-vous que ce PVC existe
+            claimName: db-pvc
