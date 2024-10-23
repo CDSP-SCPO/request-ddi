@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from django.contrib.auth.forms import AuthenticationForm
 from .models import Serie
 
+
 class CSVUploadForm(forms.Form):
     series = forms.ModelChoiceField(
         queryset=Serie.objects.all(),

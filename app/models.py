@@ -20,7 +20,7 @@ class Survey(models.Model):
     # unite geographique
     # unite d analyse
     # methode temporel
-    # serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True)
+    serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True)
     external_ref = models.CharField(max_length=255)
     name = models.TextField()
 
@@ -29,10 +29,18 @@ class Survey(models.Model):
 
 class ConceptualVariable(models.Model):
     internal_label = models.TextField()
-    concepts = models.ManyToManyField("Concept",symmetrical=False, related_name="conceptual_variables")  # plutot faire une class binding ?
+    concepts = models.ManyToManyField("Concept", symmetrical=False, related_name="conceptual_variables")
 
     def __str__(self):
-        return f"Conceptual Variable: {self.internal_label}"
+        # Récupérer toutes les variables représentées associées
+        represented_vars = self.representedvariable_set.all()
+
+        # Si au moins une variable représentée existe, on l'affiche
+        if represented_vars.exists():
+            return f"Conceptual Variable: {self.internal_label}, Linked Represented Variables: {', '.join([str(var.internal_label) for var in represented_vars])}"
+        else:
+            return f"Conceptual Variable: {self.internal_label} (No linked represented variables)"
+
 
 
 class Category(models.Model):
@@ -69,7 +77,6 @@ class BindingSurveyRepresentedVariable(models.Model):
     notes = models.TextField()
     variable_name = models.TextField()
     universe = models.TextField()
-    serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return f"Binding: {self.variable_name} - Survey: {self.survey.name}"

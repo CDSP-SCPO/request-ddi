@@ -5,7 +5,7 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib import messages
 from .forms import CSVUploadForm, XMLUploadForm
 from django.views.generic import ListView
-from .models import Survey, RepresentedVariable, ConceptualVariable, Category, BindingSurveyRepresentedVariable
+from .models import Survey, RepresentedVariable, ConceptualVariable, Category, BindingSurveyRepresentedVariable, Serie
 from django.http import JsonResponse
 from django.db import transaction
 from .documents import BindingSurveyDocument
@@ -16,7 +16,7 @@ from elasticsearch_dsl import Search, A
 
 # views.py
 from django.views import View
-from import_export import resources
+
 from .utils.csvimportexport import BindingSurveyResource
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -83,7 +83,7 @@ class BaseUploadView(FormView):
         survey, _ = Survey.objects.get_or_create(external_ref=doi, name=title)
         return survey
 
-    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes, serie):
+    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
         binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
             variable_name=variable_name,
             defaults={
@@ -91,7 +91,6 @@ class BaseUploadView(FormView):
                 'variable': represented_variable,
                 'universe': universe,
                 'notes': notes,
-                'serie': serie,
             }
         )
         if not created:
@@ -100,7 +99,6 @@ class BaseUploadView(FormView):
             binding.variable = represented_variable
             binding.universe = universe
             binding.notes = notes
-            binding.serie = serie
             binding.save()
 
         return binding, created
@@ -123,14 +121,15 @@ class CSVUploadView(BaseUploadView):
     template_name = 'upload_csv.html'
     form_class = CSVUploadForm
     required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
-    
+
     def get_data(self, form):
-        self.selected_series = form.cleaned_data['series']
+        self.selected_serie = Serie.objects.get(name=form.cleaned_data['series'])
         return form.cleaned_data['csv_file']
 
     def convert_data(self, content):
         return csv.DictReader(content)
 
+    @transaction.atomic
     def process_data(self, question_datas):
         num_records = 0
         num_new_surveys = 0
@@ -139,112 +138,61 @@ class CSVUploadView(BaseUploadView):
 
         for line_number, row in enumerate(question_datas, start=1):
             try:
-                # Création ou récupération d'une enquête (Survey)
-                ddi = row['ddi'].strip()
-                if ddi and not ddi.startswith('doi:'):
-                    raise ValueError(f"Le DDI '{ddi}' à la ligne {line_number} n'est pas au bon format. Il doit commencer par 'doi:'.")
-                survey, created_survey = self.get_or_create_survey(ddi, row['title'])
+                survey, created_survey = self.get_or_create_survey(row['ddi'], row['title'], self.selected_serie)
                 if created_survey:
                     num_new_surveys += 1
 
-                # Vérifier si la variable existe déjà
-                existing_variable = BindingSurveyRepresentedVariable.objects.filter(variable_name=row['variable_name']).first()
-                if existing_variable:
-                    # Mettre à jour la variable existante
-                    existing_variable.universe = row['univers']
-                    existing_variable.notes = row['notes']
-                    represented_variable = existing_variable.variable
-                    if self.should_update_represented_variable(represented_variable, row):
-                        associated_variables_count = BindingSurveyRepresentedVariable.objects.filter(variable=represented_variable).count()
-                        if associated_variables_count > 1:
-                            # Création d'une nouvelle RepresentedVariable car il y a plusieurs associations
-                            new_represented_variable = self.create_new_represented_variable(row, represented_variable.conceptual_var, row['question_text'], row['variable_label'])
-                            existing_variable.variable = new_represented_variable
-                        else:
-                            # Mettre à jour directement la RepresentedVariable
-                            represented_variable.question_text = row['question_text']
-                            represented_variable.internal_label = row['variable_label']
-                            if row['category_label']:
-                                self.update_categories(represented_variable, row['category_label'])
-                            represented_variable.save()
-                    existing_variable.save()
-                else:
-                    # Créer une nouvelle variable
-                    represented_variable, created_variable = self.get_or_create_represented_variable(row)
-                    if created_variable:
-                        num_new_variables += 1
+                represented_variable, created_variable = self.get_or_create_represented_variable(row, line_number)
+                if created_variable:
+                    num_new_variables += 1
 
-                    # Créer une nouvelle liaison
-                    _, created_binding = self.get_or_create_binding(survey, represented_variable, row['variable_name'], row['univers'], row['notes'], self.selected_series)
-                    if created_binding:
-                        num_new_bindings += 1
+                binding, created_binding = self.get_or_create_binding(
+                    survey, represented_variable,
+                    row['variable_name'],
+                    row.get('univers', ''),
+                    row.get('notes', ''),
+                )
+                if created_binding:
+                    num_new_bindings += 1
 
                 num_records += 1
-            except ValueError as e:
-                raise e
+            except ValueError as ve:
+                messages.error(self.request, f"Erreur de valeur à la ligne {line_number}: {str(ve)}")
             except Exception as e:
-                error_message = f"Erreur à la ligne {line_number} : {str(e)}"
-                print(error_message)
-                raise Exception(error_message)
+                messages.error(self.request, f"Erreur à la ligne {line_number} : {str(e)}")
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
-    def should_update_represented_variable(self, represented_variable, row):
-        # Comparer les champs de la RepresentedVariable avec les nouvelles données
-        normalized_question_text = normalize_string(row['question_text'])
-        normalized_internal_label = normalize_string(row['variable_label'])
-        if normalize_string(represented_variable.question_text) != normalized_question_text or  normalize_string(represented_variable.internal_label) != normalized_internal_label:
-            return True
-        # FAIRE LE NORMALIZE STRING SUR LA SUITE
-        row_categories =row['category_label']
-
-        if row_categories != "":
-            current_categories = represented_variable.categories.all()
-
-            new_categories = self.parse_categories(row['category_label'])
-            current_category_set = set((cat.code, cat.category_label) for cat in current_categories)
-            new_category_set = set(new_categories)
-
-            if current_category_set != new_category_set:
-                return True
-        return False
-
-    def update_categories(self, represented_variable, new_category_string):
-        current_categories = represented_variable.categories.all()
-        new_categories = self.parse_categories(new_category_string)
-        current_category_set = set((cat.code, cat.category_label) for cat in current_categories)
-        new_category_set = set(new_categories)
-        if current_category_set != new_category_set:
-            represented_variable.categories.clear()
-        for code, label in new_categories:
-            category, _ = Category.objects.get_or_create(code=code, category_label=label)
-            represented_variable.categories.add(category)
-
-    def get_or_create_represented_variable(self, row):
+    def get_or_create_represented_variable(self, row, line_number):
+        """Gérer la création ou la mise à jour d'une variable représentée."""
         name_question = row['question_text']
-        variable_label = row['variable_label']
         category_label = row['category_label']
+
         var_represented = RepresentedVariable.objects.filter(question_text=name_question)
 
         if var_represented.exists():
             for var in var_represented:
                 if self.check_category(category_label, var.categories):
-                    return var, False  # False = pas de nouvelle variable créée
-            return self.create_new_represented_variable(row, var_represented[0].conceptual_var, name_question, variable_label), True
-        else:
-            return self.create_new_represented_variable(row, ConceptualVariable.objects.create(), name_question, variable_label), True
+                    return var, False  # Pas de nouvelle variable créée
 
-    def create_new_represented_variable(self, row, conceptual_var, name_question, variable_label):
+            return self.create_new_represented_variable(row, var_represented[0].conceptual_var), True
+        else:
+            conceptual_var = ConceptualVariable.objects.create()
+            return self.create_new_represented_variable(row, conceptual_var), True
+
+    def create_new_represented_variable(self, row, conceptual_var):
+        """Créer une nouvelle variable représentée."""
         new_represented_var = RepresentedVariable.objects.create(
             conceptual_var=conceptual_var,
-            question_text=name_question,
-            internal_label=variable_label
+            question_text=row['question_text'],
+            internal_label=row['variable_label']
         )
         new_categories = self.create_new_categories(row['category_label'])
         new_represented_var.categories.set(new_categories)
         return new_represented_var
 
     def create_new_categories(self, csv_category_string):
+        """Créer de nouvelles catégories à partir d'une chaîne CSV."""
         categories = []
         if csv_category_string:
             parsed_categories = self.parse_categories(csv_category_string)
@@ -253,20 +201,44 @@ class CSVUploadView(BaseUploadView):
                 categories.append(category)
         return categories
 
-    def get_or_create_survey(self, doi, title):
-        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title)
+    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
+        """Créer ou mettre à jour une liaison entre une enquête et une variable représentée."""
+        binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
+            variable_name=variable_name,
+            defaults={
+                'survey': survey,
+                'variable': represented_variable,
+                'universe': universe,
+                'notes': notes,
+            }
+        )
+        if not created:
+            # Mise à jour des champs de la liaison si elle existe déjà
+            binding.universe = universe
+            binding.notes = notes
+            binding.save()
+
+        return binding, created
+
+    def get_or_create_survey(self, doi, title, serie):
+        """Créer ou récupérer une enquête."""
+        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title, serie=serie)
         return survey, created  # Retourne l'indicateur de création
 
-    # def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
-    #     binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
-    #         survey=survey,
-    #         variable=represented_variable,
-    #         variable_name=variable_name,
-    #         notes=notes,
-    #         universe=universe
-    #     )
-    #     return binding, created
+    def check_category(self, category_string, existing_categories):
+        """Vérifier si les catégories correspondent."""
+        csv_categories = self.parse_categories(category_string) if category_string else []
+        existing_categories_list = [(category.code, category.category_label) for category in existing_categories.all()]
+        return set(csv_categories) == set(existing_categories_list)
 
+    def parse_categories(self, category_string):
+        """Extraire les catégories d'une chaîne CSV."""
+        categories = []
+        csv_category_pairs = category_string.split(" | ")
+        for pair in csv_category_pairs:
+            code, label = pair.split(",", 1)
+            categories.append((code.strip(), label.strip()))
+        return categories
 
 
 class ExportQuestionsView(View):
