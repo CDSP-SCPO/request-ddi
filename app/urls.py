@@ -1,6 +1,14 @@
+# -- DJANGO
 from django.urls import path
-from .views import CSVUploadView, XMLUploadView, CombinedUploadView, RepresentedVariableSearchView, search_results, search_results_data, autocomplete, export_page, QuestionDetailView, similar_representative_variable_questions, similar_conceptual_variable_questions, check_duplicates
-from .views import CustomLoginView
+
+# -- BASEDEQUESTIONS (LOCAL)
+from .views import (
+    CombinedUploadView, CSVUploadView, CustomLoginView, QuestionDetailView,
+    RepresentedVariableSearchView, XMLUploadView, autocomplete,
+    check_duplicates, export_page, search_results, search_results_data,
+    similar_conceptual_variable_questions,
+    similar_representative_variable_questions,
+)
 
 app_name = 'app'
 

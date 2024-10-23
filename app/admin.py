@@ -1,6 +1,8 @@
+# -- DJANGO
 from django.contrib import admin
-from .models import *
 
+# -- BASEDEQUESTIONS (LOCAL)
+from .models import *
 
 admin.site.register(Survey)
 admin.site.register(ConceptualVariable)

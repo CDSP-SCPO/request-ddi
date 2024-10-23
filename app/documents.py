@@ -1,7 +1,13 @@
+# -- THIRDPARTY
 from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
-from .models import BindingSurveyRepresentedVariable, Survey, RepresentedVariable
 from elasticsearch.helpers import BulkIndexError, bulk
+
+# -- BASEDEQUESTIONS (LOCAL)
+from .models import (
+    BindingSurveyRepresentedVariable, RepresentedVariable, Survey,
+)
+
 
 @registry.register_document
 class BindingSurveyDocument(Document):

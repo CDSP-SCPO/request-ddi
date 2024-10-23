@@ -1,6 +1,13 @@
+# -- DJANGO
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
-from .models import BindingSurveyRepresentedVariable, RepresentedVariable, Survey, ConceptualVariable, Category
+
+# -- BASEDEQUESTIONS (LOCAL)
+from .models import (
+    BindingSurveyRepresentedVariable, Category, ConceptualVariable,
+    RepresentedVariable, Survey,
+)
+
 
 @receiver(pre_delete, sender=Survey)
 def delete_related_data_on_survey_delete(sender, instance, **kwargs):

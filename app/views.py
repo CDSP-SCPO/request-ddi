@@ -1,25 +1,30 @@
+# -- STDLIB
 import csv
-from django.views.generic.edit import FormView
-from django.urls import reverse_lazy
-from django.shortcuts import render, get_object_or_404
+
+# -- DJANGO
 from django.contrib import messages
-from .forms import CSVUploadForm, XMLUploadForm
-from django.views.generic import ListView
-from .models import Survey, RepresentedVariable, ConceptualVariable, Category, BindingSurveyRepresentedVariable, Serie
-from django.http import JsonResponse
 from django.db import transaction
-from .documents import BindingSurveyDocument
-from bs4 import BeautifulSoup
-from django.views.generic import TemplateView
-
-from elasticsearch_dsl import Search, A
-
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
 # views.py
 from django.views import View
+from django.views.generic import ListView, TemplateView
+from django.views.generic.edit import FormView
 
+# -- THIRDPARTY
+from bs4 import BeautifulSoup
+from elasticsearch_dsl import A, Search
+
+# -- BASEDEQUESTIONS (LOCAL)
+from .documents import BindingSurveyDocument
+from .forms import CSVUploadForm, XMLUploadForm
+from .models import (
+    BindingSurveyRepresentedVariable, Category, ConceptualVariable,
+    RepresentedVariable, Serie, Survey,
+)
 from .utils.csvimportexport import BindingSurveyResource
-from django.shortcuts import redirect
-from django.urls import reverse
+
 
 def admin_required(user):
     return user.is_authenticated and user.is_staff
@@ -517,7 +522,10 @@ def search_results_data(request):
 
 
 
+# -- STDLIB
 import re
+
+
 def autocomplete(request):
     search_value = request.GET.get('q', '').lower()
     search_location = request.GET.get('location', 'questions')
@@ -571,8 +579,11 @@ def autocomplete(request):
 
 
 
+# -- DJANGO
 from django.http import HttpResponse
 from django.views import View
+
+
 class ExportQuestionsCSVView(View):
     def get(self, request, *args, **kwargs):
         # Créer la réponse CSV
@@ -670,15 +681,22 @@ def similar_conceptual_variable_questions(request, question_id):
     })
 
 
+# -- DJANGO
 from django.contrib.auth.views import LoginView
+
+# -- BASEDEQUESTIONS (LOCAL)
 from .forms import CustomAuthenticationForm
+
+
 class CustomLoginView(LoginView):
     template_name = 'login.html'
     authentication_form = CustomAuthenticationForm
     redirect_authenticated_user = True
 
 
+# -- DJANGO
 from django.views.decorators.csrf import csrf_exempt
+
 
 @csrf_exempt
 def check_duplicates(request):

@@ -1,5 +1,5 @@
+# -- DJANGO
 from django.db import models
-
 
 # class Entites(models.Model):
 #     orcid
