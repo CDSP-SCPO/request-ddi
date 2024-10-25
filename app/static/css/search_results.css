@@ -11,7 +11,7 @@ header h1 {
 nav {
     display: flex;
     justify-content: center;
-    background-color: #0072ce;
+    background-color: #888888;
     padding: 10px;
 }
 nav a {
@@ -24,7 +24,7 @@ nav a:hover {
     text-decoration: underline;
 }
 section.hero {
-    background-color: #005fa3;
+    background-color: #888888;
     color: white;
     padding: 100px 20px;
     text-align: center;
@@ -42,14 +42,8 @@ section.hero h2 {
 }
 .search-bar button {
     padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background-color: #00396a;
-    color: white;
+    border-radius: 50px;
     cursor: pointer;
-}
-.search-bar button:hover {
-    background-color: #002347;
 }
 section.features {
     padding: 50px 20px;
@@ -113,7 +107,7 @@ font-size: 0.9em;
 }
 
 .study-card button {
-background-color: #0072ce;
+background-color: #888888;
 color: white;
 padding: 10px 20px;
 border: none;
@@ -122,5 +116,26 @@ cursor: pointer;
 }
 
 .study-card button:hover {
-background-color: #005fa3;
+background-color: #888888;
+}
+
+
+.btn-outline-secondary {
+    color: white !important;  /* Mettre le texte en blanc */
+    border-color: white !important;  /* Bordure blanche pour harmoniser */
+}
+
+.dropdown-toggle.btn {
+    background-color: #888888 !important;  /* Couleur de fond gris (ou autre si besoin) */
+    color: white !important;  /* Texte blanc */
+}
+
+
+.form-select button{
+    padding: 12px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    color: black !important;
 }

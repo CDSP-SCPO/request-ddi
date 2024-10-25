@@ -313,7 +313,7 @@ class XMLUploadView(BaseUploadView):
                 num_new_variables += 1
 
             # Création ou récupération d'une liaison (BindingSurveyRepresentedVariable)
-            _, created_binding = self.get_or_create_binding(survey, represented_variable, variable_name, universe, notes, self.selected_series)
+            _, created_binding = self.get_or_create_binding(survey, represented_variable, variable_name, universe, notes)
             if created_binding:
                 num_new_bindings += 1
 

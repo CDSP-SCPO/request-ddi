@@ -10,6 +10,8 @@ from .views import (
     similar_representative_variable_questions,
 )
 
+from django.contrib.auth.views import LogoutView
+
 app_name = 'app'
 
 urlpatterns = [
@@ -28,6 +30,7 @@ urlpatterns = [
     path('questions/similar_conceptual/<int:question_id>/', similar_conceptual_variable_questions, name='similar_conceptual'),
 
     path('login/', CustomLoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
     path('check-duplicates/', check_duplicates, name='check_duplicates'),
 
 ]
