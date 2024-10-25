@@ -41,12 +41,10 @@
     <section class="studies">
         <h2>Études Disponibles</h2>
         <div class="study-cards">
-            {% for survey in surveys %}
+            {% for serie in series %}
             <a href="https://data.sciencespo.fr/dataset.xhtml?persistentId={{ survey.external_ref }}" target="_blank" class="study-card-link">
                 <div class="study-card">
-                    <img src="{{ survey.image_url }}" alt="{{ survey.title }}">
-                    <h3>{{ survey.name }}</h3>
-                    <!-- <p>{{ survey.external_ref }}</p> -->
+                    <h3>{{ serie.name }}</h3>
                 </div>
             </a>
             {% endfor %}
