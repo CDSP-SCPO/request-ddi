@@ -98,7 +98,7 @@
     .card {
         position: relative; /* Important pour confiner le dropdown à la carte */
         margin-bottom: 20px;
-        max-height: 400px; /* Limite de la hauteur de la carte si nécessaire */
+        max-height: 800px; /* Limite de la hauteur de la carte si nécessaire */
         overflow: hidden; /* Empêche le dépassement du contenu */
     }
 </style>
@@ -177,24 +177,28 @@ $(document).ready(function() {
         },
         "columns": [
         {
-                "data": "id",  
+                "data": "id",
                 "render": function (data, type, row) {
-                    var url = '/question/' + row.id + '/';
-                    var categoryBadge = row.category_matched ? `<span class="badge-category">` + row.category_matched + `</span>` : '';
-                    var otherCategories = row.other_categories.map(function(category) {
-                        var highlightClass = category === row.category_matched ? 'highlight-category' : '';
-                        return `<div class="category-item ` + highlightClass + `">` + category + `</div>`;
-                    }).join("");
-                    var dropdown = `<div class="category-dropdown">` + otherCategories + `</div>`;
-                    return `
+                var url = '/question/' + row.id + '/';
+                var categoriesDisplay = row.categories.map(function(category) {
+                    return `${category}`;
+                }).join("<br>");
+                return `
                     <div class="card mb-3">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <a href="` + url + `">` + row.question_text + `</a>` + categoryBadge + dropdown + `
+                                <a href="` + url + `">` + row.question_text + `</a>
                             </h5>
                             <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
                             <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
-                            <p class="card-text">Détails supplémentaires sur l'enquête...</p>
+                            <h6 class="card-subtitle mb-2 text-muted">Label interne : ` + row.internal_label + `</h6>
+                                                 <!-- Bouton pour afficher les catégories -->
+                            <button class="btn btn-primary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Catégories</button>
+                            
+                            <!-- Liste des catégories, affichée directement si is_category_search est True -->
+                            <div id="categories-` + row.id + `" class="categories-list mb-3 mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">
+                                ` + categoriesDisplay + `
+                            </div>
                         </div>
                     </div>`;
                 }
@@ -222,6 +226,15 @@ $(document).ready(function() {
 function deleteSurvey(id) {
     // Code pour supprimer l'enquête
     alert('Supprimer l\'enquête ' + id);
+}
+
+function toggleCategories(categoryId) {
+    var categoriesDiv = document.getElementById(categoryId);
+    if (categoriesDiv.style.display === "none") {
+        categoriesDiv.style.display = "block"; // Affiche la liste
+    } else {
+        categoriesDiv.style.display = "none"; // Cache la liste
+    }
 }
 </script>
 {% endblock %}

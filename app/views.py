@@ -1,24 +1,28 @@
 # -- STDLIB
 import csv
+import re
 
 # -- DJANGO
 from django.contrib import messages
+from django.contrib.auth.views import LoginView
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 # views.py
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, TemplateView
 from django.views.generic.edit import FormView
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
-from elasticsearch_dsl import A, Search
+from elasticsearch_dsl import A, Q, Search
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .documents import BindingSurveyDocument
-from .forms import CSVUploadForm, XMLUploadForm
+from .documents import \
+    BindingSurveyDocument
+from .forms import CSVUploadForm, CustomAuthenticationForm, XMLUploadForm
 from .models import (
     BindingSurveyRepresentedVariable, Category, ConceptualVariable,
     RepresentedVariable, Serie, Survey,
@@ -379,7 +383,7 @@ class RepresentedVariableSearchView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['surveys'] = Survey.objects.all()
+        context['series'] = Serie.objects.all()
         context['success_message'] = self.request.GET.get('success_message', None)
         context['upload_stats'] = self.request.GET.get('upload_stats', None)
         return context
@@ -399,131 +403,159 @@ def apply_highlight(full_text, highlights):
         full_text = full_text.replace(highlight.replace("<mark style='background-color: yellow;'>", "").replace("</mark>", ""), highlight)
     return full_text
 
-def search_results_data(request):
-    # Récupérer les valeurs de la recherche et du filtre d'études
-    search_value = request.GET.get('q', '').strip().lower()
-    search_location = request.GET.get('search_location', 'questions')
-    start = int(request.GET.get('start', 0))
-    length = int(request.GET.get('length', 10))
-    study_filter = request.GET.getlist('study[]', None)
 
-    # Convertir le filtre en liste d'entiers si nécessaire
-    study_filter = [int(study_id) for study_id in study_filter if study_id.isdigit()]
+class SearchResultsDataView(ListView):
+    model = BindingSurveyDocument  # Juste à titre indicatif, sans effet direct ici
+    context_object_name = 'results'
+    paginate_by = 10  # Par défaut
 
-    # Initialisation de la recherche avec Elasticsearch pour BindingSurveyRepresentedVariable
-    search = BindingSurveyDocument.search()
+    def get_queryset(self):
+        search_value = self.request.GET.get('q', '').strip().lower()
+        search_location = self.request.GET.get('search_location', 'questions')
+        study_filter = self.request.GET.getlist('study[]', None)
 
-    if search_value:
-        # Recherche sur les questions
+        # Convertir le filtre en liste d'entiers
+        study_filter = [int(study_id) for study_id in study_filter if study_id.isdigit()]
+
+        # Configuration de la recherche Elasticsearch
+        search = BindingSurveyDocument.search()
+
+        # Appliquer les filtres de recherche en fonction de `search_location`
+        if search_value:
+            search = self.apply_search_filters(search, search_value, search_location)
+
+        # Appliquer le surlignage
+        search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"],
+                                          post_tags=["</mark>"]) \
+            .highlight('variable.question_text', fragment_size=10000) \
+            .highlight('variable.categories.category_label', fragment_size=10000) \
+            .highlight('variable_name', fragment_size=10000)
+
+        # Appliquer le filtre par étude
+        if study_filter:
+            search = search.filter('terms', **{"survey.id": study_filter})
+
+        # Pagination (start et length) depuis DataTables
+        start = int(self.request.GET.get('start', 0))
+        length = int(self.request.GET.get('length', self.paginate_by))
+
+        return search[start:start + length].execute()
+
+    def apply_search_filters(self, search, search_value, search_location):
+        """Applique des filtres de recherche en fonction du `search_location`."""
         if search_location == 'questions':
             search = search.query(
                 'bool',
                 should=[
-                    # Correspondance exacte avec un boost élevé
                     {"term": {"variable.question_text.keyword": {"value": search_value, "boost": 10}}},
-                    # Correspondance par phrase pour des résultats proches
                     {"match_phrase": {"variable.question_text": {"query": search_value, "boost": 5}}},
-                    # Correspondance par préfixe avec le boost le plus bas
                     {"match_phrase_prefix": {"variable.question_text": {"query": search_value, "boost": 1}}}
                 ],
                 minimum_should_match=1
             )
-        # Recherche sur les catégories
         elif search_location == 'categories':
             search = search.query('nested', path='variable.categories', query={
                 'bool': {
                     'should': [
-                        # Correspondance exacte sur la catégorie avec un boost élevé
                         {"term": {"variable.categories.category_label.keyword": {"value": search_value, "boost": 10}}},
-                        # Correspondance par phrase pour des résultats proches
                         {"match_phrase": {"variable.categories.category_label": {"query": search_value, "boost": 5}}},
-                        # Correspondance par préfixe avec un boost plus bas
-                        {"match_phrase_prefix": {"variable.categories.category_label": {"query": search_value, "boost": 1}}}
+                        {"match_phrase_prefix": {
+                            "variable.categories.category_label": {"query": search_value, "boost": 1}}}
                     ],
                     "minimum_should_match": 1
                 }
             })
-        # Recherche sur le nom de la variable
         elif search_location == 'variable_name':
             search = search.query(
                 'bool',
                 should=[
-                    # Correspondance exacte sur `variable_name`
                     {"term": {"variable_name.keyword": {"value": search_value, "boost": 10}}},
-                    # Correspondance par phrase sur `variable_name`
                     {"match_phrase": {"variable_name": {"query": search_value, "boost": 5}}},
-                    # Correspondance par préfixe sur `variable_name`
                     {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 1}}}
                 ],
                 minimum_should_match=1
             )
+        return search
 
-        # Ajout du highlighting pour mettre en valeur les termes recherchés
-        search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"], post_tags=["</mark>"]) \
-                       .highlight('variable.question_text', fragment_size=10000) \
-                       .highlight('variable.categories.category_label', fragment_size=10000) \
-                       .highlight('variable_name', fragment_size=10000)
+    def format_search_results(self, response, search_location):
+        """Formate les résultats de la recherche pour DataTables."""
+        data = []
+        is_category_search = search_location == 'categories'
 
-    # Appliquer le filtre par étude si nécessaire
-    if len(study_filter) > 0:
-        search = search.filter('terms', **{"survey.id": study_filter})
+        for result in response.hits:
+            original_question = getattr(result.variable, 'question_text', "N/A")
 
-    # Exécuter la recherche pour obtenir les résultats paginés
-    response = search[start:start+length].execute()
-    # Récupérer le nombre total de documents correspondants avant et après filtrage
-    total_records = BindingSurveyDocument.search().count()
-    filtered_records = response.hits.total.value  # Nombre de documents filtrés
+            # Logique de surlignage
+            highlighted_question = (
+                result.meta.highlight['variable.question_text'][0]
+                if hasattr(result.meta, 'highlight') and 'variable.question_text' in result.meta.highlight
+                else original_question
+            )
 
-    # Formatage des résultats pour DataTables
-    data = []
-    for result in response.hits:
-        original_question = result.variable.question_text if hasattr(result.variable, 'question_text') else "N/A"
-        
-        # Appliquer le surlignage, ou garder le texte complet si pas de surlignage
-        if 'highlight' in result.meta and 'variable.question_text' in result.meta.highlight:
-            highlighted_question = result.meta.highlight['variable.question_text'][0]
-        else:
-            highlighted_question = original_question
+            category_matched = None
+            all_clean_categories = []  # Initialisation de full_cat
 
-        category_matched = None
-        other_categories = []
-        if search_location == 'categories':
-            if 'highlight' in result.meta and 'variable.categories.category_label' in result.meta.highlight:
-                category_matched = result.meta.highlight['variable.categories.category_label'][0]
+            # Récupérer la catégorie correspondante
+            if search_location == 'categories' and hasattr(result.meta, 'highlight'):
+                if 'variable.categories.category_label' in result.meta.highlight:
+                    category_highlight = result.meta.highlight['variable.categories.category_label']
+                    category_matched = category_highlight[0] if category_highlight else None
 
-            if hasattr(result.variable, 'categories'):
-                for category in result.variable.categories:
-                    other_categories.append(category.category_label)
+            # Ajouter un marquage à la catégorie correspondante
+            if category_matched:
+                for cat in result.variable.categories:
+                    if cat.category_label == remove_html_tags(category_matched):
+                        # Formatez avec le code et le label
+                        all_clean_categories.append(
+                            f"<mark style='background-color: yellow;'>{cat.code} : {cat.category_label}</mark>"
+                        )
+                    else:
+                        # Conservez le format habituel
+                        all_clean_categories.append(f"{cat.code} : {cat.category_label}")
+            else:
+                # Si aucune catégorie n'est mise en correspondance, conservez les autres catégories
+                for cat in result.variable.categories:
+                    all_clean_categories.append(f"{cat.code} : {cat.category_label}")
 
-        # Surligner le nom de la variable si nécessaire
-        variable_name = result.variable_name
-        if search_location == 'variable_name' and 'highlight' in result.meta and 'variable_name' in result.meta.highlight:
-            variable_name = result.meta.highlight['variable_name'][0]
+            variable_name = result.variable_name
+            if search_location == 'variable_name' and hasattr(result.meta,
+                                                              'highlight') and 'variable_name' in result.meta.highlight:
+                variable_name = result.meta.highlight['variable_name'][0]
 
-        data.append({
-            "id": result.meta.id,  # ID de la liaison
-            "variable_name": variable_name,  # Nom de la variable avec surlignage si disponible
-            "question_text": highlighted_question,  # Texte de la question avec surbrillance si disponible
-            "survey_name": result.survey.name if hasattr(result, 'survey') else "N/A",
-            "notes": result.notes if hasattr(result, 'notes') else "N/A",
-            "category_matched": category_matched,
-            "other_categories": other_categories,
+            # Collecte des données formatées
+            data.append({
+                "id": result.meta.id,
+                "variable_name": variable_name,
+                "question_text": highlighted_question,
+                "survey_name": getattr(result.survey, 'name', "N/A"),
+                "notes": getattr(result, 'notes', "N/A"),
+                "categories": all_clean_categories,
+                "internal_label": result.variable.internal_label,
+                "is_category_search": is_category_search,
+            })
+        return data
+
+    def get(self, request, *args, **kwargs):
+        response = self.get_queryset()
+
+        # Total records pour DataTables
+        total_records = BindingSurveyDocument.search().count()
+        filtered_records = response.hits.total.value
+
+        # Formater les données pour DataTables
+        data = self.format_search_results(response, request.GET.get('search_location', 'questions'))
+
+        return JsonResponse({
+            "recordsTotal": total_records,
+            "recordsFiltered": filtered_records,
+            "draw": int(request.GET.get('draw', 1)),
+            "data": data
         })
 
-    # Retourner la réponse au format JSON pour DataTables
-    return JsonResponse({
-        "recordsTotal": total_records,
-        "recordsFiltered": filtered_records,
-        "draw": int(request.GET.get('draw', 1)),
-        "data": data
-    })
 
-
-
-
-
-# -- STDLIB
-import re
+def remove_html_tags(text):
+    """Supprime toutes les balises HTML d'une chaîne de caractères."""
+    return re.sub(r'<[^>]+>', '', text)
 
 
 def autocomplete(request):
@@ -579,9 +611,7 @@ def autocomplete(request):
 
 
 
-# -- DJANGO
-from django.http import HttpResponse
-from django.views import View
+
 
 
 class ExportQuestionsCSVView(View):
@@ -681,11 +711,7 @@ def similar_conceptual_variable_questions(request, question_id):
     })
 
 
-# -- DJANGO
-from django.contrib.auth.views import LoginView
 
-# -- BASEDEQUESTIONS (LOCAL)
-from .forms import CustomAuthenticationForm
 
 
 class CustomLoginView(LoginView):
@@ -693,9 +719,6 @@ class CustomLoginView(LoginView):
     authentication_form = CustomAuthenticationForm
     redirect_authenticated_user = True
 
-
-# -- DJANGO
-from django.views.decorators.csrf import csrf_exempt
 
 
 @csrf_exempt

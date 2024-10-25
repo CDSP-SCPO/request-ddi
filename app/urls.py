@@ -4,8 +4,8 @@ from django.urls import path
 # -- BASEDEQUESTIONS (LOCAL)
 from .views import (
     CombinedUploadView, CSVUploadView, CustomLoginView, QuestionDetailView,
-    RepresentedVariableSearchView, XMLUploadView, autocomplete,
-    check_duplicates, export_page, search_results, search_results_data,
+    RepresentedVariableSearchView, SearchResultsDataView, XMLUploadView,
+    autocomplete, check_duplicates, export_page, search_results,
     similar_conceptual_variable_questions,
     similar_representative_variable_questions,
 )
@@ -18,7 +18,7 @@ urlpatterns = [
     path('upload-xml/', XMLUploadView.as_view(), name='upload_xml'),
     path('', RepresentedVariableSearchView.as_view(), name='representedvariable_search'),
     path('search-results/', search_results, name='search_results'),  
-    path('api/search-results/', search_results_data, name='search_results_data'),
+    path('api/search-results/', SearchResultsDataView.as_view(), name='search_results_data'),
 
     path('export-csv/', export_page, name='export_page'),
 
