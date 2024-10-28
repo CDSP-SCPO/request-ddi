@@ -43,11 +43,14 @@ nav a:hover {
 
 /* Section Hero */
 section.hero {
+    width:80%;
     color: #333;
     padding: 100px 20px;
     text-align: center;
     border-bottom: 1px solid;
+    margin : 0 auto;
 }
+
 
 section.hero h2 {
     margin-bottom: 10px;
@@ -174,3 +177,6 @@ footer {
 .dropdown-item.active{
     background-color: #6c757d;;
 }
+
+
+

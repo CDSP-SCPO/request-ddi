@@ -1,26 +1,23 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-    <div>
-        <a href="{% url 'app:representedvariable_search' %}" class="btn btn-primary">Retour</a>
-        <h1>Exporter Questions en CSV</h1>
-        <a href="{% url 'export_questions_csv' %}">
-            <button>Télécharger le fichier CSV</button>
-        </a>
+    <div class="container-custom mt-4">
+        <h1 class="text-center mb-4">Upload de CSV et XML</h1>
+        <div class="d-flex justify-content-center">
+            <a href="{% url 'export_questions_csv' %}">
+                <button>Télécharger le fichier CSV</button>
+            </a>
+        </div>
     </div>
 {% endblock %}
 
 {% block extra_css %}
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f9;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-    }
+    .container-custom {
+            min-height: 90%;
+            flex-grow: 1;
+        }
     button {
         background-color: #007bff;
         color: white;
