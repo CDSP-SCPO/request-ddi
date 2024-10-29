@@ -97,7 +97,7 @@
     .card {
         position: relative; /* Important pour confiner le dropdown à la carte */
         margin-bottom: 20px;
-        max-height: 400px; /* Limite de la hauteur de la carte si nécessaire */
+
         overflow: hidden; /* Empêche le dépassement du contenu */
     }
 </style>
@@ -195,7 +195,7 @@ $(document).ready(function() {
                             <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Catégories</button>
                             
                             <!-- Liste des catégories, affichée directement si is_category_search est True -->
-                            <div id="categories-` + row.id + `" class="categories-list mb-3 mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">
+                            <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">
                                 ` + categoriesDisplay + `
                             </div>
                         </div>
