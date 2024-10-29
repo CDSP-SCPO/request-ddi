@@ -11,3 +11,4 @@ psycopg2-binary
 gunicorn==20.1.0
 whitenoise==6.4.0
 isort
+Pillow ==11.0.0

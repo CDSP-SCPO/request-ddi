@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="container">
-    <h2>Login</h2>
-    <form method="post" class="form-group">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="btn btn-primary">Login</button>
-    </form>
+  <div class="container d-flex justify-content-center align-items-center flex-direction-column pt-4">
+    <div class="w-50">
+      <h2 class="text-center">Login</h2>
+      <form method="post" class="form-group">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Login</button>
+      </form>
+    </div>
   </div>
 {% endblock %}
