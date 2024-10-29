@@ -2,103 +2,77 @@
 {% load static %}
 
 {% block content %}
-    <div class="container">
-        <a href="{% url 'app:representedvariable_search' %}" class="btn btn-primary">Retour</a>
-        <h1>Upload de CSV et XML</h1>
+    <div class="container-custom mt-4">
+        <h1 class="text-center mb-4">Upload de CSV et XML</h1>
 
-        <!-- Affichage des messages d'erreur -->
-
-
-        <div class="form-container">
-            <!-- Colonne gauche pour le CSV -->
-            <div class="csv-section">
+        <!-- Colonne gauche pour le CSV -->
+        <div class="row justify-content-center">
+            <!-- Section CSV -->
+            <div class="col-md-5">
                 <div class="help-box">
                     <h2>Aide pour le fichier CSV</h2>
                     <p>Votre fichier CSV doit contenir les colonnes suivantes :</p>
-                    <div class="d-flex justify-content-around">
-                        <ul>
-                            <li>ddi</li>
-                            <li>title</li>
-                            <li>variable_name</li>
-                            <li>variable_label</li>
-                            <li>question_text</li>
-                            <li>category_label</li>
-                        </ul>
-                        <ul>
-                            <li>univers</li>
-                            <li>notes</li>
-                        </ul>
-                    </div>
-                    <p>Assurez-vous que ces colonnes sont présentes et correctement orthographiées dans le fichier.</p>
+                    <ul>
+                        <li>ddi</li>
+                        <li>title</li>
+                        <li>variable_name</li>
+                        <li>variable_label</li>
+                        <li>question_text</li>
+                        <li>category_label</li>
+                        <li>univers</li>
+                        <li>notes</li>
+                    </ul>
+                    <p>Assurez-vous que ces colonnes sont présentes et correctement orthographiées.</p>
                 </div>
 
                 <h2>Uploader un fichier CSV</h2>
-                <form method="POST" enctype="multipart/form-data" id="csvUploadForm"
-                      action="{% url 'app:upload_csv' %}">
+                <form class="d-flex flex-column" method="POST" enctype="multipart/form-data" id="csvUploadForm" action="{% url 'app:upload_csv' %}">
                     {% csrf_token %}
-                    <p class="custom-select-container">
-                        {{ csv_form.series.label_tag }}
-                        {{ csv_form.series }}
-                    </p>
-                    <p>
-                        {{ csv_form.csv_file.label_tag }}
-                        {{ csv_form.csv_file }}
-                    </p>
+                    <div class="mb-2">
+                    {{ csv_form.series.label_tag }} {{ csv_form.series }}
+                    </div>
+                    <div>
+                    {{ csv_form.csv_file.label_tag }} {{ csv_form.csv_file }}
+                    </div>
                 </form>
-
-                <!-- Bouton d'envoi CSV -->
-                <button type="submit" form="csvUploadForm" id="submitCsvBtn">Envoyer le fichier CSV</button>
+                <button type="submit" form="csvUploadForm" id="submitCsvBtn" class="btn btn-success mt-3">Envoyer le fichier CSV</button>
             </div>
 
-            <!-- Colonne droite pour le XML -->
-            <div class="xml-section">
+            <!-- Section XML -->
+            <div class="col-md-5">
                 <div class="help-box">
                     <h2>Balises attendues pour le XML</h2>
-                    <div class="d-flex justify-content-around">
-                        <ul>
-                            <li>var
-                                <ul>
-                                    <li>catValu</li>
-                                    <li>labl</li>
-                                    <li>catgry</li>
-                                    <li>qstnLit</li>
-                                    <li>universe</li>
-                                    <li>notes</li>
-                                </ul>
-                            </li>
-                        </ul>
-                        <ul>
-                            <li>IDNo</li>
-                            <li>titl</li>
-                            
-                        </ul>
-                    </div>
-
-                    <p>Assurez-vous que ces balises et attributs sont présents dans votre fichier XML pour garantir une
-                        structure valide.</p>
+                    <ul>
+                        <li>var
+                            <ul>
+                                <li>catValu</li>
+                                <li>labl</li>
+                                <li>catgry</li>
+                                <li>qstnLit</li>
+                                <li>universe</li>
+                                <li>notes</li>
+                            </ul>
+                        </li>
+                        <li>IDNo</li>
+                        <li>titl</li>
+                    </ul>
+                    <p>Assurez-vous que ces balises sont présentes dans votre fichier XML pour garantir une structure valide.</p>
                 </div>
 
-
                 <h2>Uploader un fichier XML</h2>
-                <form method="POST" enctype="multipart/form-data" id="xmlUploadForm"
-                      action="{% url 'app:upload_xml' %}">
+                <form class="d-flex flex-column" method="POST" enctype="multipart/form-data" id="xmlUploadForm" action="{% url 'app:upload_xml' %}">
                     {% csrf_token %}
-                    <p class="custom-select-container">
-                        {{ xml_form.series.label_tag }}
-                        {{ xml_form.series }}
-                    </p>
-                    <p>
-                        {{ xml_form.xml_file.label_tag }}
-                        {{ xml_form.xml_file }}
-                    </p>
+                    <div class="mb-2">
+                    {{ xml_form.series.label_tag }} {{ xml_form.series }}
+                    </div>
+                    <div>
+                    {{ xml_form.xml_file.label_tag }} {{ xml_form.xml_file }}
+                    </div>
                 </form>
-
-
-                <!-- Bouton d'envoi XML -->
-                <button type="submit" form="xmlUploadForm" id="submitXmlBtn">Envoyer le fichier XML</button>
+                <button type="submit" form="xmlUploadForm" id="submitXmlBtn" class="btn btn-success mt-3">Envoyer le fichier XML</button>
             </div>
         </div>
-
+        
         <!-- Superposition et spinner de chargement -->
         <div class="overlay" id="overlay">
             <div class="spinner-container">
@@ -112,14 +86,14 @@
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        $('document').ready(function(){
+        document.addEventListener('DOMContentLoaded', function() {
             {% if messages %}
                 {% for message in messages %}
                     {% if message.tags == "success" %}
                         Swal.fire({
                             icon: 'success',
                             title: 'Succès',
-                            html: '{{ message|safe }}'  // Utilise `safe` pour rendre le HTML
+                            html: '{{ message|safe }}'  
                         }).then(function() {
                             document.getElementById('overlay').classList.remove('show');
                         });
@@ -127,7 +101,7 @@
                         Swal.fire({
                             icon: 'error',
                             title: 'Erreur',
-                            html: "{{ message|safe }}"  // Utilise aussi `safe` pour les erreurs
+                            html: "{{ message|safe }}"
                         }).then(function() {
                             document.getElementById('overlay').classList.remove('show');
                         });
@@ -135,10 +109,9 @@
                 {% endfor %}
             {% endif %}
         });
-        document.getElementById('csvUploadForm').addEventListener('submit', function (event) {
-            event.preventDefault(); // Empêcher l'envoi par défaut
 
-            // Envoi d'une requête AJAX pour vérifier les doublons avant de soumettre le formulaire
+        document.getElementById('csvUploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
             var formData = new FormData(this);
 
             fetch('{% url "app:check_duplicates" %}', {
@@ -157,15 +130,12 @@
                         cancelButtonText: 'Annuler',
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Si l'utilisateur confirme, soumettre le formulaire
                             document.getElementById('csvUploadForm').submit();
-                        }
-                        else if (result.isDismissed) {
+                        } else {
                             document.getElementById('overlay').classList.remove('show');
                         }
                     });
                 } else {
-                    // Si aucun doublon, soumettre directement le formulaire
                     document.getElementById('csvUploadForm').submit();
                 }
             })
@@ -175,15 +145,12 @@
                     title: 'Erreur',
                     text: 'Une erreur s\'est produite lors de la vérification des doublons.',
                 });
-                console.error('Erreur lors de la vérification des doublons:', error);
                 document.getElementById('overlay').classList.remove('show');
             });
         });
 
-        document.getElementById('xmlUploadForm').addEventListener('submit', function (event) {
-            event.preventDefault(); // Empêcher l'envoi par défaut
-
-            // Envoi d'une requête AJAX pour vérifier les doublons avant de soumettre le formulaire
+        document.getElementById('xmlUploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
             var formData = new FormData(this);
 
             fetch('{% url "app:check_duplicates" %}', {
@@ -202,15 +169,12 @@
                         cancelButtonText: 'Annuler',
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Si l'utilisateur confirme, soumettre le formulaire
                             document.getElementById('xmlUploadForm').submit();
-                        } else if (result.isDismissed) {
-                            // Si l'utilisateur annule, cacher l'overlay
+                        } else {
                             document.getElementById('overlay').classList.remove('show');
                         }
                     });
                 } else {
-                    // Si aucun doublon, soumettre directement le formulaire
                     document.getElementById('xmlUploadForm').submit();
                 }
             })
@@ -220,17 +184,15 @@
                     title: 'Erreur',
                     text: 'Une erreur s\'est produite lors de la vérification des doublons.',
                 });
-
-                console.error('Erreur lors de la vérification des doublons:', error);
-                document.getElementById('overlay').classList.remove('show'); // Cacher l'overlay en cas d'erreur
+                document.getElementById('overlay').classList.remove('show');
             });
         });
 
-        document.getElementById('csvUploadForm').addEventListener('submit', function () {
+        document.getElementById('csvUploadForm').addEventListener('submit', function() {
             document.getElementById('overlay').classList.add('show');
         });
 
-        document.getElementById('xmlUploadForm').addEventListener('submit', function () {
+        document.getElementById('xmlUploadForm').addEventListener('submit', function() {
             document.getElementById('overlay').classList.add('show');
         });
 
@@ -246,47 +208,24 @@
 
 {% block extra_css %}
     <style>
-        /* Style global */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            flex-direction: column;
-            height: auto;
-            overflow: hidden;
+        .container-custom {
+            min-height: 90%;
+            flex-grow: 1;
         }
 
-        h1 {
-            color: #333;
-            text-align: center;
+        .help-box {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
             margin-bottom: 20px;
+            color: #333;
         }
 
-        .form-container {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            max-width: 1200px; /* Largeur maximum de la zone de contenu */
-            margin: 0 auto; /* Centrer le conteneur */
+        .help-box h2 {
+            color: #007bff;
+            font-size: 1.2em;
         }
 
-        .csv-section, .xml-section {
-            width: 45%; /* Chaque section prend 45% de la largeur */
-            margin: 0 2.5%; /* Espacement horizontal entre les sections */
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column; /* Aligner le contenu verticalement */
-            justify-content: space-between; /* Équilibrer l'espace entre les éléments */
-        }
-
-        /* Alignement des boutons */
         button {
             background-color: #28a745;
             color: white;
@@ -295,63 +234,13 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s ease;
-            margin-top: 20px; /* Espacement au-dessus des boutons */
+            margin-top: 20px;
         }
 
         button:hover {
             background-color: #218838;
         }
 
-        /* Style de la cellule d'aide */
-        .help-box {
-            background-color: #e9ecef;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            color: #333;
-            height: 22em;
-        }
-
-        .help-box h2 {
-            margin-top: 0;
-            font-size: 1.2em;
-            color: #007bff;
-        }
-
-        .help-box p {
-            margin: 5px 0;
-        }
-
-        .help-box ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        .help-box li {
-            margin: 5px 0;
-            padding-left: 15px;
-            position: relative;
-        }
-
-        .help-box li::before {
-            content: "✔";
-            color: green;
-            position: absolute;
-            left: 0;
-            top: 0;
-        }
-
-        /* Style pour les messages d'erreur */
-        .error-box {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            border: 1px solid #f5c6cb;
-        }
-
-        /* Style pour la superposition et le spinner */
         .overlay {
             position: fixed;
             top: 0;
@@ -369,11 +258,6 @@
             display: flex;
         }
 
-        .spinner-container {
-            text-align: center;
-            color: #fff;
-        }
-
         .spinner {
             width: 60px;
             height: 60px;
@@ -381,8 +265,6 @@
             border-radius: 50%;
             border-top: 8px solid #28a745;
             animation: spin 1s linear infinite;
-            margin-bottom: 10px;
-            display: inline-block;
         }
 
         @keyframes spin {
@@ -397,6 +279,7 @@
         .spinner-text {
             font-size: 1.2em;
             margin-top: 10px;
+            color: white;
         }
     </style>
 {% endblock %}

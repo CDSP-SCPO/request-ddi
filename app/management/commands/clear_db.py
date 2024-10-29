@@ -1,5 +1,12 @@
+# -- DJANGO
 from django.core.management.base import BaseCommand
-from app.models import BindingConcept, BindingSurveyRepresentedVariable, Category, Concept, RepresentedVariable, ConceptualVariable, Survey, Serie
+
+# -- BASEDEQUESTIONS
+from app.models import (
+    BindingConcept, BindingSurveyRepresentedVariable, Category, Concept,
+    ConceptualVariable, RepresentedVariable, Serie, Survey,
+)
+
 
 class Command(BaseCommand):
     help = 'Supprime toutes les données de la base de données dans un ordre spécifique'

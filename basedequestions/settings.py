@@ -1,7 +1,10 @@
-from pathlib import Path
-from get_docker_secret import get_docker_secret
+# -- STDLIB
 import os
+from pathlib import Path
+
+# -- THIRDPARTY
 from dotenv import load_dotenv
+from get_docker_secret import get_docker_secret
 
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent

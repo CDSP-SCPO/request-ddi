@@ -2,29 +2,28 @@
 {% load static %}
 
 {% block content %}
-<div class="container">
-    <a href="{% url 'app:representedvariable_search' %}" class="btn btn-primary">Retour à la page d'accueil
-    </a>
+<div class="container mt-4">
+    
     <h1 class="mb-4">Résultats de la recherche</h1>
     <form method="GET" action="{% url 'app:search_results' %}" class="search-bar form-inline mb-4">
         <div class="input-group mr-2">
             <input type="text" name="q" class="form-control" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
         </div>
         <div class="input-group mr-2">
-            <select name="study" id="study-filter" class="form-control selectpicker" multiple data-live-search="false" data-style="btn-outline-primary">
+            <select name="study" id="study-filter" class="form-control selectpicker" multiple data-live-search="false" data-style="btn-outline-secondary">
                 {% for study in studies %}
                     <option value="{{ study.id }}">{{ study.name }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="input-group mr-2">
-            <select name="search_location" id="search-location" class="form-control selectpicker">
+            <select name="search_location" id="search-location" class="form-select selectpicker">
                 <option value="questions" {% if search_location == 'questions' %}selected{% endif %}>Questions</option>
                 <option value="categories" {% if search_location == 'categories' %}selected{% endif %}>Catégories</option>
                 <option value="variable_name" {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la variable</option>
             </select>
         </div>
-        <button type="submit" class="btn btn-primary">Rechercher</button>
+        <button type="submit" class="btn btn-outline-primary mx-2"><i class="fa-solid fa-magnifying-glass pr-2"></i>Rechercher</button>
     </form>
     <table id="survey-table" class="table table-striped table-bordered display" style="width:100%">
         <thead class="table-dark" style="display:none">
@@ -148,7 +147,7 @@ $(document).ready(function() {
         showTick: true,
         liveSearch: false,
         actionsBox: true,
-        style: 'btn-outline-primary',
+        style: 'btn-outline-secondary',
         selectedTextFormat: 'count > 1',
         countSelectedText: function(numSelected, numTotal) {
             return (numSelected === 1) ? "{0} étude sélectionnée" : "{0} études sélectionnées";
@@ -180,21 +179,25 @@ $(document).ready(function() {
                 "data": "id",  
                 "render": function (data, type, row) {
                     var url = '/question/' + row.id + '/';
-                    var categoryBadge = row.category_matched ? `<span class="badge-category">` + row.category_matched + `</span>` : '';
-                    var otherCategories = row.other_categories.map(function(category) {
-                        var highlightClass = category === row.category_matched ? 'highlight-category' : '';
-                        return `<div class="category-item ` + highlightClass + `">` + category + `</div>`;
-                    }).join("");
-                    var dropdown = `<div class="category-dropdown">` + otherCategories + `</div>`;
+                    var categoriesDisplay = row.categories.map(function(category) {
+                        return `${category}`;
+                    }).join("<br>");
                     return `
                     <div class="card mb-3">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <a href="` + url + `">` + row.question_text + `</a>` + categoryBadge + dropdown + `
+                                <a href="` + url + `">` + row.question_text + `</a>
                             </h5>
                             <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
                             <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
-                            <p class="card-text">Détails supplémentaires sur l'enquête...</p>
+                            <h6 class="card-subtitle mb-2 text-muted">Label interne : ` + row.internal_label + `</h6>
+                                                 <!-- Bouton pour afficher les catégories -->
+                            <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Catégories</button>
+                            
+                            <!-- Liste des catégories, affichée directement si is_category_search est True -->
+                            <div id="categories-` + row.id + `" class="categories-list mb-3 mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">
+                                ` + categoriesDisplay + `
+                            </div>
                         </div>
                     </div>`;
                 }
@@ -222,6 +225,14 @@ $(document).ready(function() {
 function deleteSurvey(id) {
     // Code pour supprimer l'enquête
     alert('Supprimer l\'enquête ' + id);
+}
+function toggleCategories(categoryId) {
+    var categoriesDiv = document.getElementById(categoryId);
+    if (categoriesDiv.style.display === "none") {
+        categoriesDiv.style.display = "block"; // Affiche la liste
+    } else {
+        categoriesDiv.style.display = "none"; // Cache la liste
+    }
 }
 </script>
 {% endblock %}

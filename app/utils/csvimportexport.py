@@ -1,6 +1,9 @@
 # resources.py
+# -- THIRDPARTY
 from import_export import resources
 from import_export.fields import Field
+
+# -- BASEDEQUESTIONS (LOCAL)
 from ..models import BindingSurveyRepresentedVariable
 
 

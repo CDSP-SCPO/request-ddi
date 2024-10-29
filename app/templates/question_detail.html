@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
+<div class="container mt-4">
     <h1>Détails de la Question</h1>
     <div class="card">
         <div class="card-body">
@@ -13,7 +13,7 @@
             <h6 class="card-subtitle mb-2 text-muted">Internal Label: {{ question_represented_var.internal_label }}</h6>
             <!-- <h6 class="card-subtitle mb-2 text-muted">Type des catégories: {{ question.variable_name }}</h6> -->
             <p class="card-text">Détails supplémentaires ici...</p>
-            <a href="{% url 'app:representedvariable_search' %}" class="btn btn-primary">Retour à la recherche</a>
+            <a href="javascript:history.back()" class="btn btn-primary">Retour à la recherche</a>
         </div>
     </div>
     <div class="card mt-4">

@@ -1,10 +1,17 @@
 # forms.py
-from django import forms
+# -- STDLIB
 import csv
+
+# -- DJANGO
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm
+
+# -- THIRDPARTY
 from bs4 import BeautifulSoup
 
-from django.contrib.auth.forms import AuthenticationForm
+# -- BASEDEQUESTIONS (LOCAL)
 from .models import Serie
+
 
 class CSVUploadForm(forms.Form):
     series = forms.ModelChoiceField(

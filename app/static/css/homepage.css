@@ -1,71 +1,115 @@
+/* Style général */
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Open Sans', sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f4;
+    background-color: #ffffff; /* Couleur beige douce */
 }
+
+/* Header */
 header {
     background-color: #00466b;
     color: white;
     padding: 20px 0;
     text-align: center;
 }
+
 header h1 {
     margin: 0;
+    font-size: 2.5rem;
 }
+
+/* Navigation */
 nav {
     display: flex;
     justify-content: center;
-    background-color: #0072ce;
+    background-color: #6c757d;;
     padding: 10px;
 }
+
 nav a {
     color: white;
     text-decoration: none;
     margin: 0 15px;
     font-weight: bold;
-}
-nav a:hover {
-    text-decoration: underline;
-}
-section.hero {
-    background-color: #005fa3;
-    color: white;
-    padding: 100px 20px;
-    text-align: center;
-}
-section.hero h2 {
-    margin-bottom: 10px;
-}
-.search-bar {
-    margin-top: 20px;
-}
-.search-bar input[type="text"] {
-    padding: 10px;
-    width: 300px;
-    border: none;
+    padding: 8px 15px;
+    transition: background-color 0.3s ease;
     border-radius: 5px;
-}
-.search-bar button {
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
 }
 
+nav a:hover {
+    background-color: #005fa3;
+}
+
+/* Section Hero */
+section.hero {
+    width:80%;
+    color: #333;
+    padding: 100px 20px;
+    text-align: center;
+    border-bottom: 1px solid;
+    margin : 0 auto;
+}
+
+
+section.hero h2 {
+    margin-bottom: 10px;
+    font-size: 2rem;
+    color: #333;
+}
+
+section.hero p {
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.search-bar {
+    margin-top: 30px;
+}
+
+.search-bar input[type="text"] {
+    padding: 12px 20px;
+    width: 300px;
+    border: 1px solid #ddd;
+    border-radius: 50px; /* Bordures arrondies */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Ombre douce */
+}
+
+.search-bar select {
+    padding: 12px;
+    border-radius: 50px;
+    margin-left: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.search-bar button {
+    padding: 12px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Section Features */
 section.features {
     padding: 50px 20px;
     display: flex;
     justify-content: space-around;
     background-color: white;
 }
+
 .feature {
     text-align: center;
     max-width: 300px;
 }
+
 .feature img {
     max-width: 100%;
+    border-radius: 10px;
 }
+
+/* Footer */
 footer {
     background-color: #00466b;
     color: white;
@@ -74,55 +118,65 @@ footer {
     margin-top: 30px;
 }
 
+/* Section des études */
 .studies {
-padding: 50px 20px;
-background-color: #f9f9f9;
+    padding: 50px 20px;
 }
 
 .study-cards {
-display: flex;
-flex-wrap: wrap;
-gap: 20px;
-justify-content: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
 }
 
 .study-card {
-background-color: white;
-border-radius: 10px;
-box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-max-width: 300px;
-padding: 20px;
-text-align: center;
-transition: transform 0.3s;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 300px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .study-card:hover {
-transform: scale(1.05);
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 .study-card img {
-max-width: 100%;
-border-radius: 10px;
+    max-width: 100%;
+    border-radius: 10px;
 }
 
-.study-card h3 {
-margin: 15px 0 10px;
+.study-card h5 {
+    margin: 15px 0 10px;
+    color: #333;
 }
 
 .study-card p {
-color: #666;
-font-size: 0.9em;
+    color: #666;
+    font-size: 0.9em;
 }
 
 .study-card button {
-background-color: #0072ce;
-color: white;
-padding: 10px 20px;
-border: none;
-border-radius: 5px;
-cursor: pointer;
+    background-color: #6c757d;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 .study-card button:hover {
-background-color: #005fa3;
+    background-color: #666666;
 }
+
+.dropdown-item.active{
+    background-color: #6c757d;;
+}
+
+
+
