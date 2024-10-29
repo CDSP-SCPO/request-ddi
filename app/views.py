@@ -22,7 +22,7 @@ from elasticsearch_dsl import A, Q, Search
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import \
     BindingSurveyDocument
-from .forms import CSVUploadForm, CustomAuthenticationForm, XMLUploadForm
+from .forms import CSVUploadForm, CustomAuthenticationForm, XMLUploadForm, SerieForm
 from .models import (
     BindingSurveyRepresentedVariable, Category, ConceptualVariable,
     RepresentedVariable, Serie, Survey,
@@ -711,13 +711,21 @@ def similar_conceptual_variable_questions(request, question_id):
     })
 
 
-
-
-
 class CustomLoginView(LoginView):
     template_name = 'login.html'
     authentication_form = CustomAuthenticationForm
     redirect_authenticated_user = True
+
+
+
+class CreateSerie(FormView):
+    template_name = "create_serie.html"
+    form_class = SerieForm
+    success_url = reverse_lazy('app:representedvariable_search')
+
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
 
 
 

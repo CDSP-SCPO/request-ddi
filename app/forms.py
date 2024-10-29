@@ -5,6 +5,7 @@ import csv
 # -- DJANGO
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from django.forms import ModelForm
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
@@ -22,7 +23,8 @@ class CSVUploadForm(forms.Form):
     )
     csv_file = forms.FileField(label='Select a CSV file')
 
-    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes']
+    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers',
+                        'notes']
 
     def clean_csv_file(self):
         csv_file = self.cleaned_data['csv_file']
@@ -110,7 +112,28 @@ class XMLUploadForm(forms.Form):
             raise forms.ValidationError(f"Erreur lors de la lecture du fichier XML : {str(e)}")
 
 
-
 class CustomAuthenticationForm(AuthenticationForm):
     username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+
+
+class SerieForm(ModelForm):
+    class Meta:
+        model = Serie
+        fields = "__all__"
+
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'Nom de l\'enquête'
+            }),
+            'publisher': forms.TextInput(attrs={
+                'class': 'form-control form-control-lg',
+                'placeholder': 'Éditeur'
+            }),
+            'abstract': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 5,
+                'placeholder': 'Entrez le résumé ici...'
+            }),
+        }

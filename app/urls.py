@@ -7,7 +7,7 @@ from .views import (
     RepresentedVariableSearchView, SearchResultsDataView, XMLUploadView,
     autocomplete, check_duplicates, export_page, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions,
+    similar_representative_variable_questions, CreateSerie
 )
 
 from django.contrib.auth.views import LogoutView
@@ -31,6 +31,7 @@ urlpatterns = [
 
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('create-serie/', CreateSerie.as_view(), name='create-serie'),
     path('check-duplicates/', check_duplicates, name='check_duplicates'),
 
 ]

@@ -7,7 +7,9 @@ from django.db import models
 #     affiliation
 
 class Serie(models.Model):
-    name = models.TextField()
+    name = models.CharField()
+    publisher = models.CharField()
+    abstract = models.TextField()
 
     def __str__(self):
         return f"{self.name}"
