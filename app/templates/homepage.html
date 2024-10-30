@@ -33,20 +33,11 @@
 
         <section class="studies">
             <h2 class="container-custom-font">Études Disponibles</h2>
-            <div class="container">
-                <div class="row">
-                    {% for serie in series %}
-                    <div class="col-12 col-md-6 d-flex justify-content-center mb-4">
-                        <a href="https://data.sciencespo.fr/dataset.xhtml?persistentId={{ serie.external_ref }}" target="_blank" class="study-card-link">
-                            <div class="study-card d-flex align-items-center">
-                                {% if serie.photo %}
-                                    <img src="{{ serie.photo.url }}" alt="{{ serie.name }}" class="study-card-image">
-                                {% endif %}
-                                <div class="study-card-content">
-                                    <h5>{{ serie.name }}</h5>
-                                </div>
-                            </div>
-                        </a>
+            <div class="study-cards">
+                {% for serie in series %}
+                <a href="{% url 'app:serie_detail' serie.pk %}" target="_blank" class="study-card-link">
+                    <div class="study-card">
+                        <h5>{{ serie.name }}</h5>
                     </div>
                     {% endfor %}
                 </div>

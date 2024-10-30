@@ -7,7 +7,9 @@ from django.db import models
 #     affiliation
 
 class Serie(models.Model):
-    name = models.TextField()
+    name = models.CharField()
+    publisher = models.CharField()
+    abstract = models.TextField()
     photo = models.ImageField(upload_to='series_photos/', blank=True, null=True)
 
     def __str__(self):
