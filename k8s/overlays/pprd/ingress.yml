@@ -1,4 +1,4 @@
-apiVersion: networking.k8s.io/v1
+apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: basedequestions-ingress
@@ -19,11 +19,8 @@ spec:
               service:
                 name: basedequestions
                 port:
-                  number: 8000
+                    number: 8000
           - path: /
-            pathType: Prefix
             backend:
-              service:
-                name: basedequestions
-                port:
-                  number: 8000
+              serviceName: basedequestions
+              servicePort: 8000
