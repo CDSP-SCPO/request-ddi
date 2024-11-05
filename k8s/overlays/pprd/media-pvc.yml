@@ -5,7 +5,7 @@ metadata:
   namespace: basedequestions
 spec:
   accessModes:
-    - ReadWriteMany  # ou ReadWriteOnce selon vos besoins
+    - ReadWriteMany
   resources:
     requests:
       storage: 1Gi
