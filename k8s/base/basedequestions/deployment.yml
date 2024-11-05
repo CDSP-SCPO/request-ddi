@@ -12,15 +12,8 @@ spec:
       labels:
         app: basedequestions
     spec:
-      securityContext:  # Contexte de sécurité au niveau du Pod pour appliquer fsGroup
-        fsGroup: 1000  # Assure que le groupe ID 1000 peut accéder aux fichiers
-      initContainers:  # InitContainer pour configurer les permissions du dossier media
-        - name: init-media-permissions
-          image: busybox  # Utilisation d'une image légère comme BusyBox
-          command: ["sh", "-c", "chown -R 1000:1000 /app/media"]
-          volumeMounts:
-            - name: media-volume
-              mountPath: /app/media
+      imagePullSecrets:
+        - name: gitlab-reg
       containers:
         - name: basedequestions
           image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:latest
@@ -68,13 +61,10 @@ spec:
           ports:
             - containerPort: 8000
           imagePullPolicy: Always
-          securityContext:  # Contexte de sécurité au niveau du conteneur
-            runAsUser: 1000    # ID de `appuser`
-            runAsGroup: 1000   # Groupe de `appuser`
           volumeMounts:
             - name: media-volume
-              mountPath: /app/media  # Monte le PVC dans le conteneur
+              mountPath: /app/media
       volumes:
         - name: media-volume
           persistentVolumeClaim:
-            claimName: media-pvc  # Utilise le PVC nommé media-pvc
+            claimName: media-pvc
