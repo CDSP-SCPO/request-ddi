@@ -61,3 +61,10 @@ spec:
           ports:
             - containerPort: 8000
           imagePullPolicy: Always
+          volumeMounts:  # Ajout de la section volumeMounts
+            - name: media-volume
+              mountPath: /app/media  # Montre le PVC dans le conteneur
+      volumes:  # Ajout de la section volumes
+        - name: media-volume
+          persistentVolumeClaim:
+            claimName: media-pvc  # Assurez-vous que ce PVC est défini et existe
