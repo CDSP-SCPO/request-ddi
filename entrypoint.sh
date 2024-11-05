@@ -1,14 +1,5 @@
 #!/usr/bin/env sh
 
-# Créer le dossier media s'il n'existe pas
-echo "Création du dossier /app/media si nécessaire..."
-mkdir -p /app/media
-echo "/app/media créé ou déjà existant."
-
-# Changer le propriétaire du dossier à appuser
-echo "Changement du propriétaire du dossier /app/media à appuser..."
-chown -R appuser:appuser /app/media
-echo "Propriétaire changé."
 
 # Lancer les migrations Django
 echo "Lancement des migrations Django..."
