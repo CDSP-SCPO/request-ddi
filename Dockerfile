@@ -12,10 +12,12 @@ RUN apt-get update && apt-get install -y netcat-openbsd && apt-get clean
 # Définit le répertoire de travail
 WORKDIR /app
 
+RUN mkdir -p /app/media && chown -R appuser:appuser /app/media
+
 # Crée les répertoires pour les fichiers statiques et ajuste les permissions
 RUN mkdir -p /app/static && chown -R appuser:appuser /app/static
 RUN mkdir -p /app/collected_static && chown -R appuser:appuser /app/collected_static
-RUN mkdir -p /app/media && chown -R appuser:appuser /app/media
+
 
 
 # Copie le fichier requirements.txt et installe les dépendances
