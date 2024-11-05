@@ -3,7 +3,11 @@
 
 {% block content %}
     <div class="container-custom mt-4">
-        <h1 class="text-center mb-4">Upload de CSV et XML</h1>
+    <div class="text-center mb-3">
+        <h1 class="mb-2">Upload de CSV et XML</h1>
+        <a href="{% url 'app:create-serie' %}" class="btn btn-warning">Créer une nouvelle série</a>
+    </div>
+        
 
         <!-- Colonne gauche pour le CSV -->
         <div class="row justify-content-center w-100">
