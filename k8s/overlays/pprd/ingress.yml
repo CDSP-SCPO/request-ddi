@@ -14,12 +14,9 @@ spec:
       http:
         paths:
           - path: /media/
-            pathType: Prefix
             backend:
-              service:
-                name: basedequestions
-                port:
-                    number: 8000
+              serviceName: basedequestions
+              servicePort: 8000
           - path: /
             backend:
               serviceName: basedequestions
