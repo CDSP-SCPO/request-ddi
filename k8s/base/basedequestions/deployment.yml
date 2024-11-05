@@ -12,8 +12,15 @@ spec:
       labels:
         app: basedequestions
     spec:
-      imagePullSecrets:
-        - name: gitlab-reg
+      securityContext:  # Contexte de sécurité au niveau du Pod pour appliquer fsGroup
+        fsGroup: 1000  # Assure que le groupe ID 1000 peut accéder aux fichiers
+      initContainers:  # InitContainer pour configurer les permissions du dossier media
+        - name: init-media-permissions
+          image: busybox  # Utilisation d'une image légère comme BusyBox
+          command: ["sh", "-c", "chown -R 1000:1000 /app/media"]
+          volumeMounts:
+            - name: media-volume
+              mountPath: /app/media
       containers:
         - name: basedequestions
           image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:latest
@@ -61,21 +68,13 @@ spec:
           ports:
             - containerPort: 8000
           imagePullPolicy: Always
-          securityContext:  # Définit l'utilisateur et le groupe du conteneur
-            runAsUser: 1000  # ID de `appuser`
-            runAsGroup: 1000  # Groupe de `appuser`
-            fsGroup: 1000     # Groupe qui possède les fichiers créés par le conteneur
+          securityContext:  # Contexte de sécurité au niveau du conteneur
+            runAsUser: 1000    # ID de `appuser`
+            runAsGroup: 1000   # Groupe de `appuser`
           volumeMounts:
             - name: media-volume
-              mountPath: /app/media
-      initContainers:  # Utilisation d'un initContainer pour configurer les permissions au besoin
-        - name: init-media-permissions
-          image: busybox
-          command: ["sh", "-c", "chown -R 1000:1000 /app/media"]
-          volumeMounts:
-            - name: media-volume
-              mountPath: /app/media
+              mountPath: /app/media  # Monte le PVC dans le conteneur
       volumes:
         - name: media-volume
           persistentVolumeClaim:
-            claimName: media-pvc
+            claimName: media-pvc  # Utilise le PVC nommé media-pvc
