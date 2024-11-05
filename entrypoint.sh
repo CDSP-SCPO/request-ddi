@@ -1,9 +1,10 @@
 #!/usr/bin/env sh
 
-# Créer le dossier media s'il n'existe pas avec l'utilisateur appuser
-if [ ! -d /app/media ]; then
-    sudo -u appuser mkdir -p /app/media
-fi
+# Créer le dossier media s'il n'existe pas
+mkdir -p /app/media
+
+# Changer le propriétaire du dossier à appuser
+chown -R appuser:appuser /app/media
 
 # Lancer les migrations Django
 python manage.py makemigrations
