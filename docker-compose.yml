@@ -11,6 +11,7 @@ services:
     user: "1000:1000"
     volumes:
       - ./:/app
+      - media_data:/app/media  # Ajout du volume pour media
     entrypoint: /app/entrypoint.sh
     depends_on:
       - elasticsearch
@@ -55,6 +56,7 @@ services:
 volumes:
   postgres_data:
   elasticsearch_data:
+  media_data:
 
 networks:
   default:
