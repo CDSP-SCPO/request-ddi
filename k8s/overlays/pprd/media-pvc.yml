@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-pvc
+  namespace: basedequestions
+spec:
+  accessModes:
+    - ReadWriteMany  # ou ReadWriteOnce selon vos besoins
+  resources:
+    requests:
+      storage: 1Gi
