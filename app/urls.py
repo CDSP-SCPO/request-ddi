@@ -1,5 +1,7 @@
 # -- DJANGO
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .views import (
@@ -25,7 +27,6 @@ urlpatterns = [
     path('export-csv/', export_page, name='export_page'),
 
     path('question/<int:id>/', QuestionDetailView.as_view(), name='question_detail'),
-
     path('questions/similar_representative/<int:question_id>/', similar_representative_variable_questions, name='similar_representative'),
     path('questions/similar_conceptual/<int:question_id>/', similar_conceptual_variable_questions, name='similar_conceptual'),
 
@@ -35,5 +36,6 @@ urlpatterns = [
     path('check-duplicates/', check_duplicates, name='check_duplicates'),
     path('serie/<int:pk>/', SerieDetailView.as_view(), name='serie_detail'),
 
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 
