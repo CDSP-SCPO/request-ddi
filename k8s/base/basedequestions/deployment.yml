@@ -14,6 +14,13 @@ spec:
     spec:
       imagePullSecrets:
         - name: gitlab-reg
+      initContainers:
+        - name: init-media-permissions
+          image: busybox
+          command: ["sh", "-c", "mkdir -p /app/media && chown -R appuser:appuser /app/media"]
+          volumeMounts:
+            - name: media-volume
+              mountPath: /app/media
       containers:
         - name: basedequestions
           image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:latest
