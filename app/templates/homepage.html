@@ -5,7 +5,7 @@
 {% block content %}
     <!-- Affichage des messages -->
     <div class="container-homepage">
-    {% if messages %}
+        {% if messages %}
             <div class="messages">
                 {% for message in messages %}
                     <div class="alert alert-success">  <!-- Utiliser seulement alert-success pour le succès -->
@@ -21,30 +21,43 @@
                 <p>Explorez des données à travers différents projets de recherche.</p>
             </div>
             <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
-                <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
+                <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}"
+                       id="autocomplete-input">
                 <select name="search_location" id="search-location" class="selectpicker form-select shadow-none">
-                    <option value="questions" {% if request.GET.search_location == 'questions' %}selected{% endif %}>Questions</option>
-                    <option value="categories" {% if request.GET.search_location == 'categories' %}selected{% endif %}>Catégories</option>
-                    <option value="variable_name" {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la variable</option>
+                    <option value="questions" {% if request.GET.search_location == 'questions' %}selected{% endif %}>
+                        Questions
+                    </option>
+                    <option value="categories" {% if request.GET.search_location == 'categories' %}selected{% endif %}>
+                        Catégories
+                    </option>
+                    <option value="variable_name"
+                            {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la
+                        variable
+                    </option>
                 </select>
-                <button type="submit" class="btn btn-outline-primary mx-2"><i class="fa-solid fa-magnifying-glass pr-2"></i>Rechercher</button>
+                <button type="submit" class="btn btn-outline-primary mx-2"><i
+                        class="fa-solid fa-magnifying-glass pr-2"></i>Rechercher
+                </button>
             </form>
         </section>
 
         <section class="studies">
-            <h2 class="container-custom-font">Études Disponibles</h2>
-            <div class="study-cards">
+            <h2 class="container-custom-font mb-5">Études Disponibles</h2>
+            <div class="row">
                 {% for serie in series %}
-                <a href="{% url 'app:serie_detail' serie.pk %}" target="_blank" class="study-card-link">
-                    <div class="study-card">
-                        <h5>{{ serie.name }}</h5>
+                    <div class="col-6 study-cards">
+                        <a href="{% url 'app:serie_detail' serie.pk %}" target="_blank" class="study-card-link">
+                            <div class="study-card d-flex align-items-center">
+                                <img src="{{ serie.photo.url }}" alt="{{ serie.name }}" class="img-fluid"
+                                     style="max-width: 150px; height: auto;">
+                                <h5 class="mx-auto">{{ serie.name }}</h5>
+                            </div>
+
+                        </a>
                     </div>
-                    {% endfor %}
-                </div>
+                {% endfor %}
             </div>
         </section>
-        
-        
     </div>
 {% endblock %}
 
@@ -53,8 +66,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<meta name="autocomplete-url" content="{% url 'autocomplete' %}">
-<script src="{% static 'js/search_elastic.js' %}"></script>
-<script src="{% static 'js/homepage.js' %}"></script>
+    <meta name="autocomplete-url" content="{% url 'autocomplete' %}">
+    <script src="{% static 'js/search_elastic.js' %}"></script>
+    <script src="{% static 'js/homepage.js' %}"></script>
 {% endblock %}
 

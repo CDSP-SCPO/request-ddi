@@ -123,6 +123,11 @@ footer {
     padding: 50px 20px;
 }
 
+section.studies {
+    width:80%;
+    margin : 0 auto;
+}
+
 .study-card {
     background-color: white;
     border-radius: 10px;

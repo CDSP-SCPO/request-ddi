@@ -4,12 +4,13 @@
     <div class="container mt-5">
         <div class="col-md-8 offset-md-2 col-lg-8 offset-lg-3">
             <h1 class="text-center mb-4">Création de série d'enquêtes</h1>
-            <form method="post" class="p-4 shadow-sm rounded bg-light">
+            <form method="post" enctype="multipart/form-data"
+                  class="p-4 shadow-sm rounded bg-light">
                 {% csrf_token %}
-                
+
                 <div class="mb-3">
                     {{ form.name }}
-                    {% if form.field1.errors %}
+                    {% if form.name.errors %}
                         <div class="text-danger small">
                             {{ form.name.errors }}
                         </div>
@@ -30,6 +31,15 @@
                     {% if form.abstract.errors %}
                         <div class="text-danger small">
                             {{ form.abstract.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.photo }}
+                    {% if form.photo.errors %}
+                        <div class="text-danger small">
+                            {{ form.photo.errors }}
                         </div>
                     {% endif %}
                 </div>
