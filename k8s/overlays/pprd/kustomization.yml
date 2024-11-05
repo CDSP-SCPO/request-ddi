@@ -9,6 +9,7 @@ bases:
 resources:
   - pvc.yml
   - ingress.yml # Ingress pour l'accès externe
+  - media-pvc.yml
 
 
 # Labels communs à toutes les ressources dans cet overlay
