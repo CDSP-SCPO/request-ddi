@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: basedequestions-ingress
@@ -13,7 +13,17 @@ spec:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
-          - path: /
+          - path: /media/
+            pathType: Prefix
             backend:
-              serviceName: basedequestions
-              servicePort: 8000
+              service:
+                name: basedequestions
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: basedequestions
+                port:
+                  number: 8000
