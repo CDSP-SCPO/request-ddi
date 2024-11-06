@@ -153,4 +153,4 @@ LOGOUT_REDIRECT_URL = '/'
 
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = 'app/media'
+MEDIA_ROOT = '/app/media'
