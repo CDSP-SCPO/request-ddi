@@ -7,5 +7,4 @@ spec:
     - port: 8000
   selector:
     app: basedequestions
-    component: basedequestions
   clusterIP: None
