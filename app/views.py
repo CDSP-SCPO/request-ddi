@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.detail import DetailView
+from django.conf import settings
 # views.py
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -20,6 +21,7 @@ from django.views.generic.edit import FormView
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
 from elasticsearch_dsl import A, Q, Search
+
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import \
@@ -736,6 +738,12 @@ class SerieDetailView(DetailView):
 
 
 
+
+def check_media_root(request):
+    return JsonResponse({
+        "MEDIA_ROOT": str(settings.MEDIA_ROOT),
+        "MEDIA_URL": settings.MEDIA_URL,
+    })
 
 @csrf_exempt
 def check_duplicates(request):
