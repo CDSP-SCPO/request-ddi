@@ -17,13 +17,9 @@ spec:
         paths:
           - path: /media(/|$)(.*)
             backend:
-              service:
-                name: basedequestions
-                port:
-                  number: 8000
+              serviceName: basedequestions
+              servicePort: 8000
           - path: /
             backend:
-              service:
-                name: basedequestions
-                port:
-                  number: 8000
+              serviceName: basedequestions
+              servicePort: 8000
