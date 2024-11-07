@@ -43,8 +43,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Elasticsearch
     'django_elasticsearch_dsl',
+    # Your app
     'app',
-    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -56,9 +56,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
-
 
 ROOT_URLCONF = 'basedequestions.urls'
 
@@ -155,4 +153,4 @@ LOGOUT_REDIRECT_URL = '/'
 
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/app/media'
+MEDIA_ROOT = BASE_DIR / 'media'
