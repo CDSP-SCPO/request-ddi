@@ -18,14 +18,10 @@ spec:
           - path: /media(/|$)(.*)
             pathType: Prefix
             backend:
-              service:
-                name: basedequestions
-                port:
-                  number: 8000
+              serviceName: basedequestions
+              servicePort: 8000
           - path: /
             pathType: Prefix
             backend:
-              service:
-                name: basedequestions
-                port:
-                  number: 8000
+              serviceName: basedequestions
+              servicePort: 8000
