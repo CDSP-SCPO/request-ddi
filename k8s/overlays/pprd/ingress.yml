@@ -18,18 +18,12 @@ spec:
         paths:
           # Cette règle gère les fichiers /media/ et les redirige sans réécriture
           - path: /media/
-            pathType: Prefix
             backend:
-              service:
-                name: basedequestions
-                port:
-                  number: 8000
+              serviceName: basedequestions
+              servicePort: 8000
 
           # Cette règle applique le rewrite target sur les autres chemins
           - path: /
-            pathType: Prefix
             backend:
-              service:
-                name: basedequestions
-                port:
-                  number: 8000
+              serviceName: basedequestions
+              servicePort: 8000
