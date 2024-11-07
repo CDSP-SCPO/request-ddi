@@ -22,7 +22,7 @@ else:
     SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'changeme-in-dev')
 
 # Debug mode : activé uniquement en dev
-DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
+DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
 
 # Hôtes autorisés (en production, utiliser des domaines spécifiques)
 if ENVIRONMENT == 'production':
