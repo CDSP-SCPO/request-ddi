@@ -18,6 +18,7 @@ spec:
         paths:
           # Cette règle gère les fichiers /media/ et les redirige sans réécriture
           - path: /media/
+            pathType: Prefix
             backend:
               serviceName: basedequestions
               servicePort: 8000
