@@ -4,6 +4,7 @@ metadata:
   name: basedequestions-ingress
   namespace: basedequestions
   annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
@@ -14,11 +15,17 @@ spec:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
-          - path: /media
+          - path: /media(/|$)(.*)
+            pathType: Prefix
             backend:
-              serviceName: basedequestions
-              servicePort: 8000
+              service:
+                name: basedequestions
+                port:
+                  number: 8000
           - path: /
+            pathType: Prefix
             backend:
-              serviceName: basedequestions
-              servicePort: 8000
+              service:
+                name: basedequestions
+                port:
+                  number: 8000
