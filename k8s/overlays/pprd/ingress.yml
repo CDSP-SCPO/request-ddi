@@ -9,22 +9,21 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
-    # Réécriture des URL pour toutes les requêtes sauf pour les fichiers /media/
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    # Applique le rewrite pour les autres requêtes mais laisse les /media/ intactes
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
   rules:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
           # Cette règle gère les fichiers /media/ et les redirige sans réécriture
-          - path: /media/
-            pathType: Prefix
+          - path: /media/(.*)
             backend:
               serviceName: basedequestions
               servicePort: 8000
 
           # Cette règle applique le rewrite target sur les autres chemins
-          - path: /
+          - path: /(.+)
             backend:
               serviceName: basedequestions
               servicePort: 8000
