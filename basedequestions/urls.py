@@ -19,6 +19,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+import debug_toolbar
 
 # -- BASEDEQUESTIONS
 from app.views import ExportQuestionsCSVView, autocomplete
@@ -28,6 +29,7 @@ urlpatterns = [
     path('', include('app.urls')),
     path('autocomplete/', autocomplete, name='autocomplete'),
     path('export/questions/', ExportQuestionsCSVView.as_view(), name='export_questions_csv'),
+    path('__debug__/', include(debug_toolbar.urls))
 ]
 
 
