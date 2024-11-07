@@ -29,7 +29,6 @@ urlpatterns = [
     path('', include('app.urls')),
     path('autocomplete/', autocomplete, name='autocomplete'),
     path('export/questions/', ExportQuestionsCSVView.as_view(), name='export_questions_csv'),
-    path('__debug__/', include(debug_toolbar.urls))
 ]
 
 
