@@ -10,6 +10,7 @@ resources:
   - pvc.yml
   - media-pvc.yml
   - ingress.yml # Ingress pour l'accès externe
+  - media-ingress.yml
 
 
 

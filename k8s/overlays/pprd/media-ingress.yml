@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: basedequestions-media-ingress
+  namespace: basedequestions
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /media/$1   # Réécrit les chemins qui commencent par /media/
+    nginx.ingress.kubernetes.io/enable-cors: "true"  # Activer le CORS si nécessaire pour les fichiers médias
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m  # Augmenter la taille maximale des requêtes (utile pour les fichiers volumineux)
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"  # Timeout de connexion
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "180"  # Timeout pour la lecture des réponses
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "180"  # Timeout pour l'envoi des requêtes
+spec:
+  rules:
+    - host: base-de-questions-pprd.cdsp.sciences-po.fr  # Ton domaine
+      http:
+        paths:
+          - path: /media/(.*)  # Correspond à tout ce qui commence par /media/
+            backend:
+              serviceName: basedequestions  # Nom du service qui gère les médias
+              servicePort: 8000
