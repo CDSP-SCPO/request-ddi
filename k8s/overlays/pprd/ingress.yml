@@ -1,21 +1,35 @@
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: basedequestions-ingress
   namespace: basedequestions
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
+    # Réécriture des URL pour toutes les requêtes sauf pour les fichiers /media/
+    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
-          - path: /
+          # Cette règle gère les fichiers /media/ et les redirige sans réécriture
+          - path: /media/
+            pathType: Prefix
             backend:
-              serviceName: basedequestions
-              servicePort: 8000
+              service:
+                name: basedequestions
+                port:
+                  number: 8000
+
+          # Cette règle applique le rewrite target sur les autres chemins
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: basedequestions
+                port:
+                  number: 8000
