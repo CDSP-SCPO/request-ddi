@@ -16,7 +16,7 @@ spec:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
-          - path: /media(/|$)(.*)
+          - path: /media
             backend:
               serviceName: basedequestions
               servicePort: 8000
