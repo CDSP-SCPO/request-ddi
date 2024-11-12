@@ -19,7 +19,7 @@
         <div class="input-group mr-2">
             <select name="search_location" id="search-location" class="form-select selectpicker">
                 <option value="questions" {% if search_location == 'questions' %}selected{% endif %}>Questions</option>
-                <option value="categories" {% if search_location == 'categories' %}selected{% endif %}>Catégories</option>
+                <option value="categories" {% if search_location == 'categories' %}selected{% endif %}>Modalités</option>
                 <option value="variable_name" {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la variable</option>
             </select>
         </div>
@@ -186,13 +186,13 @@ $(document).ready(function() {
                     <div class="card mb-3">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <a href="` + url + `">` + row.question_text + `</a>
+                                <a class="custom-name-card" href="` + url + `">` + row.question_text + `</a>
                             </h5>
                             <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
                             <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
                             <h6 class="card-subtitle mb-2 text-muted">Label interne : ` + row.internal_label + `</h6>
                                                  <!-- Bouton pour afficher les catégories -->
-                            <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Catégories</button>
+                            <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Modalités</button>
                             
                             <!-- Liste des catégories, affichée directement si is_category_search est True -->
                             <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">

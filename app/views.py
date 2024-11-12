@@ -445,6 +445,8 @@ class SearchResultsDataView(ListView):
         # Pagination (start et length) depuis DataTables
         start = int(self.request.GET.get('start', 0))
         length = int(self.request.GET.get('length', self.paginate_by))
+        if length == -1:
+            length = search.count()
 
         return search[start:start + length].execute()
 
@@ -501,34 +503,25 @@ class SearchResultsDataView(ListView):
 
             category_matched = None
             all_clean_categories = []  # Initialisation de full_cat
-
+            sorted_categories = sorted(result.variable.categories, key=lambda cat: cat.code)
             # Récupérer la catégorie correspondante
             if search_location == 'categories' and hasattr(result.meta, 'highlight'):
                 if 'variable.categories.category_label' in result.meta.highlight:
                     category_highlight = result.meta.highlight['variable.categories.category_label']
                     category_matched = category_highlight[0] if category_highlight else None
 
-            # Ajouter un marquage à la catégorie correspondante
-            if category_matched:
-                for cat in result.variable.categories:
-                    if cat.category_label == remove_html_tags(category_matched):
-                        # Formatez avec le code et le label
-                        all_clean_categories.append(
-                            f"<mark style='background-color: yellow;'>{cat.code} : {cat.category_label}</mark>"
-                        )
-                    else:
-                        # Conservez le format habituel
-                        all_clean_categories.append(f"{cat.code} : {cat.category_label}")
-            else:
-                # Si aucune catégorie n'est mise en correspondance, conservez les autres catégories
-                for cat in result.variable.categories:
+            for cat in sorted_categories:
+                if category_matched and cat.category_label == remove_html_tags(category_matched):
+                    all_clean_categories.append(
+                        f"<mark style='background-color: yellow;'>{cat.code} : {cat.category_label}</mark>"
+                    )
+                else:
                     all_clean_categories.append(f"{cat.code} : {cat.category_label}")
 
             variable_name = result.variable_name
             if search_location == 'variable_name' and hasattr(result.meta,
                                                               'highlight') and 'variable_name' in result.meta.highlight:
                 variable_name = result.meta.highlight['variable_name'][0]
-
             # Collecte des données formatées
             data.append({
                 "id": result.meta.id,
@@ -666,7 +659,7 @@ class QuestionDetailView(View):
         question_represented_var = question.variable
         question_conceptual_var = question_represented_var.conceptual_var
         question_survey = question.survey
-        categories = question.variable.categories.all()
+        categories = sorted(question.variable.categories.all(), key=lambda x:x.code)
         context = locals()
         return render(request, 'question_detail.html', context)
 
