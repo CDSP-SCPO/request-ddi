@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1  # Utilisation de la nouvelle API
 kind: Ingress
 metadata:
   name: basedequestions-ingress
@@ -18,12 +18,18 @@ spec:
         paths:
           # Ne pas réécrire les chemins /media
           - path: /media(/|$)(.*)
+            pathType: Prefix  # Nouveau champ requis pour la version v1
             backend:
-              serviceName: basedequestions
-              servicePort: 8000
+              service:
+                name: basedequestions
+                port:
+                  number: 8000
 
           # Réécrire les autres routes
           - path: /
+            pathType: Prefix  # Nouveau champ requis pour la version v1
             backend:
-              serviceName: basedequestions
-              servicePort: 8000
+              service:
+                name: basedequestions
+                port:
+                  number: 8000
