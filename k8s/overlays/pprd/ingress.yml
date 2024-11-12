@@ -16,13 +16,13 @@ spec:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
-          # Traite les chemins commençant par /media sans réécriture
-          - path: /media(/|$)(.*) # Capture le chemin /media et le laisse intact pour la réécriture
+          # Ne pas réécrire les chemins /media
+          - path: /media(/|$)(.*)
             backend:
               serviceName: basedequestions
               servicePort: 8000
 
-          # Toutes les autres routes seront réécrites
+          # Réécrire les autres routes
           - path: /
             backend:
               serviceName: basedequestions
