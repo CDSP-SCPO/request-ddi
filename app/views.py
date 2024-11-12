@@ -25,6 +25,7 @@ from django.views.generic.edit import FormView
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
 from elasticsearch_dsl import A, Q, Search
+import requests
 
 
 # -- BASEDEQUESTIONS (LOCAL)
@@ -751,12 +752,20 @@ def check_media_root(request):
     for root, dirs, files in os.walk(settings.MEDIA_ROOT):
         for name in files:
             file_path = os.path.join(root, name)
+            relative_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
+
+            # Tenter de construire l'URL de l'image et vérifier si l'URL est accessible
+            file_url = os.path.join(settings.MEDIA_URL, relative_path).replace("\\", "/")
+            file_exists = check_file_access(file_url)
+
             # Obtenir les informations sur le fichier
             file_info = {
                 "name": name,
-                "relative_path": os.path.relpath(file_path, settings.MEDIA_ROOT),
+                "relative_path": relative_path,
                 "size": os.path.getsize(file_path),  # Taille en octets
                 "last_modified": datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat(),
+                "url": file_url,
+                "accessible": file_exists,
             }
             media_files_info.append(file_info)
 
@@ -766,6 +775,26 @@ def check_media_root(request):
         "file_count": len(media_files_info),
         "files": media_files_info,
     })
+
+
+def check_file_access(file_url):
+    """
+    Fonction qui essaie de faire une requête HTTP GET pour vérifier si l'URL du fichier est accessible.
+    Retourne True si le fichier est accessible, sinon False.
+    """
+
+
+    # Construire l'URL complète (en prenant en compte la configuration du domaine et du path)
+    # Ici, on assume que l'URL du fichier est accessible via un domaine public
+    full_url = f"http://{settings.ALLOWED_HOSTS[0]}{file_url}"
+
+    try:
+        response = requests.get(full_url)
+        # Si le code de réponse est 200, cela signifie que le fichier est accessible
+        return response.status_code == 200
+    except requests.exceptions.RequestException:
+        # Si une exception se produit, on considère que le fichier n'est pas accessible
+        return False
 
 @csrf_exempt
 def check_duplicates(request):
