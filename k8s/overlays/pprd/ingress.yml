@@ -4,7 +4,7 @@ metadata:
   name: basedequestions-ingress
   namespace: basedequestions
   annotations:
-    ingress.kubernetes.io/rewrite-target: /
+    ingress.kubernetes.io/rewrite-target: / # Réécrit tous les chemins pour qu'ils commencent à la racine
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
@@ -16,13 +16,14 @@ spec:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
-          - path: /media
+          # Traite les chemins commençant par /media sans réécriture
+          - path: /media(/|$)(.*) # Capture le chemin /media et le laisse intact pour la réécriture
             backend:
               serviceName: basedequestions
               servicePort: 8000
 
+          # Toutes les autres routes seront réécrites
           - path: /
             backend:
               serviceName: basedequestions
               servicePort: 8000
-
