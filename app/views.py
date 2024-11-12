@@ -1,6 +1,9 @@
 # -- STDLIB
 import csv
 import re
+import os
+from datetime import datetime
+
 
 # -- DJANGO
 from django.contrib import messages
@@ -12,6 +15,7 @@ from django.urls import reverse, reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.detail import DetailView
 from django.conf import settings
+
 # views.py
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -737,12 +741,30 @@ class SerieDetailView(DetailView):
     context_object_name = 'serie'  # Nom de l'objet passé au template
 
 
-
-
 def check_media_root(request):
+    # Vérifier si le répertoire MEDIA_ROOT existe
+    if not os.path.exists(settings.MEDIA_ROOT):
+        return JsonResponse({"error": "MEDIA_ROOT directory does not exist."})
+
+    # Parcourir les fichiers et dossiers dans MEDIA_ROOT
+    media_files_info = []
+    for root, dirs, files in os.walk(settings.MEDIA_ROOT):
+        for name in files:
+            file_path = os.path.join(root, name)
+            # Obtenir les informations sur le fichier
+            file_info = {
+                "name": name,
+                "relative_path": os.path.relpath(file_path, settings.MEDIA_ROOT),
+                "size": os.path.getsize(file_path),  # Taille en octets
+                "last_modified": datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat(),
+            }
+            media_files_info.append(file_info)
+
     return JsonResponse({
         "MEDIA_ROOT": str(settings.MEDIA_ROOT),
         "MEDIA_URL": settings.MEDIA_URL,
+        "file_count": len(media_files_info),
+        "files": media_files_info,
     })
 
 @csrf_exempt
