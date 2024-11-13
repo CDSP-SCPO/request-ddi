@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-media
+  namespace: basedequestions
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-media
+  template:
+    metadata:
+      labels:
+        app: nginx-media
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          volumeMounts:
+            - name: media-volume
+              mountPath: /usr/share/nginx/html/media
+          ports:
+            - containerPort: 80
+      volumes:
+        - name: media-volume
+          persistentVolumeClaim:
+            claimName: media-pvc  # Assure-toi que ce PVC pointe vers ton volume de médias
