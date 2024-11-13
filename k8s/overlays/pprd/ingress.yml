@@ -10,10 +10,10 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 
 
 spec:
+  ingressClassName: nginx
   rules:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
