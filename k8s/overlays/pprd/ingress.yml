@@ -1,10 +1,10 @@
-apiVersion: networking.k8s.io/v1  # Utilisation de la nouvelle API
+apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: basedequestions-ingress
   namespace: basedequestions
   annotations:
-    ingress.kubernetes.io/rewrite-target: / # Réécrit tous les chemins pour qu'ils commencent à la racine
+    ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
@@ -16,20 +16,11 @@ spec:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
-          # Ne pas réécrire les chemins /media
           - path: /media(/|$)(.*)
-            pathType: Prefix  # Nouveau champ requis pour la version v1
             backend:
-              service:
-                name: basedequestions
-                port:
-                  number: 8000
-
-          # Réécrire les autres routes
+              serviceName: basedequestions
+              servicePort: 8000
           - path: /
-            pathType: Prefix  # Nouveau champ requis pour la version v1
             backend:
-              service:
-                name: basedequestions
-                port:
-                  number: 8000
+              serviceName: basedequestions
+              servicePort: 8000
