@@ -8,6 +8,7 @@ namespace: basedequestions
 resources:
   - basedequestions/deployment.yml
   - basedequestions/service.yml
+  - basedequestions/media-service.yml
   - elasticsearch/deployment.yml
   - elasticsearch/service.yml
   - db/deployment.yml
