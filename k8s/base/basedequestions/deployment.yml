@@ -70,8 +70,8 @@ spec:
           imagePullPolicy: Always
           volumeMounts:
             - name: media-volume
-              mountPath: /app/media  # Monte le volume media dans le conteneur
+              mountPath: /app/media
       volumes:
         - name: media-volume
           persistentVolumeClaim:
-            claimName: media-pvc  # Le PVC pour stocker les fichiers médias
+            claimName: media-pvc
