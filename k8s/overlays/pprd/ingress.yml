@@ -13,7 +13,6 @@ metadata:
 
 
 spec:
-  ingressClassName: nginx
   rules:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
