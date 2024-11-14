@@ -68,21 +68,17 @@ class BaseUploadView(FormView):
 
 
         except ValueError as ve:
-            print("test value error")
             # Gérer l'erreur spécifique et rediriger
             messages.error(self.request, str(ve))
             return self.form_invalid(form)
 
         except Exception as e:
-            print("test exception", e)
             messages.error(self.request, f"Erreur lors du traitement des données : {str(e)}")
             return self.form_invalid(form)
             
     def form_invalid(self, form):
-        # Ajout d'un message d'erreur générique si le formulaire n'est pas valide
-        
-        return redirect(reverse('app:upload_files'))
-        # return super().form_invalid(form)
+        errors = form.errors.as_json()
+        return self.render_to_response(self.get_context_data(errors=errors))
 
     def get_data(self, form):
         """Méthode pour obtenir les données du formulaire."""
@@ -96,8 +92,8 @@ class BaseUploadView(FormView):
         """Méthode pour traiter les données."""
         pass
 
-    def get_or_create_survey(self, doi, title):
-        survey, _ = Survey.objects.get_or_create(external_ref=doi, name=title)
+    def get_or_create_survey(self, doi, title, serie):
+        survey, _ = Survey.objects.get_or_create(external_ref=doi, name=title, serie=serie)
         return survey
 
     def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
@@ -138,6 +134,11 @@ class CSVUploadView(BaseUploadView):
     template_name = 'upload_csv.html'
     form_class = CSVUploadForm
     required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['csv_form'] = CSVUploadForm()
+        return context
 
     def get_data(self, form):
         self.selected_serie = Serie.objects.get(name=form.cleaned_data['series'])
@@ -273,6 +274,11 @@ class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['xml_form'] = XMLUploadForm()
+        return context
+
     def get_data(self, form):
         self.selected_series = form.cleaned_data['series']
         return form.cleaned_data['xml_file']
@@ -311,7 +317,7 @@ class XMLUploadView(BaseUploadView):
             if not doi.startswith('doi:'):
                 raise ValueError(f"Le DDI '{doi}' n'est pas au bon format. Il doit commencer par 'doi:'.")
             # Création ou récupération d'une enquête (Survey)
-            survey, created_survey = self.get_or_create_survey(doi, title)
+            survey, created_survey = self.get_or_create_survey(doi, title, self.selected_series)
             if created_survey:
                 num_new_surveys += 1
 
@@ -358,8 +364,8 @@ class XMLUploadView(BaseUploadView):
                 category, _ = Category.objects.get_or_create(code=code, category_label=label)
                 represented_variable.categories.add(category)
 
-    def get_or_create_survey(self, doi, title):
-        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title)
+    def get_or_create_survey(self, doi, title, serie):
+        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title, serie = serie)
         return survey, created
 
     # def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes, serie):
@@ -373,14 +379,14 @@ class XMLUploadView(BaseUploadView):
     #     return binding, created
 
 
-class CombinedUploadView(LoginRequiredMixin, TemplateView):
-    template_name = 'upload_files.html'
+# class CombinedUploadView(LoginRequiredMixin, TemplateView):
+#     template_name = 'upload_files.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['csv_form'] = CSVUploadForm()
-        context['xml_form'] = XMLUploadForm()
-        return context
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['csv_form'] = CSVUploadForm()
+#         context['xml_form'] = XMLUploadForm()
+#         return context
 
 
 class RepresentedVariableSearchView(ListView):
@@ -399,8 +405,13 @@ class RepresentedVariableSearchView(ListView):
 
 
 def search_results(request):
-    search_location = request.GET.get('search_location', 'questions')
+    selected_series = request.GET.getlist('serie')
+    selected_studies = request.GET.getlist('survey')
+
+    series = Serie.objects.all()
     studies = Survey.objects.all()
+
+    search_location = request.GET.get('search_location', 'questions')
     context = locals()
     return render(request, 'search_results.html', context)
 
@@ -420,9 +431,11 @@ class SearchResultsDataView(ListView):
         search_value = self.request.GET.get('q', '').strip().lower()
         search_location = self.request.GET.get('search_location', 'questions')
         study_filter = self.request.GET.getlist('study[]', None)
+        series_filter = self.request.GET.getlist('series[]', None)
 
         # Convertir le filtre en liste d'entiers
         study_filter = [int(study_id) for study_id in study_filter if study_id.isdigit()]
+        series_filter = [int(serie_id) for serie_id in series_filter if serie_id.isdigit()]
 
         # Configuration de la recherche Elasticsearch
         search = BindingSurveyDocument.search()
@@ -439,8 +452,11 @@ class SearchResultsDataView(ListView):
             .highlight('variable_name', fragment_size=10000)
 
         # Appliquer le filtre par étude
+        if series_filter:
+            search = search.filter('terms', **{"survey.serie_id": series_filter})
         if study_filter:
             search = search.filter('terms', **{"survey.id": study_filter})
+        
 
         # Pagination (start et length) depuis DataTables
         start = int(self.request.GET.get('start', 0))
@@ -777,7 +793,9 @@ def check_duplicates(request):
             existing_variables = []
             for var in soup.find_all('var'):
                 variable_name = var.get('name', '').strip()
-                if BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name).exists():
+                variable_survey_id = var.get('IDNo','').strip()
+                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name, survey__external_ref=variable_survey_id)
+                if existing_bindings.exists():
                     existing_variables.append(variable_name)
 
         # Vérifier si c'est un fichier CSV
@@ -786,7 +804,9 @@ def check_duplicates(request):
             existing_variables = []
             for row in reader:
                 variable_name = row['variable_name']
-                if BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name).exists():
+                variable_survey_id = row['ddi']
+                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name, survey__external_ref=variable_survey_id)
+                if existing_bindings.exists():
                     existing_variables.append(variable_name)
         
         else:
@@ -799,3 +819,23 @@ def check_duplicates(request):
 
     return JsonResponse({'error': 'Requête invalide'}, status=400)
 
+
+class SerieSurveysView(View):
+    def get(self, request, serie_id):
+        serie = get_object_or_404(Serie, id=serie_id)
+        surveys = Survey.objects.filter(serie=serie)
+        return render(request, 'serie_surveys.html', {'serie': serie, 'surveys': surveys})
+
+
+
+def get_surveys_by_series(request):
+    series_ids = request.GET.get('series_ids')
+    if series_ids:
+        series_ids = [int(id) for id in series_ids.split(',')]
+        surveys = Survey.objects.filter(serie__id__in=series_ids)
+    else:
+        surveys = Survey.objects.all()
+    
+
+    surveys_data = [{'id': survey.id, 'name': survey.name} for survey in surveys]
+    return JsonResponse({'surveys': surveys_data})

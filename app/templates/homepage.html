@@ -47,7 +47,7 @@
                 <div class="row">
                     {% for serie in series %}
                     <div class="col-12 col-md-6 d-flex justify-content-center mb-4">
-                        <a href="https://data.sciencespo.fr/dataset.xhtml?persistentId={{ serie.external_ref }}" target="_blank" class="study-card-link">
+                        <a href="{% url 'app:serie_surveys' serie.id %}" class="study-card-link">
                             <div class="study-card d-flex align-items-center">
                                 {% if serie.photo %}
                                     <img src="{{ serie.photo.url }}" alt="{{ serie.name }}" class="study-card-image">
