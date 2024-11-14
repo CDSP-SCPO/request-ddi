@@ -24,4 +24,4 @@ spec:
       volumes:
         - name: media-volume
           persistentVolumeClaim:
-            claimName: media-pvc  # Assure-toi que ce PVC pointe vers ton volume de médias
+            claimName: media-pvc
