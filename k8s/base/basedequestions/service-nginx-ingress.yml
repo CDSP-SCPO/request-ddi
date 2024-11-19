@@ -7,10 +7,12 @@ spec:
   selector:
     app: nginx-ingress-controller  # Assure-toi que ce label correspond à tes pods nginx-ingress-controller
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 80
       targetPort: 80
-    - protocol: TCP
+    - name: https
+      protocol: TCP
       port: 443
       targetPort: 443
   type: LoadBalancer  # Utilise LoadBalancer pour exposer à l'extérieur du cluster
