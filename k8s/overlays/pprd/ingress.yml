@@ -7,7 +7,11 @@ metadata:
     ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
     nginx.ingress.kubernetes.io/configuration-snippet: |
+      # Configuration spécifique pour servir les fichiers médias
       location /media/ {
         alias /app/media/;
         autoindex on;
@@ -17,6 +21,10 @@ spec:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
+          - path: /media/
+            backend:
+              serviceName: nginx-ingress-controller
+              servicePort: 80
           - path: /
             backend:
               serviceName: basedequestions
