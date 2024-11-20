@@ -9,6 +9,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
     nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2  # Cette ligne est ajoutée pour la réécriture
 spec:
   rules:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
