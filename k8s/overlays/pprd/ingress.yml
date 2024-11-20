@@ -4,28 +4,29 @@ metadata:
   name: basedequestions-ingress
   namespace: basedequestions
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /  # Utiliser $2 pour préserver la partie de l'URL
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      location /media/ {
-        alias /app/media/;
-        autoindex on;  # Affiche une liste des fichiers dans le répertoire /media
-      }
-
 spec:
   rules:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
-          - path: /media/ # Permet de capter correctement les sous-chemins de /media/
+          # Accès aux fichiers media
+          - path: /media(/|$)(.*)
             backend:
               serviceName: basedequestions
               servicePort: 8000
 
+          # Accès aux fichiers statiques
+          - path: /static(/|$)(.*)
+            backend:
+              serviceName: basedequestions
+              servicePort: 8000
+
+          # Accès à l'application principale
           - path: /
             backend:
               serviceName: basedequestions
