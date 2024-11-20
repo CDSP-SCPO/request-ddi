@@ -7,7 +7,6 @@ spec:
   selector:
     app: postgres
     component: db
-    environment: pprd
   ports:
     - protocol: TCP
       port: 5432
