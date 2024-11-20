@@ -7,13 +7,13 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: basedequestions
+      app: postgres
       component: db
       environment: pprd
   template:
     metadata:
       labels:
-        app: basedequestions
+        app: postgres
         component: db
         environment: pprd
     spec:
