@@ -17,7 +17,7 @@ spec:
       initContainers:
         - name: init-media-permissions
           image: busybox
-          command: ["sh", "-c", "mkdir -p /app/media && chown -R 5678:5678 /app/media && echo 'This is a test file' > /app/media/toto"]
+          command: [ "sh", "-c", "echo 'Starting init-media-permissions' && mkdir -p /app/media && echo 'Created /app/media' && chown -R 5678:5678 /app/media && echo 'Changed ownership of /app/media' && echo 'This is a test file' > /app/media/toto && echo 'Test file created' && ls -la /app/media" ]
           volumeMounts:
             - name: media-volume
               mountPath: /app/media
