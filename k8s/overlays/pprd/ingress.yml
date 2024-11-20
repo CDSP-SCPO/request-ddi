@@ -21,7 +21,7 @@ spec:
               servicePort: 8000
 
           # Accès à l'application principale
-          - path: /
+          - path: /()(.*)
             backend:
               serviceName: basedequestions
               servicePort: 8000
