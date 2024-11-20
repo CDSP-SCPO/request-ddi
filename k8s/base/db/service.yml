@@ -5,6 +5,7 @@ metadata:
   namespace: basedequestions
 spec:
   selector:
+    app: postgres
     component: db
     environment: pprd
   ports:
