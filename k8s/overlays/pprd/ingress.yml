@@ -10,6 +10,11 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      location /media/ {
+        alias /app/media/;
+        autoindex on;  # Affiche une liste des fichiers dans le répertoire /media
+      }
 
 spec:
   rules:
