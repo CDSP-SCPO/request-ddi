@@ -19,8 +19,3 @@ secretGenerator:
   - name: basedequestions-secret
     literals:
       - DJANGO_SECRET_KEY=your-secret-key-here  # Remplace avec ta vraie clé secrète
-
-# Configurations communes (si nécessaire, tu peux ajouter des patches ici)
-commonLabels:
-  app: basedequestions
-
