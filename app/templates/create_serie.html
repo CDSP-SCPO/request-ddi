@@ -1,62 +1,166 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-    <div class="container mt-5">
-        <div class="col-md-8 offset-md-2 col-lg-8 offset-lg-3">
-            <h1 class="text-center mb-4">Création de série d'enquêtes</h1>
-            <form method="post" enctype="multipart/form-data"
-                  class="p-4 shadow-sm rounded bg-light">
-                {% csrf_token %}
+<div class="container mt-5">
+    <div class="d-flex justify-content-center align-items-center position-relative mb-4">
+        <h1 class="text-center mb-0">Création de série d'enquêtes</h1>
+        <button type="button" class="btn btn-primary position-absolute" style="right: 0;" data-toggle="modal" data-target="#editorModal">
+            Ajouter un éditeur
+        </button>
+    </div>
+    
+    <div class="col-md-8 offset-md-2 col-lg-8">
+        <form method="post" enctype="multipart/form-data" class="p-4 shadow-sm rounded bg-light">
+            {% csrf_token %}
 
-                <div class="mb-3">
-                    {{ form.name }}
-                    {% if form.name.errors %}
-                        <div class="text-danger small">
-                            {{ form.name.errors }}
-                        </div>
-                    {% endif %}
-                </div>
+            <div class="mb-3">
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="text-danger small">
+                        {{ form.name.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-                <div class="mb-3">
-                    {{ form.publisher }}
-                    {% if form.publisher.errors %}
-                        <div class="text-danger small">
-                            {{ form.publisher.errors }}
-                        </div>
-                    {% endif %}
-                </div>
+            <div class="mb-3">
+                {{ form.publisher }}
+                {% if form.publisher.errors %}
+                    <div class="text-danger small">
+                        {{ form.publisher.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-                <div class="mb-3">
-                    {{ form.abstract }}
-                    {% if form.abstract.errors %}
-                        <div class="text-danger small">
-                            {{ form.abstract.errors }}
-                        </div>
-                    {% endif %}
-                </div>
+            <div class="mb-3">
+                {{ form.abstract }}
+                {% if form.abstract.errors %}
+                    <div class="text-danger small">
+                        {{ form.abstract.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-                <div class="mb-3">
-                    {{ form.photo }}
-                    {% if form.photo.errors %}
-                        <div class="text-danger small">
-                            {{ form.photo.errors }}
-                        </div>
-                    {% endif %}
-                </div>
+            <div class="mb-3">
+                {{ form.photo }}
+                {% if form.photo.errors %}
+                    <div class="text-danger small">
+                        {{ form.photo.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-                <div class="text-center">
-                    <button type="submit" class="btn btn-primary w-100">Créer</button>
-                </div>
-            </form>
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary w-100">Créer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="editorModal" tabindex="-1" role="dialog" aria-labelledby="editorModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editorModalLabel">Ajouter un éditeur</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="createPublisherForm">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="editor-name">Nom de l'éditeur</label>
+                        <input type="text" class="form-control" id="editor-name" name="name" placeholder="Entrez le nom de l'éditeur" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Créer</button>
+                </form>
+            </div>
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function() {
         $('.selectpicker').selectpicker();
-    });
-</script>
+        const form = document.getElementById('createPublisherForm');
+        const publisherSelect = document.querySelector('select[name="publisher"]');
 
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            const selectedPublisher = publisherSelect.value;
+
+            fetch("{% url 'app:create_publisher' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    $('#editorModal').modal('hide');
+
+                    form.reset();
+
+                    Swal.fire({
+                        title: 'Succès',
+                        text: data.message,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+
+                    fetch("{% url 'app:get_publishers' %}")
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.publishers) {
+                                publisherSelect.innerHTML = '';
+
+                                const emptyOption = document.createElement('option');
+                                emptyOption.value = "";
+                                emptyOption.textContent = "Choisissez un éditeur";
+                                publisherSelect.appendChild(emptyOption);
+
+                                data.publishers.forEach(publisher => {
+                                    const option = document.createElement('option');
+                                    option.value = publisher.id;
+                                    option.textContent = publisher.name;
+                                    publisherSelect.appendChild(option);
+                                });
+
+                                publisherSelect.value = selectedPublisher || "";
+
+                                $('.selectpicker').selectpicker('refresh');
+                            }
+                        })
+                        .catch(error => console.error('Erreur lors de la mise à jour des publishers:', error));
+                } else {
+                    Swal.fire({
+                        title: 'Erreur',
+                        text: data.message,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                Swal.fire({
+                    title: 'Erreur',
+                    text: 'Une erreur est survenue. Veuillez réessayer.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            });
+        });
+    });
+
+</script>
 {% endblock %}

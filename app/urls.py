@@ -9,7 +9,7 @@ from .views import (
     RepresentedVariableSearchView, SearchResultsDataView, XMLUploadView,
     autocomplete, check_duplicates, export_page, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions, CreateSerie, SerieDetailView, check_media_root, SerieSurveysView, get_surveys_by_series
+    similar_representative_variable_questions, CreateSerie, SerieDetailView, check_media_root, SerieSurveysView, get_surveys_by_series, create_publisher, get_publishers
 )
 
 from django.contrib.auth.views import LogoutView
@@ -38,6 +38,8 @@ urlpatterns = [
     path('serie/<int:serie_id>/surveys/', SerieSurveysView.as_view(), name='serie_surveys'),
 
     path('api/get-surveys-by-series/', get_surveys_by_series, name='get_surveys_by_series'),
+    path('add-publisher/', create_publisher, name='create_publisher'),
+    path('get-publishers/', get_publishers, name='get_publishers'),
 ]
 
 if settings.DEBUG:

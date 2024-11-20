@@ -33,7 +33,7 @@ from .documents import \
 from .forms import CSVUploadForm, CustomAuthenticationForm, XMLUploadForm, SerieForm
 from .models import (
     BindingSurveyRepresentedVariable, Category, ConceptualVariable,
-    RepresentedVariable, Serie, Survey,
+    RepresentedVariable, Serie, Survey, Publisher
 )
 from .utils.csvimportexport import BindingSurveyResource
 
@@ -632,6 +632,8 @@ def autocomplete(request):
 
 class ExportQuestionsCSVView(View):
     def get(self, request, *args, **kwargs):
+        selected_series = request.GET.getlist('series')
+        selected_surveys = request.GET.getlist('surveys')
         # Créer la réponse CSV
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
@@ -642,7 +644,13 @@ class ExportQuestionsCSVView(View):
 
         # Récupérer toutes les questions et les informations associées
         questions = RepresentedVariable.objects.all()
-        for question in questions:
+
+        if selected_series:
+            questions = questions.filter(bindingsurveyrepresentedvariable__survey__serie__id__in=selected_series)
+        if selected_surveys:
+            questions = questions.filter(bindingsurveyrepresentedvariable__survey__id__in=selected_surveys)
+
+        for question in questions.distinct():
             # Récupérer les liaisons entre les surveys et les variables représentées
             binding = BindingSurveyRepresentedVariable.objects.filter(variable=question).first()
 
@@ -667,7 +675,10 @@ class ExportQuestionsCSVView(View):
 
         return response
 def export_page(request):
-    return render(request, 'export_csv.html')
+    series = Serie.objects.all()
+    surveys = Survey.objects.all()
+    context = locals()
+    return render(request, 'export_csv.html', context)
 
 class QuestionDetailView(View): 
     def get(self, request, id, *args, **kwargs):
@@ -741,6 +752,7 @@ class CreateSerie(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         form.save()
+        messages.success(self.request, "Série créée avec succès.")
         return super().form_valid(form)
 
 
@@ -839,3 +851,16 @@ def get_surveys_by_series(request):
 
     surveys_data = [{'id': survey.id, 'name': survey.name} for survey in surveys]
     return JsonResponse({'surveys': surveys_data})
+
+def create_publisher(request):
+    if request.method == "POST":
+        name = request.POST.get('name')
+        if name:
+            Publisher.objects.get_or_create(name=name)
+            return JsonResponse({"success": True, "message": "Éditeur ajouté avec succès."})
+        return JsonResponse({"success": False, "message": "Le nom de l'éditeur est requis."})
+    return JsonResponse({"success": False, "message": "Requête invalide."})
+
+def get_publishers(request):
+    publishers = Publisher.objects.all().values("id", "name")
+    return JsonResponse({"publishers": list(publishers)})
