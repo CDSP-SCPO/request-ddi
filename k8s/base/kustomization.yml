@@ -12,6 +12,8 @@ resources:
   - elasticsearch/service.yml
   - db/deployment.yml
   - db/service.yml
+  - nginx-media/deployment.yml
+  - nginx-media/service.yml
 
 
 # Gestion des secrets (ex : clé secrète de Django)
