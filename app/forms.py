@@ -11,7 +11,7 @@ from django.forms import ModelForm
 from bs4 import BeautifulSoup
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .models import Serie
+from .models import Serie, BindingSurveyRepresentedVariable, Publisher
 
 
 class CSVUploadForm(forms.Form):
@@ -26,8 +26,12 @@ class CSVUploadForm(forms.Form):
     required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers',
                         'notes']
 
+    validate_duplicates = True
+
     def clean_csv_file(self):
         csv_file = self.cleaned_data['csv_file']
+        if not csv_file.name.endswith('.csv'):
+            raise forms.ValidationError("Le fichier doit être au format CSV.")
         try:
             decoded_file = csv_file.read().decode('utf-8').splitlines()
             sample = '\n'.join(decoded_file[:2])
@@ -40,10 +44,31 @@ class CSVUploadForm(forms.Form):
             if missing_columns:
                 raise forms.ValidationError(f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}")
 
+            self.cleaned_data['decoded_csv'] = decoded_file
+
             return decoded_file  # Si tout va bien, renvoie le fichier décodé pour un traitement ultérieur
 
         except Exception as e:
             raise forms.ValidationError(f"Erreur lors de la lecture du fichier CSV : {str(e)}")
+
+    def validate_duplicates_check(self):
+        """Check des doublons après validation des colonnes."""
+        if not self.cleaned_data.get('decoded_csv') or not self.validate_duplicates:
+            return  # Évite de répéter le check si une erreur a été trouvée précédemment
+
+        decoded_file = self.cleaned_data['decoded_csv']
+        reader = csv.DictReader(decoded_file)
+        duplicate_variables = []
+
+        for row in reader:
+            variable_name = row.get('variable_name')
+            if variable_name and BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name).exists():
+                duplicate_variables.append(variable_name)
+
+        if duplicate_variables:
+            raise forms.ValidationError({
+                'csv_file': f"Les variables suivantes existent déjà : {', '.join(duplicate_variables)}"
+            })
 
 
 class XMLUploadForm(forms.Form):
@@ -118,6 +143,15 @@ class CustomAuthenticationForm(AuthenticationForm):
 
 
 class SerieForm(ModelForm):
+    publisher = forms.ModelChoiceField(
+            queryset=Publisher.objects.all(),
+            label="Éditeur",
+            widget=forms.Select(attrs={
+                'class': 'form-control form-control-lg selectpicker',
+                'data-live-search': 'true',
+            }),
+            empty_label="Choisissez un éditeur"
+        )
     class Meta:
         model = Serie
         fields = "__all__"
@@ -126,10 +160,6 @@ class SerieForm(ModelForm):
             'name': forms.TextInput(attrs={
                 'class': 'form-control form-control-lg',
                 'placeholder': 'Nom de l\'enquête'
-            }),
-            'publisher': forms.TextInput(attrs={
-                'class': 'form-control form-control-lg',
-                'placeholder': 'Éditeur'
             }),
             'abstract': forms.Textarea(attrs={
                 'class': 'form-control',

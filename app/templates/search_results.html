@@ -10,16 +10,28 @@
             <input type="text" name="q" class="form-control" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
         </div>
         <div class="input-group mr-2">
-            <select name="study" id="study-filter" class="form-control selectpicker" multiple data-live-search="false" data-style="btn-outline-secondary">
+            <select name="serie" id="series-filter" class="selectpicker form-control" multiple title="Séries">
+                {% for serie in series %}
+                    <option value="{{ serie.id }}" {% if serie.id|stringformat:"s" in selected_series %}selected{% endif %}>
+                        {{ serie.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="input-group mr-2">
+            <select name="survey" id="study-filter" class="selectpicker form-control" multiple title="Études">
                 {% for study in studies %}
-                    <option value="{{ study.id }}">{{ study.name }}</option>
+                    <option value="{{ study.id }}" {% if study.id|stringformat:"s" in selected_studies %}selected{% endif %}>
+                        {{ study.name }}
+                    </option>
                 {% endfor %}
             </select>
         </div>
         <div class="input-group mr-2">
             <select name="search_location" id="search-location" class="form-select selectpicker">
                 <option value="questions" {% if search_location == 'questions' %}selected{% endif %}>Questions</option>
-                <option value="categories" {% if search_location == 'categories' %}selected{% endif %}>Catégories</option>
+                <option value="categories" {% if search_location == 'categories' %}selected{% endif %}>Modalités</option>
                 <option value="variable_name" {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la variable</option>
             </select>
         </div>
@@ -100,6 +112,15 @@
 
         overflow: hidden; /* Empêche le dépassement du contenu */
     }
+
+    .bootstrap-select .btn {
+        max-width: 200px; /* Limite la largeur maximale du bouton */
+        max-height: 40px; /* Limite la hauteur maximale du bouton */
+        overflow: hidden; /* Cache le texte qui dépasse */
+        text-overflow: ellipsis; /* Affiche "..." si le texte est trop long */
+        white-space: nowrap; /* Empêche le texte de passer à la ligne */
+    }
+    
 </style>
 
 {% endblock %}
@@ -111,21 +132,45 @@
 
 $(document).ready(function() {
 
+    const seriesFilter = document.getElementById('series-filter');
+    const surveysFilter = document.getElementById('study-filter');
+
+    seriesFilter.addEventListener('change', function () {
+        const selectedSeries = Array.from(seriesFilter.selectedOptions).map(option => option.value);
+        const selectedStudies = Array.from(surveysFilter.selectedOptions).map(option => option.value);
+
+        fetch(`/api/get-surveys-by-series/?series_ids=${selectedSeries.join(',')}`)
+            .then(response => response.json())
+            .then(data => {
+                surveysFilter.innerHTML = '';
+
+                data.surveys.forEach(survey => {
+                    const option = document.createElement('option');
+                    option.value = survey.id;
+                    option.text = survey.name;
+                    if (selectedStudies.includes(String(survey.id))) {
+                        option.selected = true;
+                    }
+                    surveysFilter.appendChild(option);
+                });
+                $('.selectpicker').selectpicker('refresh');
+            });
+        $('#survey-table').DataTable().ajax.reload();
+    });
     $(document).on('click', '.badge-category', function() {
         var dropdown = $(this).siblings('.category-dropdown');
-        $('.category-dropdown').not(dropdown).hide();  // Fermer les autres dropdowns
-        dropdown.toggle();  // Afficher/masquer la dropdown
+        $('.category-dropdown').not(dropdown).hide();
+        dropdown.toggle();
     });
 
-    // Fermer la dropdown si on clique en dehors
     $(document).click(function(event) {
         if (!$(event.target).closest('.badge-category, .category-dropdown').length) {
             $('.category-dropdown').hide();
         }
     });
     $(document).on('click', '.badge-category', function() {
-        var matchedCategory = $(this).text().trim();  // La catégorie correspondante (le texte du badge)
-        var dropdown = $(this).siblings('.category-dropdown');  // Le dropdown associé
+        var matchedCategory = $(this).text().trim();
+        var dropdown = $(this).siblings('.category-dropdown');
         dropdown.find('.category-item').each(function() {
             if ($(this).text().trim() === matchedCategory) {
                 $(this).addClass('highlight-category');
@@ -138,19 +183,22 @@ $(document).ready(function() {
         return $('#study-filter').val() || [];
     }
 
+    function getSerieFilter() {
+        return $('#series-filter').val() || [];
+    }
+
     function getSearchLocation() {
         return $('#search-location').val() || 'questions';
     }
 
     $('.selectpicker').selectpicker({
-        noneSelectedText: 'Sélectionner une ou plusieurs études',
+        noneSelectedText: 'Sélectionner une ou plusieurs options',
         showTick: true,
-        liveSearch: false,
+        liveSearch: true,
         actionsBox: true,
-        style: 'btn-outline-secondary',
         selectedTextFormat: 'count > 1',
         countSelectedText: function(numSelected, numTotal) {
-            return (numSelected === 1) ? "{0} étude sélectionnée" : "{0} études sélectionnées";
+            return (numSelected === 1) ? "{0} sélectionnée" : "{0} sélectionnées";
         },
     });
     $('.selectpicker').selectpicker('refresh');
@@ -170,6 +218,7 @@ $(document).ready(function() {
             "data": function(d) {
                 d.q = "{{ request.GET.q }}";
                 d.study = getStudyFilter();
+                d.series = getSerieFilter();
                 d.search_location = getSearchLocation();
             },
             "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },
@@ -186,13 +235,13 @@ $(document).ready(function() {
                     <div class="card mb-3">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <a href="` + url + `">` + row.question_text + `</a>
+                                <a class="custom-name-card" href="` + url + `">` + row.question_text + `</a>
                             </h5>
                             <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
                             <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
                             <h6 class="card-subtitle mb-2 text-muted">Label interne : ` + row.internal_label + `</h6>
                                                  <!-- Bouton pour afficher les catégories -->
-                            <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Catégories</button>
+                            <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Modalités</button>
                             
                             <!-- Liste des catégories, affichée directement si is_category_search est True -->
                             <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">

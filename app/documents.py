@@ -15,6 +15,7 @@ class BindingSurveyDocument(Document):
         'id': fields.IntegerField(),
         'name': fields.TextField(),
         'external_ref': fields.TextField(),
+        'serie_id': fields.IntegerField()
     })
     variable = fields.ObjectField(properties={
         'question_text': fields.TextField(analyzer='custom_analyzer'),
@@ -103,10 +104,11 @@ class BindingSurveyDocument(Document):
             "notes": instance.notes,
             "universe": instance.universe,
             "survey": {
-            "id": instance.survey.id,
-            "name": instance.survey.name,
-            "external_ref": instance.survey.external_ref,
-        },
+                "id": instance.survey.id,
+                "name": instance.survey.name,
+                "external_ref": instance.survey.external_ref,
+                "serie_id": instance.survey.serie.id if instance.survey.serie else None
+            },
             "variable": {
                 "question_text": instance.variable.question_text,
                 "internal_label": instance.variable.internal_label,

@@ -73,6 +73,10 @@
 
 
 .bootstrap-select .dropdown-toggle:focus {
-    outline: none !important; /* Supprime l'outline bleu */
-    box-shadow: none !important; /* Supprime l'effet d'ombre */
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+body {
+    font-family: Arial, sans-serif;
 }

@@ -139,3 +139,8 @@ background-color: #888888;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     color: black !important;
 }
+
+.custom-name-card{
+    color:#6c757d;
+    font-weight: bold;
+}

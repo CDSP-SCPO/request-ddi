@@ -1,6 +1,171 @@
-<h2>Upload XML File</h2>
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Upload</button>
-  </form>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="container-custom mt-4">
+        <div class="text-center mb-3">
+            <h1 class="mb-2">Import de fichier XML</h1>
+            <a href="{% url 'app:create-serie' %}" class="btn btn-warning">Créer une nouvelle série</a>
+        </div>
+
+        <!-- Section XML -->
+        <div class="col-md-8 mx-auto">
+            <div class="help-box">
+                <h2>Balises attendues pour le XML</h2>
+                <ul>
+                    <li>var
+                        <ul>
+                            <li>catValu</li>
+                            <li>labl</li>
+                            <li>catgry</li>
+                            <li>qstnLit</li>
+                            <li>universe</li>
+                            <li>notes</li>
+                        </ul>
+                    </li>
+                    <li>IDNo</li>
+                    <li>titl</li>
+                </ul>
+                <p>Assurez-vous que ces balises sont présentes dans votre fichier XML pour garantir une structure valide.</p>
+            </div>
+
+            <h2>Uploader un fichier XML</h2>
+            <form method="POST" enctype="multipart/form-data" id="xmlUploadForm" action="{% url 'app:upload_xml' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    {{ xml_form.series.label_tag }} {{ xml_form.series }}
+                </div>
+                <div class="mb-3">
+                    <label for="xml_file">Sélectionnez un fichier XML :</label>
+                    <input type="file" name="xml_file" id="xml_file" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-success mt-3">Envoyer le fichier XML</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Superposition et spinner de chargement -->
+    <div class="overlay" id="overlay">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+            <div class="spinner-text">Traitement en cours...</div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.getElementById('xmlUploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();  // Empêche l'envoi immédiat du formulaire
+            var formData = new FormData(this);
+
+            // Affiche l'overlay de chargement
+            document.getElementById('overlay').classList.add('show');
+
+            // Vérification des doublons
+            fetch("{% url 'app:check_duplicates' %}", {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'exists') {
+                    Swal.fire({
+                        title: 'Doublons détectés',
+                        text: 'Certaines variables de ce document existent déjà. Voulez-vous les mettre à jour ?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Oui, mettre à jour',
+                        cancelButtonText: 'Annuler',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Confirme l'envoi final du formulaire
+                            document.getElementById('xmlUploadForm').submit();
+                        } else {
+                            document.getElementById('overlay').classList.remove('show');
+                        }
+                    });
+                } else {
+                    document.getElementById('xmlUploadForm').submit();
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Une erreur s\'est produite lors de la vérification des doublons.'
+                });
+                document.getElementById('overlay').classList.remove('show');
+            });
+        });
+
+        // Gestion des erreurs affichées depuis le serveur via messages
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if errors %}
+                let errorMessages = "";
+                const errors = {{ errors|safe }};
+                // Construire le message d'erreurs à partir des données d'erreurs JSON
+                for (const [field, fieldErrors] of Object.entries(errors)) {
+                    fieldErrors.forEach(error => {
+                        errorMessages += error.message + "<br>";
+                    });
+                }
+                // Affiche une alerte SweetAlert avec les erreurs
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur lors de l\'import',
+                    html: errorMessages
+                });
+                // Masquer l'overlay si des erreurs sont détectées
+                document.getElementById('overlay').classList.remove('show');
+            {% endif %}
+        });
+    </script>
+{% endblock %}
+
+
+{% block extra_css %}
+    <style>
+        .form-control{
+          border: none;
+        }
+        /* Styles similaires à ceux utilisés dans `upload_csv.html` */
+        .help-box {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        /* Superposition et spinner */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .overlay.show {
+            display: flex;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 8px solid rgba(0, 0, 0, 0.1);
+            border-top: 8px solid #28a745;
+            animation: spin 1s linear infinite;
+            border-radius: 50%;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+{% endblock %}
+
