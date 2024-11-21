@@ -1,23 +1,37 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-    <div class="container-custom mt-4">
-        <h1 class="text-center mb-4">Upload de CSV et XML</h1>
-        <div class="d-flex justify-content-center">
-            <a href="{% url 'export_questions_csv' %}">
-                <button>Télécharger le fichier CSV</button>
-            </a>
-        </div>
+    <div class="mt-4">
+        <h1 class="text-center mb-4">Export en CSV</h1>
+        <form method="GET" action="{% url 'export_questions_csv' %}" class="d-flex flex-column align-items-center">
+            <!-- Sélection de la série -->
+            <div class="mb-3">
+                <label for="series-filter" class="form-label">Choisissez une ou plusieurs séries :</label>
+                <select name="series" id="series-filter" class="selectpicker form-select" multiple data-live-search="true">
+                    {% for serie in series %}
+                        <option value="{{ serie.id }}">{{ serie.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Sélection de l'enquête -->
+            <div class="mb-3">
+                <label for="survey-filter" class="form-label">Choisissez une ou plusieurs enquêtes :</label>
+                <select name="surveys" id="survey-filter" class="selectpicker form-select" multiple data-live-search="true">
+                    {% for survey in surveys %}
+                        <option value="{{ survey.id }}">{{ survey.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Bouton Télécharger -->
+            <button type="submit">Télécharger le fichier CSV</button>
+        </form>
     </div>
 {% endblock %}
 
 {% block extra_css %}
-
 <style>
-    .container-custom {
-            min-height: 90%;
-            flex-grow: 1;
-        }
     button {
         background-color: #007bff;
         color: white;
@@ -31,6 +45,33 @@
         background-color: #0056b3;
     }
 </style>
-
 {% endblock %}
 
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const seriesFilter = document.getElementById('series-filter');
+        const surveyFilter = document.getElementById('survey-filter');
+        $('.selectpicker').selectpicker();
+
+        seriesFilter.addEventListener('change', function () {
+            const selectedSeries = Array.from(seriesFilter.selectedOptions).map(option => option.value);
+
+            fetch(`/api/get-surveys-by-series/?series_ids=${selectedSeries.join(',')}`)
+                .then(response => response.json())
+                .then(data => {
+                    surveyFilter.innerHTML = '';
+
+                    data.surveys.forEach(survey => {
+                        const option = document.createElement('option');
+                        option.value = survey.id;
+                        option.textContent = survey.name;
+                        surveyFilter.appendChild(option);
+                    });
+
+                    $('.selectpicker').selectpicker('refresh');
+                });
+        });
+    });
+</script>
+{% endblock %}

@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 # -- BASEDEQUESTIONS
 from app.models import (
     BindingConcept, BindingSurveyRepresentedVariable, Category, Concept,
-    ConceptualVariable, RepresentedVariable, Serie, Survey,
+    ConceptualVariable, RepresentedVariable, Serie, Survey, Publisher
 )
 
 
@@ -35,6 +35,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Deleted Survey'))
 
         Serie.objects.all().delete()
+        self.stdout.write(self.style.SUCCESS('Deleted Serie'))
+
+        Publisher.objects.all().delete()
         self.stdout.write(self.style.SUCCESS('Deleted Serie'))
 
         self.stdout.write(self.style.SUCCESS('All data cleared successfully!'))

@@ -9,7 +9,7 @@
             <h6 class="card-subtitle mb-2 text-muted">Référence externe: {{ question.internal_label }}</h6>
             <h6 class="card-subtitle mb-2 text-muted">Enquête: {{ question_survey.name }}</h6>
             <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: {{ question.variable_name }}</h6>
-            <h6 class="card-subtitle mb-2 text-muted">Type des catégories: {{ question_represented_var.type_categories }}</h6>
+            <h6 class="card-subtitle mb-2 text-muted">Type des modalités: {{ question_represented_var.type_categories }}</h6>
             <h6 class="card-subtitle mb-2 text-muted">Internal Label: {{ question_represented_var.internal_label }}</h6>
             <!-- <h6 class="card-subtitle mb-2 text-muted">Type des catégories: {{ question.variable_name }}</h6> -->
             <p class="card-text">Détails supplémentaires ici...</p>
@@ -18,7 +18,7 @@
     </div>
     <div class="card mt-4">
         <div class="card-body">
-            <h4>Options de la question (Catégories associées)</h4>
+            <h4>Modalités de la variable</h4>
             {% if categories %}
                 <ul class="list-group">
                     {% for category in categories %}

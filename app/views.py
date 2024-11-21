@@ -34,7 +34,7 @@ from .documents import \
 from .forms import CSVUploadForm, CustomAuthenticationForm, XMLUploadForm, SerieForm
 from .models import (
     BindingSurveyRepresentedVariable, Category, ConceptualVariable,
-    RepresentedVariable, Serie, Survey,
+    RepresentedVariable, Serie, Survey, Publisher
 )
 from .utils.csvimportexport import BindingSurveyResource
 
@@ -69,21 +69,17 @@ class BaseUploadView(FormView):
 
 
         except ValueError as ve:
-            print("test value error")
             # Gérer l'erreur spécifique et rediriger
             messages.error(self.request, str(ve))
             return self.form_invalid(form)
 
         except Exception as e:
-            print("test exception", e)
             messages.error(self.request, f"Erreur lors du traitement des données : {str(e)}")
             return self.form_invalid(form)
             
     def form_invalid(self, form):
-        # Ajout d'un message d'erreur générique si le formulaire n'est pas valide
-        
-        return redirect(reverse('app:upload_files'))
-        # return super().form_invalid(form)
+        errors = form.errors.as_json()
+        return self.render_to_response(self.get_context_data(errors=errors))
 
     def get_data(self, form):
         """Méthode pour obtenir les données du formulaire."""
@@ -97,8 +93,8 @@ class BaseUploadView(FormView):
         """Méthode pour traiter les données."""
         pass
 
-    def get_or_create_survey(self, doi, title):
-        survey, _ = Survey.objects.get_or_create(external_ref=doi, name=title)
+    def get_or_create_survey(self, doi, title, serie):
+        survey, _ = Survey.objects.get_or_create(external_ref=doi, name=title, serie=serie)
         return survey
 
     def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
@@ -139,6 +135,11 @@ class CSVUploadView(BaseUploadView):
     template_name = 'upload_csv.html'
     form_class = CSVUploadForm
     required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['csv_form'] = CSVUploadForm()
+        return context
 
     def get_data(self, form):
         self.selected_serie = Serie.objects.get(name=form.cleaned_data['series'])
@@ -274,6 +275,11 @@ class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['xml_form'] = XMLUploadForm()
+        return context
+
     def get_data(self, form):
         self.selected_series = form.cleaned_data['series']
         return form.cleaned_data['xml_file']
@@ -312,7 +318,7 @@ class XMLUploadView(BaseUploadView):
             if not doi.startswith('doi:'):
                 raise ValueError(f"Le DDI '{doi}' n'est pas au bon format. Il doit commencer par 'doi:'.")
             # Création ou récupération d'une enquête (Survey)
-            survey, created_survey = self.get_or_create_survey(doi, title)
+            survey, created_survey = self.get_or_create_survey(doi, title, self.selected_series)
             if created_survey:
                 num_new_surveys += 1
 
@@ -359,8 +365,8 @@ class XMLUploadView(BaseUploadView):
                 category, _ = Category.objects.get_or_create(code=code, category_label=label)
                 represented_variable.categories.add(category)
 
-    def get_or_create_survey(self, doi, title):
-        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title)
+    def get_or_create_survey(self, doi, title, serie):
+        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title, serie = serie)
         return survey, created
 
     # def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes, serie):
@@ -374,14 +380,14 @@ class XMLUploadView(BaseUploadView):
     #     return binding, created
 
 
-class CombinedUploadView(LoginRequiredMixin, TemplateView):
-    template_name = 'upload_files.html'
+# class CombinedUploadView(LoginRequiredMixin, TemplateView):
+#     template_name = 'upload_files.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['csv_form'] = CSVUploadForm()
-        context['xml_form'] = XMLUploadForm()
-        return context
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['csv_form'] = CSVUploadForm()
+#         context['xml_form'] = XMLUploadForm()
+#         return context
 
 
 class RepresentedVariableSearchView(ListView):
@@ -400,8 +406,13 @@ class RepresentedVariableSearchView(ListView):
 
 
 def search_results(request):
-    search_location = request.GET.get('search_location', 'questions')
+    selected_series = request.GET.getlist('serie')
+    selected_studies = request.GET.getlist('survey')
+
+    series = Serie.objects.all()
     studies = Survey.objects.all()
+
+    search_location = request.GET.get('search_location', 'questions')
     context = locals()
     return render(request, 'search_results.html', context)
 
@@ -421,9 +432,11 @@ class SearchResultsDataView(ListView):
         search_value = self.request.GET.get('q', '').strip().lower()
         search_location = self.request.GET.get('search_location', 'questions')
         study_filter = self.request.GET.getlist('study[]', None)
+        series_filter = self.request.GET.getlist('series[]', None)
 
         # Convertir le filtre en liste d'entiers
         study_filter = [int(study_id) for study_id in study_filter if study_id.isdigit()]
+        series_filter = [int(serie_id) for serie_id in series_filter if serie_id.isdigit()]
 
         # Configuration de la recherche Elasticsearch
         search = BindingSurveyDocument.search()
@@ -440,12 +453,17 @@ class SearchResultsDataView(ListView):
             .highlight('variable_name', fragment_size=10000)
 
         # Appliquer le filtre par étude
+        if series_filter:
+            search = search.filter('terms', **{"survey.serie_id": series_filter})
         if study_filter:
             search = search.filter('terms', **{"survey.id": study_filter})
+        
 
         # Pagination (start et length) depuis DataTables
         start = int(self.request.GET.get('start', 0))
         length = int(self.request.GET.get('length', self.paginate_by))
+        if length == -1:
+            length = search.count()
 
         return search[start:start + length].execute()
 
@@ -502,34 +520,25 @@ class SearchResultsDataView(ListView):
 
             category_matched = None
             all_clean_categories = []  # Initialisation de full_cat
-
+            sorted_categories = sorted(result.variable.categories, key=lambda cat: cat.code)
             # Récupérer la catégorie correspondante
             if search_location == 'categories' and hasattr(result.meta, 'highlight'):
                 if 'variable.categories.category_label' in result.meta.highlight:
                     category_highlight = result.meta.highlight['variable.categories.category_label']
                     category_matched = category_highlight[0] if category_highlight else None
 
-            # Ajouter un marquage à la catégorie correspondante
-            if category_matched:
-                for cat in result.variable.categories:
-                    if cat.category_label == remove_html_tags(category_matched):
-                        # Formatez avec le code et le label
-                        all_clean_categories.append(
-                            f"<mark style='background-color: yellow;'>{cat.code} : {cat.category_label}</mark>"
-                        )
-                    else:
-                        # Conservez le format habituel
-                        all_clean_categories.append(f"{cat.code} : {cat.category_label}")
-            else:
-                # Si aucune catégorie n'est mise en correspondance, conservez les autres catégories
-                for cat in result.variable.categories:
+            for cat in sorted_categories:
+                if category_matched and cat.category_label == remove_html_tags(category_matched):
+                    all_clean_categories.append(
+                        f"<mark style='background-color: yellow;'>{cat.code} : {cat.category_label}</mark>"
+                    )
+                else:
                     all_clean_categories.append(f"{cat.code} : {cat.category_label}")
 
             variable_name = result.variable_name
             if search_location == 'variable_name' and hasattr(result.meta,
                                                               'highlight') and 'variable_name' in result.meta.highlight:
                 variable_name = result.meta.highlight['variable_name'][0]
-
             # Collecte des données formatées
             data.append({
                 "id": result.meta.id,
@@ -624,6 +633,8 @@ def autocomplete(request):
 
 class ExportQuestionsCSVView(View):
     def get(self, request, *args, **kwargs):
+        selected_series = request.GET.getlist('series')
+        selected_surveys = request.GET.getlist('surveys')
         # Créer la réponse CSV
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
@@ -634,7 +645,13 @@ class ExportQuestionsCSVView(View):
 
         # Récupérer toutes les questions et les informations associées
         questions = RepresentedVariable.objects.all()
-        for question in questions:
+
+        if selected_series:
+            questions = questions.filter(bindingsurveyrepresentedvariable__survey__serie__id__in=selected_series)
+        if selected_surveys:
+            questions = questions.filter(bindingsurveyrepresentedvariable__survey__id__in=selected_surveys)
+
+        for question in questions.distinct():
             # Récupérer les liaisons entre les surveys et les variables représentées
             binding = BindingSurveyRepresentedVariable.objects.filter(variable=question).first()
 
@@ -659,7 +676,10 @@ class ExportQuestionsCSVView(View):
 
         return response
 def export_page(request):
-    return render(request, 'export_csv.html')
+    series = Serie.objects.all()
+    surveys = Survey.objects.all()
+    context = locals()
+    return render(request, 'export_csv.html', context)
 
 class QuestionDetailView(View): 
     def get(self, request, id, *args, **kwargs):
@@ -667,7 +687,7 @@ class QuestionDetailView(View):
         question_represented_var = question.variable
         question_conceptual_var = question_represented_var.conceptual_var
         question_survey = question.survey
-        categories = question.variable.categories.all()
+        categories = sorted(question.variable.categories.all(), key=lambda x:x.code)
         context = locals()
         return render(request, 'question_detail.html', context)
 
@@ -733,6 +753,7 @@ class CreateSerie(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         form.save()
+        messages.success(self.request, "Série créée avec succès.")
         return super().form_valid(form)
 
 
@@ -813,7 +834,9 @@ def check_duplicates(request):
             existing_variables = []
             for var in soup.find_all('var'):
                 variable_name = var.get('name', '').strip()
-                if BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name).exists():
+                variable_survey_id = var.get('IDNo','').strip()
+                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name, survey__external_ref=variable_survey_id)
+                if existing_bindings.exists():
                     existing_variables.append(variable_name)
 
         # Vérifier si c'est un fichier CSV
@@ -822,7 +845,9 @@ def check_duplicates(request):
             existing_variables = []
             for row in reader:
                 variable_name = row['variable_name']
-                if BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name).exists():
+                variable_survey_id = row['ddi']
+                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name, survey__external_ref=variable_survey_id)
+                if existing_bindings.exists():
                     existing_variables.append(variable_name)
         
         else:
@@ -835,3 +860,36 @@ def check_duplicates(request):
 
     return JsonResponse({'error': 'Requête invalide'}, status=400)
 
+
+class SerieSurveysView(View):
+    def get(self, request, serie_id):
+        serie = get_object_or_404(Serie, id=serie_id)
+        surveys = Survey.objects.filter(serie=serie)
+        return render(request, 'serie_surveys.html', {'serie': serie, 'surveys': surveys})
+
+
+
+def get_surveys_by_series(request):
+    series_ids = request.GET.get('series_ids')
+    if series_ids:
+        series_ids = [int(id) for id in series_ids.split(',')]
+        surveys = Survey.objects.filter(serie__id__in=series_ids)
+    else:
+        surveys = Survey.objects.all()
+    
+
+    surveys_data = [{'id': survey.id, 'name': survey.name} for survey in surveys]
+    return JsonResponse({'surveys': surveys_data})
+
+def create_publisher(request):
+    if request.method == "POST":
+        name = request.POST.get('name')
+        if name:
+            Publisher.objects.get_or_create(name=name)
+            return JsonResponse({"success": True, "message": "Éditeur ajouté avec succès."})
+        return JsonResponse({"success": False, "message": "Le nom de l'éditeur est requis."})
+    return JsonResponse({"success": False, "message": "Requête invalide."})
+
+def get_publishers(request):
+    publishers = Publisher.objects.all().values("id", "name")
+    return JsonResponse({"publishers": list(publishers)})

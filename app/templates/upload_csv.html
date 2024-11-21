@@ -1,118 +1,63 @@
 {% extends 'base.html' %}
 {% load static %}
 
-    {% block content %}
-    <div>
-        <a href="{% url 'app:representedvariable_search' %}" class="btn btn-primary">Retour</a>
-        <h1>Upload de CSV</h1>
-
-        <!-- Cellule d'aide sur les champs attendus -->
-        <div class="help-box">
-            <h2>Aide pour le fichier CSV</h2>
-            <p>Votre fichier CSV doit contenir les colonnes suivantes :</p>
-            <ul>
-                <li>ddi</li>
-                <li>title</li>
-                <li>variable_name</li>
-                <li>variable_label</li>
-                <li>question_text</li>
-                <li>category_label</li>
-            </ul>
-            <p>Assurez-vous que ces colonnes sont présentes et correctement orthographiées dans le fichier.</p>
+{% block content %}
+    <div class="container-custom mt-4">
+        <div class="text-center mb-3">
+            <h1 class="mb-2">Import de fichier CSV</h1>
+            <a href="{% url 'app:create-serie' %}" class="btn btn-warning">Créer une nouvelle série</a>
         </div>
 
-        <!-- Affichage des messages d'erreur -->
-        {% if messages %}
-            <div class="error-box">
-                {% for message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
+        <!-- Section CSV -->
+        <div class="col-md-8 mx-auto">
+            <div class="help-box">
+                <h2>Aide pour le fichier CSV</h2>
+                <p>Votre fichier CSV doit contenir les colonnes suivantes :</p>
+                <ul>
+                    <li>ddi</li>
+                    <li>title</li>
+                    <li>variable_name</li>
+                    <li>variable_label</li>
+                    <li>question_text</li>
+                    <li>category_label</li>
+                    <li>univers</li>
+                    <li>notes</li>
+                </ul>
+                <p>Assurez-vous que ces colonnes sont présentes et correctement orthographiées.</p>
             </div>
-        {% endif %}
 
-        <!-- Formulaire d'upload -->
-        <form method="POST" enctype="multipart/form-data" id="uploadForm">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" id="submitBtn">Envoyer le fichier CSV</button>
-        </form>
-
-        <!-- Superposition et spinner de chargement -->
-        <div class="overlay" id="overlay">
-            <div class="spinner-container">
-                <div class="spinner"></div>
-                <div class="spinner-text">Traitement en cours...</div>
-            </div>
+            <h2>Uploader un fichier CSV</h2>
+            <form method="POST" enctype="multipart/form-data" id="csvUploadForm" action="{% url 'app:upload_csv' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    {{ csv_form.series.label_tag }} {{ csv_form.series }}
+                </div>
+                <div class="mb-3">
+                    <label for="csv_file">Sélectionnez un fichier CSV :</label>
+                    <input type="file" name="csv_file" id="csv_file" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-success mt-3">Envoyer le fichier CSV</button>
+            </form>
         </div>
     </div>
-    {% endblock %}
-    {% block extra_js %}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        document.getElementById('uploadForm').addEventListener('submit', function() {
-            document.getElementById('overlay').classList.add('show');
-        });
 
-        {% if missing_columns %}
-        Swal.fire({
-            icon: 'error',
-            title: 'Colonnes manquantes',
-            text: 'Les colonnes suivantes sont manquantes: {{ missing_columns|join:", " }}'
-        });
-        {% endif %}
-    </script>
-    {% endblock %}
-    
-    {% block extra_css %}
+    <!-- Superposition et spinner de chargement -->
+    <div class="overlay" id="overlay">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+            <div class="spinner-text">Traitement en cours...</div>
+        </div>
+    </div>
+{% endblock %}
+
+
+
+{% block extra_css %}
     <style>
-        /* Style global */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
+        .form-control{
+          border: none;
         }
-
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        form {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 400px;
-            position: relative;
-            z-index: 1;
-        }
-
-        form p {
-            margin-bottom: 15px;
-        }
-
-        button {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #218838;
-        }
-
-        /* Style de la cellule d'aide */
+        /* Styles similaires à ceux fournis pour `base.html` */
         .help-box {
             background-color: #e9ecef;
             padding: 15px;
@@ -120,47 +65,7 @@
             margin-bottom: 20px;
             color: #333;
         }
-
-        .help-box h2 {
-            margin-top: 0;
-            font-size: 1.2em;
-            color: #007bff;
-        }
-
-        .help-box p {
-            margin: 5px 0;
-        }
-
-        .help-box ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        .help-box li {
-            margin: 5px 0;
-            padding-left: 15px;
-            position: relative;
-        }
-
-        .help-box li::before {
-            content: "✔";
-            color: green;
-            position: absolute;
-            left: 0;
-            top: 0;
-        }
-
-        /* Style pour les messages d'erreur */
-        .error-box {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            border: 1px solid #f5c6cb;
-        }
-
-        /* Style pour la superposition et le spinner */
+        /* Superposition et spinner */
         .overlay {
             position: fixed;
             top: 0;
@@ -173,37 +78,92 @@
             justify-content: center;
             z-index: 999;
         }
-
         .overlay.show {
             display: flex;
         }
-
-        .spinner-container {
-            text-align: center;
-            color: #fff;
-        }
-
         .spinner {
             width: 60px;
             height: 60px;
             border: 8px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
             border-top: 8px solid #28a745;
             animation: spin 1s linear infinite;
-            margin-bottom: 10px;
-            display: inline-block;
+            border-radius: 50%;
         }
-
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .spinner-text {
-            font-size: 1.2em;
-            margin-top: 10px;
-        }
-
     </style>
-    {% endblock %}
-    <!-- Script pour le spinner et les alertes SweetAlert -->
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.getElementById('csvUploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();  // Empêche l'envoi immédiat du formulaire
+            var formData = new FormData(this);
+
+            // Affiche l'overlay de chargement
+            document.getElementById('overlay').classList.add('show');
+
+            // Vérification des doublons
+            fetch("{% url 'app:check_duplicates' %}", {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'exists') {
+                    Swal.fire({
+                        title: 'Doublons détectés',
+                        text: 'Certaines variables de ce document existent déjà. Voulez-vous les mettre à jour ?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Oui, mettre à jour',
+                        cancelButtonText: 'Annuler',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Confirme l'envoi final du formulaire
+                            document.getElementById('csvUploadForm').submit();
+                        } else {
+                            document.getElementById('overlay').classList.remove('show');
+                        }
+                    });
+                } else {
+                    document.getElementById('csvUploadForm').submit();
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Une erreur s\'est produite lors de la vérification des doublons.'
+                });
+                document.getElementById('overlay').classList.remove('show');
+            });
+        });
+
+        // Gestion des erreurs affichées depuis le serveur via messages
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if errors %}
+                let errorMessages = "";
+                const errors = {{ errors|safe }};
+                // Construire le message d'erreurs à partir des données d'erreurs JSON
+                for (const [field, fieldErrors] of Object.entries(errors)) {
+                    fieldErrors.forEach(error => {
+                        errorMessages += error.message + "<br>";
+                    });
+                }
+                // Affiche une alerte SweetAlert avec les erreurs
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur lors de l\'import',
+                    html: errorMessages
+                });
+                // Masquer l'overlay si des erreurs sont détectées
+                document.getElementById('overlay').classList.remove('show');
+            {% endif %}
+        });
+    </script>
+{% endblock %}
+

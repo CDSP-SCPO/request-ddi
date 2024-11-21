@@ -6,9 +6,15 @@ from django.db import models
 #     name
 #     affiliation
 
+class Publisher(models.Model):
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
 class Serie(models.Model):
     name = models.CharField()
-    publisher = models.CharField()
+    publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, null=True, blank=True)
     abstract = models.TextField()
     photo = models.ImageField(upload_to='series_photos/', blank=True, null=True)
 
