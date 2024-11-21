@@ -1,16 +1,6 @@
 #!/usr/bin/env sh
 
-python manage.py shell < delete_table.py
-python manage.py makemigrations
 # Lancer les migrations Django
-
-
-if [ $? -eq 0 ]; then
-    echo "Migrations créées avec succès."
-else
-    echo "Erreur lors de la création des migrations."
-    exit 1
-fi
 
 python manage.py migrate
 if [ $? -eq 0 ]; then
