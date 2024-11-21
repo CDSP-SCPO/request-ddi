@@ -9,16 +9,17 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
     nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2  # Cette ligne est ajoutée pour la réécriture
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   rules:
     - host: base-de-questions-pprd.cdsp.sciences-po.fr
       http:
         paths:
+          # Accès aux fichiers médias, via le service NGINX
           - path: /media(/|$)(.*)
             backend:
-              serviceName: basedequestions
-              servicePort: 8000
+              serviceName: nginx-media  # Change de `basedequestions` à `nginx-media` pour utiliser le service NGINX
+              servicePort: 80  # Port exposé par le service NGINX (80 ou autre selon ta config)
 
           # Accès à l'application principale
           - path: /()(.*)
