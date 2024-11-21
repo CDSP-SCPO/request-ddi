@@ -2,6 +2,7 @@
 python manage.py showmigrations
 python manage.py flush --noinput
 python manage.py migrate app zero
+python manage.py flush --noinput
 
 # Lancer les migrations Django
 echo "Lancement des migrations Django..."
