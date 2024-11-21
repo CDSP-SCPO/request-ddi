@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
-python manage.py migrate app zero
-python manage.py showmigrations
+python manage.py shell < delete_table.py
+python manage.py makemigrations
 # Lancer les migrations Django
 
 
