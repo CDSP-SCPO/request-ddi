@@ -5,47 +5,53 @@ metadata:
   namespace: basedequestions
 data:
   nginx.conf: |
-    # Bloc HTTP qui enveloppe les directives 'server'
+    # Bloc events en dehors du bloc http
+    events {
+        worker_connections 1024;  # Nombre de connexions simultanées par worker
+    }
+    
+    # Bloc HTTP
     http {
-        include       /etc/nginx/mime.types;
-        default_type  application/octet-stream;
-        
-        access_log    /var/log/nginx/access.log;
-        error_log     /var/log/nginx/error.log;
-        
-        sendfile      on;
-        tcp_nopush    on;
-        tcp_nodelay   on;
-        keepalive_timeout  65;
-        types_hash_max_size 2048;
-
-        # Ton bloc serveur à l'intérieur du bloc http
-        server {
-            listen       80;
-            listen       [::]:80;
-            server_name  base-de-questions-pprd.cdsp.sciences-po.fr;
-
-            # Serve the media files from /media/ path
-            location /media/ {
-                alias /usr/share/nginx/html/media/;  # Map /media/ to /usr/share/nginx/html/media/
+      include       /etc/nginx/mime.types;
+      default_type  application/octet-stream;
+    
+      access_log    /var/log/nginx/access.log;
+      error_log     /var/log/nginx/error.log;
+    
+      sendfile      on;
+      tcp_nopush    on;
+      tcp_nodelay   on;
+      keepalive_timeout  65;
+      types_hash_max_size 2048;
+    
+      # Ton bloc serveur à l'intérieur du bloc http
+      server {
+        listen       80;
+        listen       [::]:80;
+        server_name  base-de-questions-pprd.cdsp.sciences-po.fr;
+    
+        # Serve the media files from /media/ path
+        location /media/ {
+          alias /usr/share/nginx/html/media/;  # Map /media/ to /usr/share/nginx/html/media/
                 try_files $uri $uri/ =404;  # Try to serve file, return 404 if not found
             }
-
+    
             # Serve the application at the root
             location / {
                 root   /usr/share/nginx/html;  # Point to the root of your application
                 index  index.html index.htm;
             }
-
+    
             # Error handling
             error_page   500 502 503 504  /50x.html;
             location = /50x.html {
                 root   /usr/share/nginx/html;
             }
-
+    
             # Optional: security for .ht files
             location ~ /\.ht {
                 deny  all;
             }
         }
     }
+    
