@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-
+python manage.py showmigrations
 
 # Lancer les migrations Django
 echo "Lancement des migrations Django..."
