@@ -757,11 +757,6 @@ class CreateSerie(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
 
-class SerieDetailView(DetailView):
-    model = Serie
-    template_name = 'serie_detail.html'  # Chemin vers ton template
-    context_object_name = 'serie'  # Nom de l'objet passé au template
-
 
 def check_media_root(request):
     # Vérifier si le répertoire MEDIA_ROOT existe

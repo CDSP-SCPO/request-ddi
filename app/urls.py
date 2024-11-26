@@ -9,7 +9,7 @@ from .views import (
     RepresentedVariableSearchView, SearchResultsDataView, XMLUploadView,
     autocomplete, check_duplicates, export_page, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions, CreateSerie, SerieDetailView, check_media_root, SerieSurveysView, get_surveys_by_series, create_publisher, get_publishers
+    similar_representative_variable_questions, CreateSerie, check_media_root, SerieSurveysView, get_surveys_by_series, create_publisher, get_publishers
 )
 
 from django.contrib.auth.views import LogoutView
@@ -33,7 +33,6 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('create-serie/', CreateSerie.as_view(), name='create-serie'),
     path('check-duplicates/', check_duplicates, name='check_duplicates'),
-    path('serie/<int:pk>/', SerieDetailView.as_view(), name='serie_detail'),
     path('check-media-root/', check_media_root),
     path('serie/<int:serie_id>/surveys/', SerieSurveysView.as_view(), name='serie_surveys'),
 
