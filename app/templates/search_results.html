@@ -227,6 +227,8 @@ $(document).ready(function() {
         {
                 "data": "id",  
                 "render": function (data, type, row) {
+                    console.log(row.id)
+                    console.log(row)
                     var url = '/question/' + row.id + '/';
                     var categoriesDisplay = row.categories.map(function(category) {
                         return `${category}`;
