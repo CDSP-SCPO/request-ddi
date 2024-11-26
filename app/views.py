@@ -520,7 +520,7 @@ class SearchResultsDataView(ListView):
 
             category_matched = None
             all_clean_categories = []  # Initialisation de full_cat
-            sorted_categories = sorted(result.variable.categories, key=lambda cat: cat.code)
+            sorted_categories = sorted(result.variable.categories, key=lambda cat: int(cat.code) if cat.code.isdigit() else cat.code)
             # Récupérer la catégorie correspondante
             if search_location == 'categories' and hasattr(result.meta, 'highlight'):
                 if 'variable.categories.category_label' in result.meta.highlight:
@@ -687,7 +687,7 @@ class QuestionDetailView(View):
         question_represented_var = question.variable
         question_conceptual_var = question_represented_var.conceptual_var
         question_survey = question.survey
-        categories = sorted(question.variable.categories.all(), key=lambda x:x.code)
+        categories = sorted(question.variable.categories.all(), key=lambda x: int(x.code) if x.code.isdigit() else x.code)
         context = locals()
         return render(request, 'question_detail.html', context)
 
