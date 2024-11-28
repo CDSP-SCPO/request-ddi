@@ -47,15 +47,15 @@ else
     exit 1
 fi
 
-# Lancer Gunicorn avec des paramètres optimisés
+# Démarrage du serveur Gunicorn
 echo "Démarrage du serveur Gunicorn..."
-gunicorn basedequestions.wsgi:application \
+exec gunicorn basedequestions.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --timeout 300 \  # Timeout augmenté pour supporter les requêtes longues
-    --workers 3 \  # Nombre de processus (ajustez selon vos ressources)
-    --threads 4 \  # Threads par processus pour meilleure gestion IO
-    --log-level info \  # Logs plus lisibles en production
-    --access-logfile -  # Journaux des accès en sortie standard
+    --timeout 300 \
+    --workers 3 \
+    --threads 4 \
+    --log-level info \
+    --access-logfile -
 if [ $? -eq 0 ]; then
     echo "Serveur Gunicorn démarré avec succès."
 else
