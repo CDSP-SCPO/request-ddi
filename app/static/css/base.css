@@ -80,3 +80,10 @@
 body {
     font-family: Arial, sans-serif;
 }
+
+.info-icon {
+    font-size: 0.7em;
+    color: grey;
+    cursor: pointer;
+    margin-left: 5px;
+}

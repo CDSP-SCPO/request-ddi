@@ -688,6 +688,16 @@ class QuestionDetailView(View):
         question_conceptual_var = question_represented_var.conceptual_var
         question_survey = question.survey
         categories = sorted(question.variable.categories.all(), key=lambda x: int(x.code) if x.code.isdigit() else x.code)
+        middle_index = len(categories) // 2
+        categories_left = categories[:middle_index]
+        categories_right = categories[middle_index:]
+        similar_representative_questions = BindingSurveyRepresentedVariable.objects.filter(
+            variable=question.variable
+        ).exclude(id=question.id)
+
+        similar_conceptual_questions = BindingSurveyRepresentedVariable.objects.filter(
+            variable__conceptual_var=question.variable.conceptual_var
+        ).exclude(id=question.id)
         context = locals()
         return render(request, 'question_detail.html', context)
 

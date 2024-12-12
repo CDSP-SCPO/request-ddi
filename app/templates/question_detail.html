@@ -1,16 +1,17 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="container mt-4">
     <h1>Détails de la Question</h1>
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">{{ question_represented_var.question_text }}</h5>
+            <h5 class="card-title">{{ question_represented_var.question_text|default:question_represented_var.internal_label }}</h5>
             <h6 class="card-subtitle mb-2 text-muted">Référence externe: {{ question.internal_label }}</h6>
             <h6 class="card-subtitle mb-2 text-muted">Enquête: {{ question_survey.name }}</h6>
             <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: {{ question.variable_name }}</h6>
-            <h6 class="card-subtitle mb-2 text-muted">Type des modalités: {{ question_represented_var.type_categories }}</h6>
-            <h6 class="card-subtitle mb-2 text-muted">Internal Label: {{ question_represented_var.internal_label }}</h6>
+            <!-- mettre univers -->
+            <h6 class="card-subtitle mb-2 text-muted">Libellé de la variable: {{ question_represented_var.internal_label }}</h6>
             <!-- <h6 class="card-subtitle mb-2 text-muted">Type des catégories: {{ question.variable_name }}</h6> -->
             <a href="javascript:history.back()" class="btn btn-primary">Retour à la recherche</a>
         </div>
@@ -18,135 +19,105 @@
     <div class="card mt-4">
         <div class="card-body">
             <h4>Modalités de la variable</h4>
-            {% if categories %}
-                <ul class="list-group">
-                    {% for category in categories %}
-                        <li class="list-group-item">
-                            <strong>Code :</strong> {{ category.code }}<br>
-                            <strong>Label :</strong> {{ category.category_label }}
-                        </li>
+            {% if categories_left or categories_right %}
+            <div class="modalities-container">
+                <!-- Première colonne -->
+                <div class="modalities-column">
+                    {% for category in categories_left %}
+                    <div class="grid-row">
+                        <div class="grid-code"><strong>Code :</strong> {{ category.code }}</div>
+                        <div class="grid-label"><strong>Label :</strong> {{ category.category_label }}</div>
+                    </div>
                     {% endfor %}
-                </ul>
+                </div>
+    
+                <!-- Deuxième colonne -->
+                <div class="modalities-column">
+                    {% for category in categories_right %}
+                    <div class="grid-row">
+                        <div class="grid-code"><strong>Code :</strong> {{ category.code }}</div>
+                        <div class="grid-label"><strong>Label :</strong> {{ category.category_label }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
             {% else %}
-                <p>Aucune catégorie associée.</p>
+            <p>Aucune catégorie associée.</p>
             {% endif %}
         </div>
     </div>
+    <h2 class="mt-5">
+        Questions identiques
+        <span 
+            class="info-icon" 
+            data-bs-toggle="tooltip" 
+            data-bs-placement="top" 
+            title="Ces variables ont exactement les mêmes questions, codes et modalités. Elles sont directement comparables">
+            &#9432;
+        </span>
+    </h2>
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for question in similar_representative_questions %}
+        <div class="col mb-3">
+            <a href="{% url 'app:question_detail' question.id %}" class="text-decoration-none card-link">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ question.variable_name }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">Référence externe: {{ question.internal_label }}</h6>
+                        <h6 class="card-subtitle mb-2 text-muted">Enquête: {{ question.survey }}</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+        {% if not similar_representative_questions %}
+        <p>Aucune question identique trouvée.</p>
+        {% endif %}
+    </div>
 
-    <h2 class="mt-5">Questions avec la même variable représentative</h2>
-    <table id="similar-representative-questions-table" class="table table-striped table-bordered display" style="width:100%">
-        <thead class="table-dark">
-            <tr>
-                <th>Question</th>
-            </tr>
-        </thead>
-    </table>
-    <h2 class="mt-5">Questions avec la même variable conceptuelle</h2>
-    <table id="similar-conceptual-questions-table" class="table table-striped table-bordered display" style="width:100%">
-        <thead class="table-dark">
-            <tr>
-                <th>Question</th>
-            </tr>
-        </thead>
-    </table>
+    <h2 class="mt-5">
+        Questions similaires
+        <span 
+            class="info-icon" 
+            data-bs-toggle="tooltip" 
+            data-bs-placement="top" 
+            title="Ces variables ont exactement les mêmes questions, mais des codes et modalités qui peuvent être différentes.">
+            &#9432;
+        </span>
+    </h2>
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for question in similar_conceptual_questions %}
+        <div class="col mb-3">
+            <a href="{% url 'app:question_detail' question.id %}" class="text-decoration-none card-link">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ question.variable_name }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">Référence externe: {{ question.internal_label }}</h6>
+                        <h6 class="card-subtitle mb-2 text-muted">Enquête: {{ question.survey }}</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+        {% if not similar_conceptual_questions %}
+        <p>Aucune question similaire trouvée.</p>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/question_detail.css' %}">
+{% endblock %}
 
 {% block extra_js %}
 <script>
 
-$(document).ready(function() {
-    $('#similar-representative-questions-table').DataTable({
-        "ordering": false,
-        "dom": '<"top"i>rt<"bottom"lp><"clear">',
-        'order': [[0, 'desc']],
-        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"]],
-        "processing": true,
-        "serverSide": true,
-        "pagingType": "full_numbers",
-        "ajax": {
-            "url": "{% url 'app:similar_representative' question.id %}",  // URL pour récupérer les questions similaires
-            "type": "GET",
-            "async": true,
-            "headers": { 'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val() },
-        },
-        "columns": [
-            {
-                "data": "id",
-                "render": function (data, type, row) {
-                    var url = '/question/' + row.id + '/';
-                    return `
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <a href="` + url + `">` + row.question_text + `</a>
-                            </h5>
-                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: ` + row.variable_name + ` </h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Référence externe: ` + row.internal_label + `</h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Survey: ` + row.survey + `</h6>
-                        </div>
-                    </div>`;
-                }
-            },
-        ],
-        "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
-            "processing": "",
-            "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
-            "paginate": {
-                "first": "Première",
-                "last": "Dernière",
-                "next": "Suivante",
-                "previous": "Précédente"
-            }
-        }
+    $(document).ready(function() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl);
+        });
     });
-    $('#similar-conceptual-questions-table').DataTable({
-        "ordering": false,
-        "dom": '<"top"i>rt<"bottom"lp><"clear">',
-        'order': [[0, 'desc']],
-        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"]],
-        "processing": true,
-        "serverSide": true,
-        "pagingType": "full_numbers",
-        "ajax": {
-            "url": "{% url 'app:similar_conceptual' question.id %}",  // URL pour récupérer les questions similaires
-            "type": "GET",
-            "async": true,
-            "headers": { 'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val() },
-        },
-        "columns": [
-            {
-                "data": "id",
-                "render": function (data, type, row) {
-                    var url = '/question/' + row.id + '/';
-                    return `
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <a href="` + url + `">` + row.question_text + `</a>
-                            </h5>
-                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: ` + row.variable_name + ` </h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Référence externe: ` + row.internal_label + `</h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Survey: ` + row.survey + `</h6>
-                        </div>
-                    </div>`;
-                }
-            },
-        ],
-        "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
-            "processing": "",
-            "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
-            "paginate": {
-                "first": "Première",
-                "last": "Dernière",
-                "next": "Suivante",
-                "previous": "Précédente"
-            }
-        }
-    });
-});
 </script>
 {% endblock %}
