@@ -237,7 +237,7 @@ $(document).ready(function() {
                     <div class="card mb-3">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <a class="custom-name-card" href="` + url + `">` + row.question_text + `</a>
+                                <a class="custom-name-card" href="` + url + `">` + (row.question_text || row.internal_label) + `</a>
                             </h5>
                             <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
                             <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
