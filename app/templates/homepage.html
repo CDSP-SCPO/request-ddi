@@ -3,13 +3,12 @@
 
 
 {% block content %}
-    <!-- Affichage des messages -->
     <div class="container-homepage">
         {% if messages %}
             <div class="messages">
                 {% for message in messages %}
-                    <div class="alert alert-success">  <!-- Utiliser seulement alert-success pour le succès -->
-                        {{ message|safe }}  <!-- Assurez-vous que le HTML est interprété -->
+                    <div class="alert alert-success"> 
+                        {{ message|safe }}
                     </div>
                 {% endfor %}
             </div>
@@ -17,8 +16,8 @@
 
         <section class="hero">
             <div class="container-custom-font">
-                <h2>Bienvenue sur la plateforme de Base de Questions</h2>
-                <p>Explorez des données à travers différents projets de recherche.</p>
+                <h2>Bienvenue sur la Base de questions</h2>
+                <p>Explorez les métadonnées des enquêtes par questionnaires en sciences humaines et sociales</p>
             </div>
             <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
                 <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}"
@@ -42,7 +41,7 @@
         </section>
 
         <section class="studies">
-            <h2 class="container-custom-font">Études Disponibles</h2>
+            <h2 class="container-custom-font">Séries d'enquêtes</h2>
             <div class="container">
                 <div class="row">
                     {% for serie in series %}

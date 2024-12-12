@@ -33,55 +33,58 @@
         <header class="bg-header-custom py-4">
             <div class="container">
                 <div class="d-flex justify-content-between align-items-center">
-                    <!-- Logo -->
-                    <a href="https://cdsp.sciences-po.fr/fr/">
-                        <img class="img-fluid mb-3" src="{% static 'img/logo-cdsp-navbar.png' %}" alt="Logo CDSP">
-                    </a>
-
-                    <!-- CSV Buttons -->
-                    <a href="{% url 'app:representedvariable_search' %}" class="btn btn-secondary">Retour à la page d'accueil
-                    </a>
-                    <div class="csv-buttons">
-                        {% if user.is_authenticated and user.is_staff %}
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Importer
-                                </button>
-                                <div class="dropdown-menu">
-                                    <a class="dropdown-item" href="{% url 'app:upload_csv' %}">Import de CSV</a>
-                                    <a class="dropdown-item" href="{% url 'app:upload_xml' %}">Import de XML</a>
-                                </div>
-                            </div>
-                        {% endif %}
-                        <a href="{% url 'app:export_page' %}" class="btn btn-secondary mx-2">Exporter CSV</a>
+                    <!-- Logo à gauche -->
+                    <div class="logo">
+                        <a href="{% url 'app:representedvariable_search' %}">
+                            <img class="img-fluid mb-3" src="{% static 'img/logo-cdsp-navbar.png' %}" alt="Logo CDSP">
+                        </a>
                     </div>
-
-                    <!-- User Profile/Connexion -->
-                    <div class="user-profile d-flex align-items-center">
-                        {% if user.is_authenticated %}
-                            <div class="dropdown">
-                                <a class="btn dropdown-toggle" href="#" role="button" id="userDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    <i class="fas fa-user"></i> {{ user.username }}
-                                </a>
-                                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
-                                    <form action="{% url 'app:logout' %}" method="post" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="dropdown-item">
-                                            <i class="fas fa-sign-out-alt"></i> Déconnexion
-                                        </button>
-                                    </form>
+        
+                    <!-- Boutons CSV et Profil utilisateur à droite -->
+                    <div class="d-flex align-items-center">
+                        <!-- CSV Buttons -->
+                        <div class="csv-buttons me-3">
+                            {% if user.is_authenticated and user.is_staff %}
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Importer
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        <a class="dropdown-item" href="{% url 'app:upload_csv' %}">Import de CSV</a>
+                                        <a class="dropdown-item" href="{% url 'app:upload_xml' %}">Import de XML</a>
+                                    </div>
                                 </div>
-                                
-                            </div>
-                        {% else %}
-                            <a href="{% url 'app:login' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-sign-in-alt"></i> Connexion
-                            </a>
-                        {% endif %}
+                            {% endif %}
+                            <a href="{% url 'app:export_page' %}" class="btn btn-secondary mx-2">Exporter CSV</a>
+                        </div>
+        
+                        <!-- User Profile/Connexion -->
+                        <div class="user-profile">
+                            {% if user.is_authenticated %}
+                                <div class="dropdown">
+                                    <a class="btn dropdown-toggle" href="#" role="button" id="userDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-user"></i> {{ user.username }}
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                                        <form action="{% url 'app:logout' %}" method="post" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-sign-out-alt"></i> Déconnexion
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <a href="{% url 'app:login' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-sign-in-alt"></i> Connexion
+                                </a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
         </header>
+        
 
         <!-- Main content -->
         <div class="container-custom">
