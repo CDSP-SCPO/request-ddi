@@ -7,45 +7,58 @@
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">{{ question_represented_var.question_text|default:question_represented_var.internal_label }}</h5>
-            <h6 class="card-subtitle mb-2 text-muted">Référence externe: {{ question.internal_label }}</h6>
-            <h6 class="card-subtitle mb-2 text-muted">Enquête: {{ question_survey.name }}</h6>
-            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable: {{ question.variable_name }}</h6>
-            <!-- mettre univers -->
-            <h6 class="card-subtitle mb-2 text-muted">Libellé de la variable: {{ question_represented_var.internal_label }}</h6>
-            <!-- <h6 class="card-subtitle mb-2 text-muted">Type des catégories: {{ question.variable_name }}</h6> -->
-            <a href="javascript:history.back()" class="btn btn-primary">Retour à la recherche</a>
+            <h6 class="card-subtitle mb-2 text-muted">
+                <span class="detail-label">Enquête:</span> {{ question_survey.name }}
+                {% if question_survey.dist_date %}
+                    (Date : {{ question_survey.dist_date|date:"d-m-Y" }})
+                {% endif %}
+            </h6>
+            <h6 class="card-subtitle mb-2 text-muted">
+                <span class="detail-label">Nom de la variable:</span> {{ question.variable_name }}
+            </h6>
+            <h6 class="card-subtitle mb-3 text-muted">
+                <span class="detail-label">Libellé de la variable:</span> {{ question_represented_var.internal_label }}
+            </h6>
+    
+            {% if question.universe %}
+            <div class="info-row">
+                <span class="info-label">Univers de la variable:</span>
+                <span class="info-value">{{ question.universe }}</span>
+            </div>
+            {% endif %}
+    
+            <a href="javascript:history.back()" class="btn btn-primary mt-3">Retour à la recherche</a>
         </div>
     </div>
+    
+    
+    
     <div class="card mt-4">
         <div class="card-body">
             <h4>Modalités de la variable</h4>
-            {% if categories_left or categories_right %}
-            <div class="modalities-container">
-                <!-- Première colonne -->
-                <div class="modalities-column">
-                    {% for category in categories_left %}
-                    <div class="grid-row">
-                        <div class="grid-code"><strong>Code :</strong> {{ category.code }}</div>
-                        <div class="grid-label"><strong>Label :</strong> {{ category.category_label }}</div>
-                    </div>
+            {% if categories %}
+            <table class="table modalities-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Label</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td>{{ category.code }}</td>
+                        <td>{{ category.category_label }}</td>
+                    </tr>
                     {% endfor %}
-                </div>
-    
-                <!-- Deuxième colonne -->
-                <div class="modalities-column">
-                    {% for category in categories_right %}
-                    <div class="grid-row">
-                        <div class="grid-code"><strong>Code :</strong> {{ category.code }}</div>
-                        <div class="grid-label"><strong>Label :</strong> {{ category.category_label }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+                </tbody>
+            </table>
             {% else %}
             <p>Aucune catégorie associée.</p>
             {% endif %}
         </div>
     </div>
+    
     <h2 class="mt-5">
         Questions identiques
         <span 
@@ -63,7 +76,6 @@
                 <div class="card h-100">
                     <div class="card-body">
                         <h5 class="card-title">{{ question.variable_name }}</h5>
-                        <h6 class="card-subtitle mb-2 text-muted">Référence externe: {{ question.internal_label }}</h6>
                         <h6 class="card-subtitle mb-2 text-muted">Enquête: {{ question.survey }}</h6>
                     </div>
                 </div>
@@ -92,7 +104,6 @@
                 <div class="card h-100">
                     <div class="card-body">
                         <h5 class="card-title">{{ question.variable_name }}</h5>
-                        <h6 class="card-subtitle mb-2 text-muted">Référence externe: {{ question.internal_label }}</h6>
                         <h6 class="card-subtitle mb-2 text-muted">Enquête: {{ question.survey }}</h6>
                     </div>
                 </div>

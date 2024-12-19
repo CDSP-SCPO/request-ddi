@@ -290,6 +290,13 @@ class XMLUploadView(BaseUploadView):
             "agency": "DataCite"}) else soup.find("IDNo").text.strip()
         title = soup.find("titl").text.strip()
 
+        date = None
+        date_tag = soup.find("distStmt").find("distDate") if soup.find("distStmt") else None
+        if date_tag and date_tag.text.strip():
+            try:
+                date = datetime.strptime(date_tag.text.strip(), "%Y-%m-%d").date()
+            except ValueError:
+                date = None
         for line in soup.find_all("var"):
             cat_to_add = " | ".join([','.join([cat.find("catValu").text.strip() if cat.find("catValu") else '',
                                                cat.find("labl").text.strip() if cat.find("labl") else ''])
@@ -298,6 +305,7 @@ class XMLUploadView(BaseUploadView):
             question_data = [
                 doi,
                 title,
+                date,
                 line["name"].strip(),
                 line.find("labl").text.strip() if line.find("labl") else "",
                 line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
@@ -314,11 +322,11 @@ class XMLUploadView(BaseUploadView):
         num_new_bindings = 0
 
         for question_data in question_datas:
-            doi, title, variable_name, variable_label, question_text, category_label, universe, notes = question_data
+            doi, title, date, variable_name, variable_label, question_text, category_label, universe, notes = question_data
             if not doi.startswith('doi:'):
                 raise ValueError(f"Le DDI '{doi}' n'est pas au bon format. Il doit commencer par 'doi:'.")
             # Création ou récupération d'une enquête (Survey)
-            survey, created_survey = self.get_or_create_survey(doi, title, self.selected_series)
+            survey, created_survey = self.get_or_create_survey(doi, title, self.selected_series, date)
             if created_survey:
                 num_new_surveys += 1
 
@@ -365,8 +373,15 @@ class XMLUploadView(BaseUploadView):
                 category, _ = Category.objects.get_or_create(code=code, category_label=label)
                 represented_variable.categories.add(category)
 
-    def get_or_create_survey(self, doi, title, serie):
-        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title, serie = serie)
+    def get_or_create_survey(self, doi, title, serie, date):
+        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title, serie=serie)
+        if not created and date:
+            if survey.date != date:
+                survey.date = date
+                survey.save()
+        elif created and date:
+            survey.date = date
+            survey.save()
         return survey, created
 
     # def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes, serie):
@@ -689,15 +704,14 @@ class QuestionDetailView(View):
         question_survey = question.survey
         categories = sorted(question.variable.categories.all(), key=lambda x: int(x.code) if x.code.isdigit() else x.code)
         middle_index = len(categories) // 2
-        categories_left = categories[:middle_index]
-        categories_right = categories[middle_index:]
         similar_representative_questions = BindingSurveyRepresentedVariable.objects.filter(
             variable=question.variable
         ).exclude(id=question.id)
 
         similar_conceptual_questions = BindingSurveyRepresentedVariable.objects.filter(
             variable__conceptual_var=question.variable.conceptual_var
-        ).exclude(id=question.id)
+        ).exclude(id=question.id).exclude(id__in=similar_representative_questions.values_list('id', flat=True))
+
         context = locals()
         return render(request, 'question_detail.html', context)
 
