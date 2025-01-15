@@ -6,6 +6,7 @@ import csv
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.forms import ModelForm
+from django.contrib import messages
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
@@ -23,9 +24,7 @@ class CSVUploadForm(forms.Form):
     )
     csv_file = forms.FileField(label='Select a CSV file')
 
-    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers',
-                        'notes']
-
+    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
     validate_duplicates = True
 
     def clean_csv_file(self):

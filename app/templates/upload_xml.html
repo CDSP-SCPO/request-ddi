@@ -37,7 +37,7 @@
                 </div>
                 <div class="mb-3">
                     <label for="xml_file">Sélectionnez un fichier XML :</label>
-                    <input type="file" name="xml_file" id="xml_file" class="form-control">
+                    <input type="file" name="xml_file" id="xml_file" class="form-control" accept=".xml">
                 </div>
                 <button type="submit" class="btn btn-success mt-3">Envoyer le fichier XML</button>
             </form>
@@ -100,27 +100,40 @@
             });
         });
 
-        // Gestion des erreurs affichées depuis le serveur via messages
         document.addEventListener('DOMContentLoaded', function() {
-            {% if errors %}
-                let errorMessages = "";
-                const errors = {{ errors|safe }};
-                // Construire le message d'erreurs à partir des données d'erreurs JSON
-                for (const [field, fieldErrors] of Object.entries(errors)) {
-                    fieldErrors.forEach(error => {
-                        errorMessages += error.message + "<br>";
+        // Gestion des erreurs passées via le contexte `errors`
+        {% if errors %}
+            let errorMessages = "";
+            {% for error in errors %}
+                errorMessages += "{{ error|escapejs }}<br>";
+            {% endfor %}
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur lors de l\'import', // Titre commun pour les erreurs
+                html: errorMessages
+            });
+        {% endif %}
+
+        // Gestion des erreurs passées via les messages Django
+        {% if messages %}
+            {% for message in messages %}
+                if ('{{ message.tags }}' === 'error') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur lors de l\'import', // Titre commun pour les erreurs
+                        html: "{{ message|escapejs }}"
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Succès',
+                        html: "{{ message|escapejs }}"
                     });
                 }
-                // Affiche une alerte SweetAlert avec les erreurs
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur lors de l\'import',
-                    html: errorMessages
-                });
-                // Masquer l'overlay si des erreurs sont détectées
-                document.getElementById('overlay').classList.remove('show');
-            {% endif %}
-        });
+            {% endfor %}
+        {% endif %}
+    });
+
     </script>
 {% endblock %}
 
@@ -154,6 +167,9 @@
         .overlay.show {
             display: flex;
         }
+        .spinner-container {
+            text-align: center;
+        }
         .spinner {
             width: 60px;
             height: 60px;
@@ -161,6 +177,7 @@
             border-top: 8px solid #28a745;
             animation: spin 1s linear infinite;
             border-radius: 50%;
+            margin: 0 auto;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }

@@ -32,6 +32,7 @@ class Survey(models.Model):
     serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True)
     external_ref = models.CharField(max_length=255)
     name = models.TextField()
+    date = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return f"Survey: {self.name} ({self.external_ref})"

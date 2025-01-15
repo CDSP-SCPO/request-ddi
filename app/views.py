@@ -45,7 +45,9 @@ def admin_required(user):
 def normalize_string(value):
     if isinstance(value, str):
         return " ".join(value.split()).strip().lower()
-    return value
+    text = text.replace("…", "...")
+    text = re.sub(r"\.{3,}", "...", text) 
+    return text.strip()
 
 class BaseUploadView(FormView):
     success_url = reverse_lazy('app:representedvariable_search')
@@ -70,16 +72,35 @@ class BaseUploadView(FormView):
 
         except ValueError as ve:
             # Gérer l'erreur spécifique et rediriger
-            messages.error(self.request, str(ve))
+            messages.error(self.request, f"{ve}", extra_tags="safe")
             return self.form_invalid(form)
 
         except Exception as e:
-            messages.error(self.request, f"Erreur lors du traitement des données : {str(e)}")
+            messages.error(self.request, f"Erreur inattendue : {str(e)}", extra_tags="safe")
             return self.form_invalid(form)
             
-    def form_invalid(self, form):
-        errors = form.errors.as_json()
-        return self.render_to_response(self.get_context_data(errors=errors))
+    def form_invalid(self, form,):
+        errors = form.errors.as_data()  # Récupérer les erreurs au format Django
+        error_messages = []
+
+        # Ajouter les erreurs du formulaire à la liste des messages
+        for field, field_errors in errors.items():
+            for error in field_errors:
+                error_messages.append(f"{field}: {error}")
+
+        storage = messages.get_messages(self.request)
+        for message in storage:
+            if message.level_tag == "error":
+                error_messages.append(message.message)
+        # Si des erreurs spécifiques ont été ajoutées via des exceptions, elles sont déjà dans les messages
+        # On peut s'assurer qu'elles sont bien ajoutées à `error_messages`
+        messages.error(
+            self.request,
+            f"Erreurs d'importation :<br/>{'<br/>'.join(error_messages)}",
+            extra_tags="safe"
+        )
+
+        return super().form_invalid(form)
 
     def get_data(self, form):
         """Méthode pour obtenir les données du formulaire."""
@@ -154,6 +175,7 @@ class CSVUploadView(BaseUploadView):
         num_new_surveys = 0
         num_new_variables = 0
         num_new_bindings = 0
+        error_lines = []
 
         for line_number, row in enumerate(question_datas, start=1):
             try:
@@ -175,10 +197,15 @@ class CSVUploadView(BaseUploadView):
                     num_new_bindings += 1
 
                 num_records += 1
+                
             except ValueError as ve:
-                messages.error(self.request, f"Erreur de valeur à la ligne {line_number}: {str(ve)}")
+                error_lines.append(line_number)
             except Exception as e:
-                messages.error(self.request, f"Erreur à la ligne {line_number} : {str(e)}")
+                error_lines.append(line_number)
+
+        if error_lines:
+            error_summary = ", ".join(map(str, error_lines))
+            raise ValueError(f"Erreurs aux lignes : {error_summary}")
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
@@ -290,6 +317,13 @@ class XMLUploadView(BaseUploadView):
             "agency": "DataCite"}) else soup.find("IDNo").text.strip()
         title = soup.find("titl").text.strip()
 
+        date = None
+        date_tag = soup.find("distStmt").find("distDate") if soup.find("distStmt") else None
+        if date_tag and date_tag.text.strip():
+            try:
+                date = datetime.strptime(date_tag.text.strip(), "%Y-%m-%d").date()
+            except ValueError:
+                date = None
         for line in soup.find_all("var"):
             cat_to_add = " | ".join([','.join([cat.find("catValu").text.strip() if cat.find("catValu") else '',
                                                cat.find("labl").text.strip() if cat.find("labl") else ''])
@@ -298,6 +332,7 @@ class XMLUploadView(BaseUploadView):
             question_data = [
                 doi,
                 title,
+                date,
                 line["name"].strip(),
                 line.find("labl").text.strip() if line.find("labl") else "",
                 line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
@@ -314,25 +349,29 @@ class XMLUploadView(BaseUploadView):
         num_new_bindings = 0
 
         for question_data in question_datas:
-            doi, title, variable_name, variable_label, question_text, category_label, universe, notes = question_data
-            if not doi.startswith('doi:'):
-                raise ValueError(f"Le DDI '{doi}' n'est pas au bon format. Il doit commencer par 'doi:'.")
-            # Création ou récupération d'une enquête (Survey)
-            survey, created_survey = self.get_or_create_survey(doi, title, self.selected_series)
-            if created_survey:
-                num_new_surveys += 1
+            try:
+                doi, title, date, variable_name, variable_label, question_text, category_label, universe, notes = question_data
+                if not doi.startswith('doi:'):
+                    raise ValueError(f"Le DOI '{doi}' n'est pas au bon format. Il doit commencer par 'doi:'.")
+                # Création ou récupération d'une enquête (Survey)
+                survey, created_survey = self.get_or_create_survey(doi, title, self.selected_series, date)
+                if created_survey:
+                    num_new_surveys += 1
 
-            # Création ou récupération d'une variable représentée (RepresentedVariable)
-            represented_variable, created_variable = self.get_or_create_represented_variable(variable_name, question_text, category_label, variable_label)
-            if created_variable:
-                num_new_variables += 1
+                # Création ou récupération d'une variable représentée (RepresentedVariable)
+                represented_variable, created_variable = self.get_or_create_represented_variable(variable_name, question_text, category_label, variable_label)
+                if created_variable:
+                    num_new_variables += 1
 
-            # Création ou récupération d'une liaison (BindingSurveyRepresentedVariable)
-            _, created_binding = self.get_or_create_binding(survey, represented_variable, variable_name, universe, notes)
-            if created_binding:
-                num_new_bindings += 1
+                # Création ou récupération d'une liaison (BindingSurveyRepresentedVariable)
+                _, created_binding = self.get_or_create_binding(survey, represented_variable, variable_name, universe, notes)
+                if created_binding:
+                    num_new_bindings += 1
 
-            num_records += 1
+                num_records += 1
+            except ValueError as ve:
+                messages.error(self.request, str(ve))
+                raise ve
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
@@ -365,8 +404,15 @@ class XMLUploadView(BaseUploadView):
                 category, _ = Category.objects.get_or_create(code=code, category_label=label)
                 represented_variable.categories.add(category)
 
-    def get_or_create_survey(self, doi, title, serie):
-        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title, serie = serie)
+    def get_or_create_survey(self, doi, title, serie, date):
+        survey, created = Survey.objects.get_or_create(external_ref=doi, name=title, serie=serie)
+        if not created and date:
+            if survey.date != date:
+                survey.date = date
+                survey.save()
+        elif created and date:
+            survey.date = date
+            survey.save()
         return survey, created
 
     # def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes, serie):
@@ -641,37 +687,43 @@ class ExportQuestionsCSVView(View):
 
         # Définir les colonnes du CSV
         writer = csv.writer(response)
-        writer.writerow(['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label'])
+        writer.writerow(['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes'])
 
         # Récupérer toutes les questions et les informations associées
-        questions = RepresentedVariable.objects.all()
+        questions = BindingSurveyRepresentedVariable.objects.all()
 
         if selected_series:
-            questions = questions.filter(bindingsurveyrepresentedvariable__survey__serie__id__in=selected_series)
+            questions = questions.filter(survey__serie__id__in=selected_series)
         if selected_surveys:
-            questions = questions.filter(bindingsurveyrepresentedvariable__survey__id__in=selected_surveys)
+            questions = questions.filter(survey__id__in=selected_surveys)
 
         for question in questions.distinct():
             # Récupérer les liaisons entre les surveys et les variables représentées
-            binding = BindingSurveyRepresentedVariable.objects.filter(variable=question).first()
+            represented_var = question.variable
 
-            if binding:
-                survey = binding.survey  # Récupérer le survey associé à cette variable représentée
-                variable_name = binding.variable_name
+            if question:
+                survey = question.survey  # Récupérer le survey associé à cette variable représentée
+                variable_name = question.variable_name
+                universe = question.universe
+                notes = question.notes
             else:
                 survey = None
                 variable_name = ''
+                universe = ''
+                notes = ''
 
             # Récupérer les catégories associées
-            categories = " | ".join ([f"{cat.code},{cat.category_label}" for cat in question.categories.all()])
+            categories = " | ".join ([f"{cat.code},{cat.category_label}" for cat in represented_var.categories.all()])
             
             writer.writerow([
-                survey.external_ref if survey else '',  # DDI
+                survey.external_ref if survey else '',  # DOI
                 survey.name if survey else '',          # Title
                 variable_name,                          # Variable Name
-                question.internal_label or '',          # Variable Label
-                question.question_text or '',           # Question Text
-                categories                              # Category Label
+                represented_var.internal_label or '',          # Variable Label
+                represented_var.question_text or '',           # Question Text
+                categories,                             # Category Label
+                universe,                               # Univers
+                notes                                   # Notes
             ])
 
         return response
@@ -689,15 +741,14 @@ class QuestionDetailView(View):
         question_survey = question.survey
         categories = sorted(question.variable.categories.all(), key=lambda x: int(x.code) if x.code.isdigit() else x.code)
         middle_index = len(categories) // 2
-        categories_left = categories[:middle_index]
-        categories_right = categories[middle_index:]
         similar_representative_questions = BindingSurveyRepresentedVariable.objects.filter(
             variable=question.variable
         ).exclude(id=question.id)
 
         similar_conceptual_questions = BindingSurveyRepresentedVariable.objects.filter(
             variable__conceptual_var=question.variable.conceptual_var
-        ).exclude(id=question.id)
+        ).exclude(id=question.id).exclude(id__in=similar_representative_questions.values_list('id', flat=True))
+
         context = locals()
         return render(request, 'question_detail.html', context)
 
@@ -830,16 +881,16 @@ def check_duplicates(request):
         
         if not file:
             return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
-
         decoded_file = file.read().decode('utf-8', errors='replace').splitlines()
         
         # Vérifier si c'est un fichier XML
         if file.name.endswith('.xml'):
             soup = BeautifulSoup("\n".join(decoded_file), 'xml')
             existing_variables = []
+            variable_survey_id = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={
+            "agency": "DataCite"}) else soup.find("IDNo").text.strip()
             for var in soup.find_all('var'):
                 variable_name = var.get('name', '').strip()
-                variable_survey_id = var.get('IDNo','').strip()
                 existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name, survey__external_ref=variable_survey_id)
                 if existing_bindings.exists():
                     existing_variables.append(variable_name)
@@ -857,7 +908,6 @@ def check_duplicates(request):
         
         else:
             return JsonResponse({'error': 'Format de fichier non supporté'}, status=400)
-
         if existing_variables:
             return JsonResponse({'status': 'exists', 'existing_variables': existing_variables})
         else:

@@ -34,3 +34,50 @@
     flex: 1;
     text-align: left;
 }
+
+.modalities-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.modalities-table th,
+.modalities-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.modalities-table th {
+    font-weight: bold;
+    background-color: #f9f9f9;
+}
+
+.modalities-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+.info-row {
+    display: flex;
+    align-items: flex-start;
+}
+
+.info-label {
+    font-weight: bold;
+    color: #6c757d;
+    margin-right: 10px;
+    white-space: nowrap;
+}
+
+.info-value {
+    color: #6c757d;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    flex: 1;
+}
+
+.detail-label {
+    font-weight: bold;
+    margin-right: 5px;
+}
