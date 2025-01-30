@@ -37,7 +37,12 @@
                 </div>
                 <div class="mb-3">
                     <label for="xml_file">Sélectionnez un fichier XML :</label>
-                    <input type="file" name="xml_file" id="xml_file" class="form-control" accept=".xml">
+                    <input type="file" name="xml_file" id="xml_file" class="form-control" accept=".xml" multiple>
+                </div>
+                <!-- Zone d'affichage des fichiers sélectionnés -->
+                <div id="file-list-container" class="mt-2">
+                    <h4>Fichiers sélectionnés :</h4>
+                    <ul id="file-list" class="list-group"></ul>
                 </div>
                 <button type="submit" class="btn btn-success mt-3">Envoyer le fichier XML</button>
             </form>
@@ -56,9 +61,63 @@
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        document.getElementById('xmlUploadForm').addEventListener('submit', function(event) {
+        document.addEventListener("DOMContentLoaded", function() {
+            const fileInput = document.getElementById("xml_file");
+            const fileList = document.getElementById("file-list");
+            const uploadForm = document.getElementById("xmlUploadForm");
+            let dataTransfer = new DataTransfer();
+            // Stocke les fichiers sélectionnés
+            let selectedFiles = [];
+
+            fileInput.addEventListener("change", function(event) {
+                // Ajoute les nouveaux fichiers à la liste
+                for (let file of event.target.files) {
+                    dataTransfer.items.add(file);
+                }
+                fileInput.files = dataTransfer.files;
+                updateFileList();
+            });
+
+            function updateFileList() {
+                fileList.innerHTML = ""; // Nettoie la liste
+                if (dataTransfer.files.length === 0) {
+                    fileList.innerHTML = "<li class='list-group-item text-muted'>Aucun fichier sélectionné</li>";
+                } else {
+                    [...dataTransfer.files].forEach((file, index) => {
+                        let listItem = document.createElement("li");
+                        listItem.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
+                        listItem.innerHTML = `
+                            ${file.name} <span class="badge bg-danger text-white delete-file" data-index="${index}" style="cursor:pointer;">Supprimer</span>
+                        `;
+                        fileList.appendChild(listItem);
+                    });
+                }
+            }
+
+            // Supprimer un fichier de la liste
+            fileList.addEventListener("click", function(event) {
+                if (event.target.classList.contains("delete-file")) {
+                    const index = event.target.getAttribute("data-index");
+                    dataTransfer.items.remove(index);
+                    updateFileList();
+                    fileInput.files = dataTransfer.files;
+                }
+            });
+        uploadForm.addEventListener('submit', function(event) {
             event.preventDefault();  // Empêche l'envoi immédiat du formulaire
+
+            if (dataTransfer.files.length === 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Aucun fichier sélectionné",
+                    text: "Veuillez sélectionner au moins un fichier avant d'envoyer."
+                });
+                return;
+            }
             var formData = new FormData(this);
+            for (let file of dataTransfer.files) {
+                formData.append("xml_file", file);
+            }
 
             // Affiche l'overlay de chargement
             document.getElementById('overlay').classList.add('show');
@@ -100,8 +159,6 @@
             });
         });
 
-        document.addEventListener('DOMContentLoaded', function() {
-        // Gestion des erreurs passées via le contexte `errors`
         {% if errors %}
             let errorMessages = "";
             {% for error in errors %}
@@ -132,7 +189,8 @@
                 }
             {% endfor %}
         {% endif %}
-    });
+
+});
 
     </script>
 {% endblock %}

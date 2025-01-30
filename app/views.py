@@ -57,6 +57,9 @@ class BaseUploadView(FormView):
         data = self.get_data(form)
         question_datas = list(self.convert_data(data))
 
+        if hasattr(self, 'errors') and self.errors:
+            return self.form_invalid(form)
+
         try:
             num_records, num_new_surveys, num_new_variables, num_new_bindings = self.process_data(question_datas)
             messages.success(self.request,
@@ -92,13 +95,13 @@ class BaseUploadView(FormView):
         for message in storage:
             if message.level_tag == "error":
                 error_messages.append(message.message)
-        # Si des erreurs spécifiques ont été ajoutées via des exceptions, elles sont déjà dans les messages
-        # On peut s'assurer qu'elles sont bien ajoutées à `error_messages`
-        messages.error(
-            self.request,
-            f"Erreurs d'importation :<br/>{'<br/>'.join(error_messages)}",
-            extra_tags="safe"
-        )
+
+        if error_messages:
+            messages.error(
+                self.request,
+                f"Erreurs d'importation :<br/>{'<br/>'.join(error_messages)}",
+                extra_tags="safe"
+            )
 
         return super().form_invalid(form)
 
@@ -155,7 +158,7 @@ class BaseUploadView(FormView):
 class CSVUploadView(BaseUploadView):
     template_name = 'upload_csv.html'
     form_class = CSVUploadForm
-    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
+    required_columns = ['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -179,7 +182,7 @@ class CSVUploadView(BaseUploadView):
 
         for line_number, row in enumerate(question_datas, start=1):
             try:
-                survey, created_survey = self.get_or_create_survey(row['ddi'], row['title'], self.selected_serie)
+                survey, created_survey = self.get_or_create_survey(row['doi'], row['title'], self.selected_serie)
                 if created_survey:
                     num_new_surveys += 1
 
@@ -305,73 +308,114 @@ class XMLUploadView(BaseUploadView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['xml_form'] = XMLUploadForm()
+        context['errors'] = getattr(self, 'errors', [])
         return context
 
     def get_data(self, form):
         self.selected_series = form.cleaned_data['series']
-        return form.cleaned_data['xml_file']
+        files = self.request.FILES.getlist('xml_file') 
+        print('files', files)
+        self.errors = []
+        return files
 
-    def convert_data(self, content):
-        soup = BeautifulSoup(content, "xml")
-        doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={
-            "agency": "DataCite"}) else soup.find("IDNo").text.strip()
-        title = soup.find("titl").text.strip()
 
-        date = None
-        date_tag = soup.find("distStmt").find("distDate") if soup.find("distStmt") else None
-        if date_tag and date_tag.text.strip():
+    def convert_data(self, files):
+        seen_invalid_dois = set()
+        for file in files:
             try:
-                date = datetime.strptime(date_tag.text.strip(), "%Y-%m-%d").date()
-            except ValueError:
+                file.seek(0)
+                content = file.read().decode('utf-8')
+                soup = BeautifulSoup(content, "xml")
+
+                # Récupérer les métadonnées du fichier
+                doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={"agency": "DataCite"}) else soup.find("IDNo").text.strip()
+                if not doi or not doi.startswith("doi:"):
+                    print("test doi")
+                    if doi not in seen_invalid_dois:
+                        seen_invalid_dois.add(doi)
+                        self.errors.append(f"<strong>{file.name}</strong> : DOI invalide '<strong>{doi}</strong>' (il doit commencer par 'doi:').")
+                    continue
+                title = soup.find("titl").text.strip()
+
+                # Récupérer la date si elle existe
                 date = None
-        for line in soup.find_all("var"):
-            cat_to_add = " | ".join([','.join([cat.find("catValu").text.strip() if cat.find("catValu") else '',
-                                               cat.find("labl").text.strip() if cat.find("labl") else ''])
-                                     for cat in line.find_all("catgry")
-                                     ])
-            question_data = [
-                doi,
-                title,
-                date,
-                line["name"].strip(),
-                line.find("labl").text.strip() if line.find("labl") else "",
-                line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
-                cat_to_add,
-                line.find("universe").text.strip() if line.find("universe") else "",
-                line.find("notes").text.strip() if line.find("notes") else "",
-            ]
-            yield question_data
+                date_tag = soup.find("distStmt").find("distDate") if soup.find("distStmt") else None
+                if date_tag and date_tag.text.strip():
+                    try:
+                        date = datetime.strptime(date_tag.text.strip(), "%Y-%m-%d").date()
+                    except ValueError:
+                        date = None
+
+                # Parcourir chaque balise <var> dans le fichier
+                for line in soup.find_all("var"):
+                    # Récupérer les catégories
+                    cat_to_add = " | ".join([
+                        ','.join([
+                            cat.find("catValu").text.strip() if cat.find("catValu") else '',
+                            cat.find("labl").text.strip() if cat.find("labl") else ''
+                        ])
+                        for cat in line.find_all("catgry")
+                    ])
+
+                    # Retourner les données pour chaque variable
+                    yield [
+                        doi,  # DOI
+                        title,  # Titre
+                        date,  # Date
+                        line["name"].strip(),  # Nom de la variable
+                        line.find("labl").text.strip() if line.find("labl") else "",  # Label
+                        line.find("qstnLit").text.strip() if line.find("qstnLit") else "",  # Question
+                        cat_to_add,  # Catégories
+                        line.find("universe").text.strip() if line.find("universe") else "",  # Univers
+                        line.find("notes").text.strip() if line.find("notes") else ""  # Notes
+                    ]
+
+            except Exception as e:
+                # En cas d'erreur lors de la lecture d'un fichier, on continue avec les autres fichiers
+                print(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
+                continue
 
     def process_data(self, question_datas):
         num_records = 0
         num_new_surveys = 0
         num_new_variables = 0
         num_new_bindings = 0
+        error_lines = []
+        seen_invalid_dois = set()
 
-        for question_data in question_datas:
+        for line_number, question_data in enumerate(question_datas, start=1):
             try:
                 doi, title, date, variable_name, variable_label, question_text, category_label, universe, notes = question_data
-                if not doi.startswith('doi:'):
-                    raise ValueError(f"Le DOI '{doi}' n'est pas au bon format. Il doit commencer par 'doi:'.")
-                # Création ou récupération d'une enquête (Survey)
+
+                # Créer ou récupérer l'enquête (Survey)
                 survey, created_survey = self.get_or_create_survey(doi, title, self.selected_series, date)
                 if created_survey:
                     num_new_surveys += 1
 
-                # Création ou récupération d'une variable représentée (RepresentedVariable)
-                represented_variable, created_variable = self.get_or_create_represented_variable(variable_name, question_text, category_label, variable_label)
+                # Créer ou récupérer la variable représentée (RepresentedVariable)
+                represented_variable, created_variable = self.get_or_create_represented_variable(
+                    variable_name, question_text, category_label, variable_label
+                )
                 if created_variable:
                     num_new_variables += 1
 
-                # Création ou récupération d'une liaison (BindingSurveyRepresentedVariable)
-                _, created_binding = self.get_or_create_binding(survey, represented_variable, variable_name, universe, notes)
+                # Créer ou récupérer la liaison (BindingSurveyRepresentedVariable)
+                _, created_binding = self.get_or_create_binding(
+                    survey, represented_variable, variable_name, universe, notes
+                )
                 if created_binding:
                     num_new_bindings += 1
 
                 num_records += 1
+
             except ValueError as ve:
-                messages.error(self.request, str(ve))
-                raise ve
+                error_lines.append(str(ve))
+            except Exception as e:
+                error_lines.append(f"Erreur inattendue : {str(e)}")
+
+        # Si des erreurs ont été rencontrées, on les affiche
+        if error_lines:
+            raise ValueError(f"Erreurs rencontrées :<br/> {'<br/>'.join(set(error_lines))}")
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
@@ -687,7 +731,7 @@ class ExportQuestionsCSVView(View):
 
         # Définir les colonnes du CSV
         writer = csv.writer(response)
-        writer.writerow(['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes'])
+        writer.writerow(['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes'])
 
         # Récupérer toutes les questions et les informations associées
         questions = BindingSurveyRepresentedVariable.objects.all()
@@ -901,7 +945,7 @@ def check_duplicates(request):
             existing_variables = []
             for row in reader:
                 variable_name = row['variable_name']
-                variable_survey_id = row['ddi']
+                variable_survey_id = row['doi']
                 existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name, survey__external_ref=variable_survey_id)
                 if existing_bindings.exists():
                     existing_variables.append(variable_name)
