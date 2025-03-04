@@ -33,6 +33,9 @@
                             {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la
                         variable
                     </option>
+                    <option value="internal_label" {% if request.GET.search_location == 'internal_label' %}selected{% endif %}>
+                        Libellé de la variable
+                    </option>
                 </select>
                 <button type="submit" class="btn btn-outline-primary mx-2"><i
                         class="fa-solid fa-magnifying-glass pr-2"></i>Rechercher

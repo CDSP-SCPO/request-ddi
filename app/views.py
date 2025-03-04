@@ -34,20 +34,15 @@ from .documents import \
 from .forms import CSVUploadForm, CustomAuthenticationForm, XMLUploadForm, SerieForm
 from .models import (
     BindingSurveyRepresentedVariable, Category, ConceptualVariable,
-    RepresentedVariable, Serie, Survey, Publisher
+    RepresentedVariable, Serie, Survey, Distributor
 )
 from .utils.csvimportexport import BindingSurveyResource
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from .utils.normalizeString import normalize_string_for_database, normalize_string_for_comparison
 
 def admin_required(user):
     return user.is_authenticated and user.is_staff
-
-def normalize_string(value):
-    if isinstance(value, str):
-        return " ".join(value.split()).strip().lower()
-    text = text.replace("…", "...")
-    text = re.sub(r"\.{3,}", "...", text) 
-    return text.strip()
 
 class BaseUploadView(FormView):
     success_url = reverse_lazy('app:representedvariable_search')
@@ -142,8 +137,10 @@ class BaseUploadView(FormView):
         return binding, created
 
     def check_category(self, category_string, existing_categories):
-        csv_categories = self.parse_categories(category_string) if category_string else []
-        existing_categories_list = [(category.code, category.category_label) for category in existing_categories.all()]
+
+        csv_categories = [(code, normalize_string_for_comparison(normalize_string_for_database(label))) for code, label in self.parse_categories(category_string)] if category_string else []
+        existing_categories_list = [(category.code, normalize_string_for_comparison(category.category_label)) for category in existing_categories.all()]
+        
         return set(csv_categories) == set(existing_categories_list)
 
     def parse_categories(self, category_string):
@@ -214,26 +211,30 @@ class CSVUploadView(BaseUploadView):
 
     def get_or_create_represented_variable(self, row, line_number):
         """Gérer la création ou la mise à jour d'une variable représentée."""
-        name_question = row['question_text']
+        name_question_for_database = normalize_string_for_database(row['question_text'])
+        name_question_for_comparison = normalize_string_for_comparison(name_question_for_database)
         category_label = row['category_label']
 
-        var_represented = RepresentedVariable.objects.filter(question_text=name_question)
+        cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
 
-        if var_represented.exists():
+        if name_question_for_comparison in cleaned_questions:
+            var_represented = RepresentedVariable.objects.filter(
+                question_text=cleaned_questions[name_question_for_comparison].question_text
+            )
+            # var_represented = cleaned_questions[name_question_for_comparison]
             for var in var_represented:
                 if self.check_category(category_label, var.categories):
-                    return var, False  # Pas de nouvelle variable créée
-
+                    return var, False
             return self.create_new_represented_variable(row, var_represented[0].conceptual_var), True
         else:
             conceptual_var = ConceptualVariable.objects.create()
-            return self.create_new_represented_variable(row, conceptual_var), True
+            return self.create_new_represented_variable(row, conceptual_var, name_question_for_database), True
 
-    def create_new_represented_variable(self, row, conceptual_var):
+    def create_new_represented_variable(self, row, conceptual_var, name_question_normalized):
         """Créer une nouvelle variable représentée."""
         new_represented_var = RepresentedVariable.objects.create(
             conceptual_var=conceptual_var,
-            question_text=row['question_text'],
+            question_text=name_question_normalized,
             internal_label=row['variable_label']
         )
         new_categories = self.create_new_categories(row['category_label'])
@@ -246,7 +247,7 @@ class CSVUploadView(BaseUploadView):
         if csv_category_string:
             parsed_categories = self.parse_categories(csv_category_string)
             for code, label in parsed_categories:
-                category, _ = Category.objects.get_or_create(code=code, category_label=label)
+                category, _ = Category.objects.get_or_create(code=code, category_label=normalize_string_for_database(label))
                 categories.append(category)
         return categories
 
@@ -274,12 +275,6 @@ class CSVUploadView(BaseUploadView):
         survey, created = Survey.objects.get_or_create(external_ref=doi, name=title, serie=serie)
         return survey, created  # Retourne l'indicateur de création
 
-    def check_category(self, category_string, existing_categories):
-        """Vérifier si les catégories correspondent."""
-        csv_categories = self.parse_categories(category_string) if category_string else []
-        existing_categories_list = [(category.code, category.category_label) for category in existing_categories.all()]
-        return set(csv_categories) == set(existing_categories_list)
-
     def parse_categories(self, category_string):
         """Extraire les catégories d'une chaîne CSV."""
         categories = []
@@ -300,7 +295,6 @@ class ExportQuestionsView(View):
         response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
         return response
 
-
 class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
@@ -314,66 +308,74 @@ class XMLUploadView(BaseUploadView):
     def get_data(self, form):
         self.selected_series = form.cleaned_data['series']
         files = self.request.FILES.getlist('xml_file') 
-        print('files', files)
         self.errors = []
         return files
 
 
     def convert_data(self, files):
+        results = []
         seen_invalid_dois = set()
-        for file in files:
-            try:
-                file.seek(0)
-                content = file.read().decode('utf-8')
-                soup = BeautifulSoup(content, "xml")
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            future_to_file = {executor.submit(self.parse_xml_file, file, seen_invalid_dois): file for file in files}
+            for future in as_completed(future_to_file):
+                file = future_to_file[future]
+                try:
+                    result = future.result()
+                    if result:
+                        results.extend(result)  # Ajouter les résultats des fichiers traités
+                except Exception as e:
+                    self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
+        return results
+    def parse_xml_file(self, file, seen_invalid_dois):
+        """Parser un fichier XML et retourner ses données."""
+        try:
+            file.seek(0)
+            content = file.read().decode('utf-8')
+            soup = BeautifulSoup(content, "xml")
 
-                # Récupérer les métadonnées du fichier
-                doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={"agency": "DataCite"}) else soup.find("IDNo").text.strip()
-                if not doi or not doi.startswith("doi:"):
-                    print("test doi")
-                    if doi not in seen_invalid_dois:
-                        seen_invalid_dois.add(doi)
-                        self.errors.append(f"<strong>{file.name}</strong> : DOI invalide '<strong>{doi}</strong>' (il doit commencer par 'doi:').")
-                    continue
-                title = soup.find("titl").text.strip()
+            # Récupérer DOI et titre
+            doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={"agency": "DataCite"}) else soup.find("IDNo").text.strip()
+            if not doi.startswith("doi:"):
+                if doi not in seen_invalid_dois:
+                    seen_invalid_dois.add(doi)
+                    self.errors.append(f"<strong>{file.name}</strong> : DOI invalide '<strong>{doi}</strong>' (doit commencer par 'doi:').")
+                return None
+            title = soup.find("titl").text.strip()
 
-                # Récupérer la date si elle existe
-                date = None
-                date_tag = soup.find("distStmt").find("distDate") if soup.find("distStmt") else None
-                if date_tag and date_tag.text.strip():
-                    try:
-                        date = datetime.strptime(date_tag.text.strip(), "%Y-%m-%d").date()
-                    except ValueError:
-                        date = None
+            # Récupérer la date
+            date = None
+            date_tag = soup.find("distStmt").find("distDate") if soup.find("distStmt") else None
+            if date_tag and date_tag.text.strip():
+                try:
+                    date = datetime.strptime(date_tag.text.strip(), "%Y-%m-%d").date()
+                except ValueError:
+                    date = None
 
-                # Parcourir chaque balise <var> dans le fichier
-                for line in soup.find_all("var"):
-                    # Récupérer les catégories
-                    cat_to_add = " | ".join([
-                        ','.join([
-                            cat.find("catValu").text.strip() if cat.find("catValu") else '',
-                            cat.find("labl").text.strip() if cat.find("labl") else ''
-                        ])
-                        for cat in line.find_all("catgry")
-                    ])
+            data = []
+            for line in soup.find_all("var"):
+                categories = " | ".join([
+                    ','.join([cat.find("catValu").text.strip() if cat.find("catValu") else '',
+                              cat.find("labl").text.strip() if cat.find("labl") else ''])
+                    for cat in line.find_all("catgry")
+                ])
+                
+                data.append([
+                    doi,  # DOI
+                    title,  # Titre
+                    date,  # Date
+                    line["name"].strip(),  # Nom de la variable
+                    line.find("labl").text.strip() if line.find("labl") else "",  # Label
+                    line.find("qstnLit").text.strip() if line.find("qstnLit") else "",  # Question
+                    categories,  # Catégories
+                    line.find("universe").text.strip() if line.find("universe") else "",  # Univers
+                    line.find("notes").text.strip() if line.find("notes") else ""  # Notes
+                ])
 
-                    # Retourner les données pour chaque variable
-                    yield [
-                        doi,  # DOI
-                        title,  # Titre
-                        date,  # Date
-                        line["name"].strip(),  # Nom de la variable
-                        line.find("labl").text.strip() if line.find("labl") else "",  # Label
-                        line.find("qstnLit").text.strip() if line.find("qstnLit") else "",  # Question
-                        cat_to_add,  # Catégories
-                        line.find("universe").text.strip() if line.find("universe") else "",  # Univers
-                        line.find("notes").text.strip() if line.find("notes") else ""  # Notes
-                    ]
+            return data
 
-            except Exception as e:
-                # En cas d'erreur lors de la lecture d'un fichier, on continue avec les autres fichiers
-                print(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
-                continue
+        except Exception as e:
+            print(f"Erreur lors du parsing du fichier {file.name}: {str(e)}")
+            return None
 
     def process_data(self, question_datas):
         num_records = 0
@@ -420,17 +422,24 @@ class XMLUploadView(BaseUploadView):
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
     def get_or_create_represented_variable(self, variable_name, question_text, category_label, variable_label):
-        var_represented = RepresentedVariable.objects.filter(question_text=question_text)
+        """Gérer la création ou la mise à jour d'une variable représentée."""
+        name_question_for_database = normalize_string_for_database(question_text)
+        name_question_for_comparison = normalize_string_for_comparison(name_question_for_database)
 
-        if var_represented.exists():
+        cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
+
+        if name_question_for_comparison in cleaned_questions:
+            var_represented = RepresentedVariable.objects.filter(
+                question_text=cleaned_questions[name_question_for_comparison].question_text
+            )
             for var in var_represented:
                 if self.check_category(category_label, var.categories):
-                    return var, False  # False = pas de nouvelle variable créée
-            return self.create_new_represented_variable(variable_name, var_represented[0].conceptual_var, question_text,
-                                                        category_label, variable_label), True
+                    return var, False
+
+            return self.create_new_represented_variable(variable_name, var_represented[0].conceptual_var, name_question_for_database, category_label, variable_label), True
         else:
-            return self.create_new_represented_variable(variable_name, ConceptualVariable.objects.create(),
-                                                        question_text, category_label, variable_label), True
+            conceptual_var = ConceptualVariable.objects.create()
+            return self.create_new_represented_variable(variable_name, conceptual_var, name_question_for_database, category_label, variable_label), True
 
     def create_new_represented_variable(self, variable_name, conceptual_var, question_text, category_label, variable_label):
         new_represented_var = RepresentedVariable.objects.create(
@@ -445,7 +454,8 @@ class XMLUploadView(BaseUploadView):
         if category_string:
             parsed_categories = self.parse_categories(category_string)
             for code, label in parsed_categories:
-                category, _ = Category.objects.get_or_create(code=code, category_label=label)
+                label_for_database = normalize_string_for_database(label)
+                category, _ = Category.objects.get_or_create(code=code, category_label=label_for_database)
                 represented_variable.categories.add(category)
 
     def get_or_create_survey(self, doi, title, serie, date):
@@ -540,7 +550,8 @@ class SearchResultsDataView(ListView):
                                           post_tags=["</mark>"]) \
             .highlight('variable.question_text', fragment_size=10000) \
             .highlight('variable.categories.category_label', fragment_size=10000) \
-            .highlight('variable_name', fragment_size=10000)
+            .highlight('variable_name', fragment_size=10000) \
+            .highlight('variable.internal_label', fragment_size=10000)
 
         # Appliquer le filtre par étude
         if series_filter:
@@ -591,6 +602,16 @@ class SearchResultsDataView(ListView):
                 ],
                 minimum_should_match=1
             )
+        elif search_location == 'internal_label':
+            search = search.query(
+                'bool',
+                should=[
+                    {"term": {"variable.internal_label.keyword": {"value": search_value, "boost": 10}}},
+                    {"match_phrase": {"variable.internal_label": {"query": search_value, "boost": 5}}},
+                    {"match_phrase_prefix": {"variable.internal_label": {"query": search_value, "boost": 1}}}
+                ],
+                minimum_should_match=1
+            )
         return search
 
     def format_search_results(self, response, search_location):
@@ -629,6 +650,10 @@ class SearchResultsDataView(ListView):
             if search_location == 'variable_name' and hasattr(result.meta,
                                                               'highlight') and 'variable_name' in result.meta.highlight:
                 variable_name = result.meta.highlight['variable_name'][0]
+
+            internal_label = result.variable.internal_label
+            if search_location == 'internal_label' and hasattr(result.meta, 'highlight') and 'variable.internal_label' in result.meta.highlight:
+                internal_label = result.meta.highlight['variable.internal_label'][0]
             # Collecte des données formatées
             data.append({
                 "id": result.meta.id,
@@ -637,7 +662,7 @@ class SearchResultsDataView(ListView):
                 "survey_name": getattr(result.survey, 'name', "N/A"),
                 "notes": getattr(result, 'notes', "N/A"),
                 "categories": all_clean_categories,
-                "internal_label": result.variable.internal_label,
+                "internal_label": internal_label,
                 "is_category_search": is_category_search,
             })
         return data
@@ -963,7 +988,7 @@ def check_duplicates(request):
 class SerieSurveysView(View):
     def get(self, request, serie_id):
         serie = get_object_or_404(Serie, id=serie_id)
-        surveys = Survey.objects.filter(serie=serie)
+        surveys = Survey.objects.filter(serie=serie).order_by('name')
         return render(request, 'serie_surveys.html', {'serie': serie, 'surveys': surveys})
 
 
@@ -980,15 +1005,15 @@ def get_surveys_by_series(request):
     surveys_data = [{'id': survey.id, 'name': survey.name} for survey in surveys]
     return JsonResponse({'surveys': surveys_data})
 
-def create_publisher(request):
+def create_distributor(request):
     if request.method == "POST":
         name = request.POST.get('name')
         if name:
-            Publisher.objects.get_or_create(name=name)
-            return JsonResponse({"success": True, "message": "Éditeur ajouté avec succès."})
-        return JsonResponse({"success": False, "message": "Le nom de l'éditeur est requis."})
+            Distributor.objects.get_or_create(name=name)
+            return JsonResponse({"success": True, "message": "Diffuseur ajouté avec succès."})
+        return JsonResponse({"success": False, "message": "Le nom du diffeuseur est requis."})
     return JsonResponse({"success": False, "message": "Requête invalide."})
 
-def get_publishers(request):
-    publishers = Publisher.objects.all().values("id", "name")
-    return JsonResponse({"publishers": list(publishers)})
+def get_distributor(request):
+    distributors = Distributor.objects.all().values("id", "name")
+    return JsonResponse({"distributors": list(distributors)})

@@ -1,21 +1,30 @@
 # -- DJANGO
 from django.db import models
+from .utils.normalizeString import normalize_string_for_comparison
 
 # class Entites(models.Model):
 #     orcid
 #     name
 #     affiliation
 
-class Publisher(models.Model):
+class Distributor(models.Model):
     name = models.CharField(max_length=255)
 
     def __str__(self):
         return self.name
 
+class Collection(models.Model):
+    name = models.CharField()
+    distributor = models.ForeignKey(Distributor, on_delete=models.CASCADE, null=True, blank=True)
+    abstract = models.TextField()
+    photo = models.ImageField(upload_to='series_photos/', blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.name}"
+
 class Serie(models.Model):
     name = models.CharField()
-    publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE, null=True, blank=True)
-    abstract = models.TextField()
+    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, null=True, blank=True)
     photo = models.ImageField(upload_to='series_photos/', blank=True, null=True)
 
     def __str__(self):
@@ -77,6 +86,14 @@ class RepresentedVariable(models.Model):
 
     def __str__(self):
         return f"Represented Variable: {self.internal_label or 'N/A'} ({self.type}, {self.question_text})"
+
+    @classmethod
+    def get_cleaned_question_texts(cls):
+        """Retourne un dictionnaire des question_text normalisés en clé et les instances associées en valeur."""
+        return {
+            normalize_string_for_comparison(var.question_text): var
+            for var in cls.objects.all()
+        }
 
 
 

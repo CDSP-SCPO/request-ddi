@@ -12,7 +12,7 @@ from django.contrib import messages
 from bs4 import BeautifulSoup
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .models import Serie, BindingSurveyRepresentedVariable, Publisher
+from .models import Serie, BindingSurveyRepresentedVariable, Distributor
 
 
 class CSVUploadForm(forms.Form):
@@ -142,14 +142,14 @@ class CustomAuthenticationForm(AuthenticationForm):
 
 
 class SerieForm(ModelForm):
-    publisher = forms.ModelChoiceField(
-            queryset=Publisher.objects.all(),
-            label="Éditeur",
+    distributor = forms.ModelChoiceField(
+            queryset=Distributor.objects.all(),
+            label="Diffuseur",
             widget=forms.Select(attrs={
                 'class': 'form-control form-control-lg selectpicker',
                 'data-live-search': 'true',
             }),
-            empty_label="Choisissez un éditeur"
+            empty_label="Choisissez un diffuseur"
         )
     class Meta:
         model = Serie
