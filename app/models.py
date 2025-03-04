@@ -1,6 +1,6 @@
 # -- DJANGO
 from django.db import models
-from .utils.normalizeString import normalize_string_for_comparison
+from .utils.normalize_string import normalize_string_for_comparison
 
 # class Entites(models.Model):
 #     orcid

@@ -13,7 +13,6 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic.detail import DetailView
 from django.conf import settings
 
 # views.py
@@ -39,7 +38,7 @@ from .models import (
 from .utils.csvimportexport import BindingSurveyResource
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from .utils.normalizeString import normalize_string_for_database, normalize_string_for_comparison
+from .utils.normalize_string import normalize_string_for_database, normalize_string_for_comparison
 
 def admin_required(user):
     return user.is_authenticated and user.is_staff
