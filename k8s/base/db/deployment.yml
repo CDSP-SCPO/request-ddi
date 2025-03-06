@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres-deployment
-  namespace: basedequestions
+  namespace: request
 spec:
   replicas: 1
   selector:

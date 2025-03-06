@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: basedequestions
+  name: request
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: basedequestions
+      app: request
   template:
     metadata:
       labels:
-        app: basedequestions
+        app: request
     spec:
       imagePullSecrets:
         - name: gitlab-reg
@@ -22,14 +22,14 @@ spec:
             - name: media-volume
               mountPath: /app/media
       containers:
-        - name: basedequestions
+        - name: request
           image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:latest
           command: ["./entrypoint.sh"]
           env:
             - name: DATABASE_URL
               value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@db:5432/$(POSTGRES_DB)"
             - name: DJANGO_DEBUG
-              value: "False"
+              value: "False"ma
             - name: DJANGO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
