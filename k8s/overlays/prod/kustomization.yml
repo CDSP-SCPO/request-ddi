@@ -19,7 +19,7 @@ commonLabels:
 
 # Images à utiliser pour cet environnement (staging)
 images:
-  - name: gitlab.sciences-po.fr:4567/cdspit/base-de-questions
+  - name: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions
     newTag: 'prod'
 
 
