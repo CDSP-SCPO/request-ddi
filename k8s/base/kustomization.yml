@@ -1,8 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Nom du namespace où seront appliqués les objets (optionnel, tu peux l'ajuster selon ton besoin)
-namespace: basedequestions
+namespace: request
 
 # Les ressources que tu veux inclure
 resources:
