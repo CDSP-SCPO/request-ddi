@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: request
+  name: basedequestions
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: request
+      app: basedequestions
   template:
     metadata:
       labels:
-        app: request
+        app: basedequestions
     spec:
       imagePullSecrets:
         - name: gitlab-reg
@@ -22,7 +22,7 @@ spec:
             - name: media-volume
               mountPath: /app/media
       containers:
-        - name: request
+        - name: basedequestions
           image: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions:latest
           command: ["./entrypoint.sh"]
           env:

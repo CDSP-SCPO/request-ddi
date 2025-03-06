@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: db
-  namespace: request
+  namespace: basedequestions
 spec:
   selector:
     app: postgres

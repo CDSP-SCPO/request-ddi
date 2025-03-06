@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: db-pvc
-  namespace: request
+  namespace: basedequestions
 spec:
   accessModes:
     - ReadWriteOnce
