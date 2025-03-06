@@ -12,7 +12,7 @@ from django.contrib import messages
 from bs4 import BeautifulSoup
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .models import Serie, BindingSurveyRepresentedVariable, Distributor
+from .models import Serie, BindingSurveyRepresentedVariable, Distributor, Survey
 
 
 class CSVUploadForm(forms.Form):
@@ -166,3 +166,54 @@ class SerieForm(ModelForm):
                 'placeholder': 'Entrez le résumé ici...'
             }),
         }
+
+# forms.py
+
+class CSVUploadFormCollection(forms.Form):
+    csv_file = forms.FileField(label='Sélectionnez un fichier CSV')
+
+    required_columns = ['distributor', 'collection', 'sous-collection', 'doi', 'title', 'xml-lang']
+    validate_duplicates = True
+
+    def clean_csv_file(self):
+        csv_file = self.cleaned_data['csv_file']
+        if not csv_file.name.endswith('.csv'):
+            raise forms.ValidationError("Le fichier doit être au format CSV.")
+        try:
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            sample = '\n'.join(decoded_file[:2])
+            sniffer = csv.Sniffer()
+            delimiter = sniffer.sniff(sample).delimiter
+            print("delimiter", delimiter)
+            reader = csv.DictReader(decoded_file, delimiter=delimiter)
+            # Validation des colonnes manquantes
+            missing_columns = [col for col in self.required_columns if col not in reader.fieldnames]
+            if missing_columns:
+                raise forms.ValidationError(f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}")
+
+            self.cleaned_data['decoded_csv'] = decoded_file
+            self.cleaned_data['delimiter'] = delimiter
+
+            return decoded_file  # Si tout va bien, renvoie le fichier décodé pour un traitement ultérieur
+
+        except Exception as e:
+            raise forms.ValidationError(f"Erreur lors de la lecture du fichier CSV : {str(e)}")
+
+    def validate_duplicates_check(self):
+        """Vérifie les doublons après validation des colonnes."""
+        if not self.cleaned_data.get('decoded_csv') or not self.validate_duplicates:
+            return  # Évite de répéter le check si une erreur a été trouvée précédemment
+
+        decoded_file = self.cleaned_data['decoded_csv']
+        reader = csv.DictReader(decoded_file)
+        duplicate_variables = []
+
+        for row in reader:
+            doi = row.get('doi')
+            if doi and Survey.objects.filter(external_ref=doi).exists():
+                duplicate_variables.append(doi)
+
+        if duplicate_variables:
+            raise forms.ValidationError({
+                'csv_file': f"Les enquêtes suivantes existent déjà : {', '.join(duplicate_variables)}"
+            })

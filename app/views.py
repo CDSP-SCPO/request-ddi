@@ -20,6 +20,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, TemplateView
 from django.views.generic.edit import FormView
+from django import forms
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
@@ -30,10 +31,10 @@ import requests
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import \
     BindingSurveyDocument
-from .forms import CSVUploadForm, CustomAuthenticationForm, XMLUploadForm, SerieForm
+from .forms import CSVUploadForm, CustomAuthenticationForm, XMLUploadForm, SerieForm, CSVUploadFormCollection
 from .models import (
     BindingSurveyRepresentedVariable, Category, ConceptualVariable,
-    RepresentedVariable, Serie, Survey, Distributor
+    RepresentedVariable, Serie, Survey, Distributor, Collection
 )
 from .utils.csvimportexport import BindingSurveyResource
 
@@ -1016,3 +1017,57 @@ def create_distributor(request):
 def get_distributor(request):
     distributors = Distributor.objects.all().values("id", "name")
     return JsonResponse({"distributors": list(distributors)})
+
+
+
+
+class CSVUploadViewCollection(FormView):
+    template_name = 'upload_csv_collection.html'
+    form_class = CSVUploadFormCollection
+
+    def form_valid(self, form):
+        try:
+            # Vérification des doublons
+            form.validate_duplicates_check()
+
+            data = self.get_data(form)
+            delimiter = form.cleaned_data['delimiter']  # Récupérez le délimiteur
+            survey_datas = list(self.convert_data(data, delimiter))
+            print("survey_datas",survey_datas)
+            self.process_data(survey_datas)
+            return JsonResponse({'status': 'success', 'message': 'Le fichier CSV a été importé avec succès.'})
+        except forms.ValidationError as ve:
+            return JsonResponse({'status': 'error', 'message': ve.message})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f"Erreur lors de l'importation du fichier CSV : {str(e)}"})
+
+    def form_invalid(self, form):
+        errors = form.errors.as_json()
+        return JsonResponse({'status': 'error', 'message': 'Le formulaire est invalide.', 'errors': errors})
+
+    def get_data(self, form):
+        # Utilisez les données décodées du formulaire
+        return form.cleaned_data['decoded_csv']
+
+    def convert_data(self, content, delimiter):
+        # Utilisez le délimiteur détecté dans le formulaire
+        reader = csv.DictReader(content, delimiter=delimiter)
+        return reader
+
+    @transaction.atomic
+    def process_data(self, survey_datas):
+        for line_number, row in enumerate(survey_datas, start=1):
+            print("row", row)
+            distributor_name = row['distributor']
+            distributor, created = Distributor.objects.get_or_create(name=distributor_name)
+
+            serie_name = row['collection']
+            serie, created = Serie.objects.get_or_create(name=serie_name, distributor=distributor)
+
+            collection_name = row['sous-collection']
+            collection, created = Collection.objects.get_or_create(name=collection_name, serie=serie)
+
+            survey_doi = row['doi']
+            survey_name = row['title']
+            survey_language = row['xml-lang']
+            survey, created = Survey.objects.get_or_create(external_ref=survey_doi, name=survey_name, serie=serie, language=survey_language)

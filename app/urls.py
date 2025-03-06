@@ -9,7 +9,7 @@ from .views import (
     RepresentedVariableSearchView, SearchResultsDataView, XMLUploadView,
     autocomplete, check_duplicates, export_page, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions, CreateSerie, check_media_root, SerieSurveysView, get_surveys_by_series, create_distributor, get_distributor
+    similar_representative_variable_questions, CreateSerie, check_media_root, SerieSurveysView, get_surveys_by_series, create_distributor, get_distributor, CSVUploadViewCollection
 )
 
 from django.contrib.auth.views import LogoutView
@@ -39,6 +39,8 @@ urlpatterns = [
     path('api/get-surveys-by-series/', get_surveys_by_series, name='get_surveys_by_series'),
     path('add-distributor/', create_distributor, name='create_distributor'),
     path('get-distributors/', get_distributor, name='get_distributor'),
+
+    path('upload-csv-collection/', CSVUploadViewCollection.as_view(), name='upload_csv_collection'),
 ]
 
 if settings.DEBUG:

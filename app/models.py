@@ -13,18 +13,19 @@ class Distributor(models.Model):
     def __str__(self):
         return self.name
 
-class Collection(models.Model):
+
+class Serie(models.Model):
     name = models.CharField()
     distributor = models.ForeignKey(Distributor, on_delete=models.CASCADE, null=True, blank=True)
-    abstract = models.TextField()
     photo = models.ImageField(upload_to='series_photos/', blank=True, null=True)
+    abstract = models.TextField(default="")
 
     def __str__(self):
         return f"{self.name}"
 
-class Serie(models.Model):
+class Collection(models.Model):
     name = models.CharField()
-    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, null=True, blank=True)
+    serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True, blank=True)
     photo = models.ImageField(upload_to='series_photos/', blank=True, null=True)
 
     def __str__(self):
@@ -42,6 +43,7 @@ class Survey(models.Model):
     external_ref = models.CharField(max_length=255)
     name = models.TextField()
     date = models.DateField(null=True, blank=True)
+    language = models.CharField(max_length=255, default="")
 
     def __str__(self):
         return f"Survey: {self.name} ({self.external_ref})"
