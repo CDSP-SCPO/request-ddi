@@ -8,6 +8,7 @@ bases:
 
 resources:
   - pvc.yml
+  - media-pvc.yml
   - ingress.yml
 
 
