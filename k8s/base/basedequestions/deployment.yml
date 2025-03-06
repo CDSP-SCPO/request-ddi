@@ -29,7 +29,7 @@ spec:
             - name: DATABASE_URL
               value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@db:5432/$(POSTGRES_DB)"
             - name: DJANGO_DEBUG
-              value: "False"ma
+              value: "False"
             - name: DJANGO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
