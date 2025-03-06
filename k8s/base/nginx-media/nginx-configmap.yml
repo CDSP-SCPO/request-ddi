@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nginx-config
-  namespace: basedequestions
+  namespace: request
 data:
   nginx.conf: |
     # Bloc events en dehors du bloc http

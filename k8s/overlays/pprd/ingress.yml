@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: basedequestions-ingress
-  namespace: basedequestions
+  namespace: request
   annotations:
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 100m
@@ -18,11 +18,11 @@ spec:
           # Accès aux fichiers médias, via le service NGINX
           - path: /media/
             backend:
-              serviceName: nginx-media  # Change de `basedequestions` à `nginx-media` pour utiliser le service NGINX
-              servicePort: 80  # Port exposé par le service NGINX (80 ou autre selon ta config)
+              serviceName: nginx-media
+              servicePort: 80  # Port exposé par le service NGINX
 
           # Accès à l'application principale
           - path: /
             backend:
-              serviceName: basedequestions
+              serviceName: request
               servicePort: 8000
