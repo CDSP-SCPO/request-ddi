@@ -1,13 +1,14 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: basedequestions
+namespace: request
 
 bases:
   - ../../base/
 
 resources:
   - pvc.yml
+  - media-pvc.yml
   - ingress.yml
 
 
@@ -18,7 +19,7 @@ commonLabels:
 
 # Images à utiliser pour cet environnement (staging)
 images:
-  - name: gitlab.sciences-po.fr:4567/cdspit/base-de-questions
+  - name: gitlab.sciences-po.fr:4567/cdspit/base-de-questions/basedequestions
     newTag: 'prod'
 
 

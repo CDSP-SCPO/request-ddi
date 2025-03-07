@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nginx-media
-  namespace: basedequestions
+  namespace: request
 spec:
   replicas: 1
   selector:
