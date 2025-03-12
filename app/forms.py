@@ -164,7 +164,7 @@ class CollectionForm(ModelForm):
 class CSVUploadFormCollection(forms.Form):
     csv_file = forms.FileField(label='Sélectionnez un fichier CSV')
 
-    required_columns = ['distributor', 'collection', 'sous-collection', 'doi', 'title', 'xml-lang']
+    required_columns = ['diffuseur', 'collection', 'sous-collection', 'doi', 'title', 'xml-lang']
     validate_duplicates = True
 
     def clean_csv_file(self):

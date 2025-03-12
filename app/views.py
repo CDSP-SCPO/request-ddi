@@ -1150,7 +1150,7 @@ class CSVUploadViewCollection(FormView):
     @transaction.atomic
     def process_data(self, survey_datas):
         for line_number, row in enumerate(survey_datas, start=1):
-            distributor_name = row['distributor']
+            distributor_name = row['diffuseur']
             distributor, created = Distributor.objects.get_or_create(name=distributor_name)
 
             collection_name = row['collection']
