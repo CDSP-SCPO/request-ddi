@@ -33,9 +33,12 @@
             <form method="POST" enctype="multipart/form-data" id="xmlUploadForm" action="{% url 'app:upload_xml' %}">
                 {% csrf_token %}
                 <div class="mb-3">
-                    {{ xml_form.series.label_tag }} {{ xml_form.series }}
+                    {{ xml_form.collection.label_tag }} 
+                    {{ xml_form.collection }}
                 </div>
+                
                 <div class="mb-3">
+
                     <label for="xml_file">Sélectionnez un fichier XML :</label>
                     <input type="file" name="xml_file" id="xml_file" class="form-control" accept=".xml" multiple>
                 </div>
@@ -67,7 +70,7 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form method="POST" enctype="multipart/form-data" id="csvUploadForm" action="{% url 'app:upload_csv_collection' %}">
+                    <form method="POST" enctype="multipart/form-data" id="csvUploadFormCollection" action="{% url 'app:upload_csv_collection' %}">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="csv_file">Sélectionnez un fichier CSV :</label>

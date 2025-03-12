@@ -12,19 +12,12 @@ from django.contrib import messages
 from bs4 import BeautifulSoup
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .models import Serie, BindingSurveyRepresentedVariable, Distributor, Survey
+from .models import BindingSurveyRepresentedVariable, Distributor, Survey, Collection, Subcollection
 
 
 class CSVUploadForm(forms.Form):
-    series = forms.ModelChoiceField(
-        queryset=Serie.objects.all(),
-        label="Sélectionnez une série",
-        required=True,
-        widget=forms.Select(attrs={'class': 'selectpicker', 'data-live-search': 'true'})
-    )
     csv_file = forms.FileField(label='Select a CSV file')
-
-    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
+    required_columns = ['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'producer', 'start_date', 'geographic_coverage']
     validate_duplicates = True
 
     def clean_csv_file(self):
@@ -71,17 +64,16 @@ class CSVUploadForm(forms.Form):
 
 
 class XMLUploadForm(forms.Form):
-    series = forms.ModelChoiceField(
-        queryset=Serie.objects.all(),
-        label="Sélectionnez une série",
-        required=True,
-        widget=forms.Select(attrs={'class': 'selectpicker', 'data-live-search': 'true'})
-    )
+
     xml_file = forms.FileField(label='Select an XML file')
 
     # Liste des balises obligatoires et attributs
-    required_tags = ['IDNo', 'titl', 'var', 'catValu', 'labl', 'catgry', 'qstnLit', 'universe', 'notes']
+    required_tags = ['IDNo', 'titl', 'var', 'catValu', 'labl', 'catgry', 'qstnLit', 'producer', 'timePrd', 'nation']
     required_attributes = {'var': 'name'}
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
     def clean_xml_file(self):
         xml_file = self.cleaned_data['xml_file']
@@ -141,7 +133,7 @@ class CustomAuthenticationForm(AuthenticationForm):
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
 
-class SerieForm(ModelForm):
+class CollectionForm(ModelForm):
     distributor = forms.ModelChoiceField(
             queryset=Distributor.objects.all(),
             label="Diffuseur",
@@ -152,7 +144,7 @@ class SerieForm(ModelForm):
             empty_label="Choisissez un diffuseur"
         )
     class Meta:
-        model = Serie
+        model = Collection
         fields = "__all__"
 
         widgets = {
@@ -184,7 +176,6 @@ class CSVUploadFormCollection(forms.Form):
             sample = '\n'.join(decoded_file[:2])
             sniffer = csv.Sniffer()
             delimiter = sniffer.sniff(sample).delimiter
-            print("delimiter", delimiter)
             reader = csv.DictReader(decoded_file, delimiter=delimiter)
             # Validation des colonnes manquantes
             missing_columns = [col for col in self.required_columns if col not in reader.fieldnames]

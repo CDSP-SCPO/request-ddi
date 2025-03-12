@@ -14,19 +14,19 @@ class Distributor(models.Model):
         return self.name
 
 
-class Serie(models.Model):
+class Collection(models.Model):
     name = models.CharField()
     distributor = models.ForeignKey(Distributor, on_delete=models.CASCADE, null=True, blank=True)
-    photo = models.ImageField(upload_to='series_photos/', blank=True, null=True)
+    photo = models.ImageField(upload_to='collections_photos/', blank=True, null=True)
     abstract = models.TextField(default="")
 
     def __str__(self):
         return f"{self.name}"
 
-class Collection(models.Model):
+class Subcollection(models.Model):
     name = models.CharField()
-    serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True, blank=True)
-    photo = models.ImageField(upload_to='series_photos/', blank=True, null=True)
+    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, null=True, blank=True)
+    photo = models.ImageField(upload_to='subcollections_photos/', blank=True, null=True)
 
     def __str__(self):
         return f"{self.name}"
@@ -39,11 +39,20 @@ class Survey(models.Model):
     # unite geographique
     # unite d analyse
     # methode temporel
-    serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True)
+    subcollection = models.ForeignKey(Subcollection, on_delete=models.CASCADE, null=True)
     external_ref = models.CharField(max_length=255)
     name = models.TextField()
-    date = models.DateField(null=True, blank=True)
+    date_last_version = models.DateField(null=True, blank=True)
     language = models.CharField(max_length=255, default="")
+
+    author = models.CharField(max_length=255, null=True, blank=True)
+    producer = models.CharField(max_length=255, null=True, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    geographic_coverage = models.CharField(max_length=255, null=True, blank=True)
+    geographic_unit = models.CharField(max_length=255, null=True, blank=True)
+    unit_of_analysis = models.CharField(max_length=255, null=True, blank=True)
+    contact = models.EmailField(null=True, blank=True)
+    citation = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return f"Survey: {self.name} ({self.external_ref})"

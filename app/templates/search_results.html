@@ -10,10 +10,10 @@
             <input type="text" name="q" class="form-control" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
         </div>
         <div class="input-group mr-2">
-            <select name="serie" id="series-filter" class="selectpicker form-control" multiple title="Séries">
-                {% for serie in series %}
-                    <option value="{{ serie.id }}" {% if serie.id|stringformat:"s" in selected_series %}selected{% endif %}>
-                        {{ serie.name }}
+            <select name="collection" id="collections-filter" class="selectpicker form-control" multiple title="Collections">
+                {% for collection in collections %}
+                    <option value="{{ collection.id }}" {% if collection.id|stringformat:"s" in selected_collections %}selected{% endif %}>
+                        {{ collection.name }}
                     </option>
                 {% endfor %}
             </select>
@@ -133,14 +133,14 @@
 
 $(document).ready(function() {
 
-    const seriesFilter = document.getElementById('series-filter');
+    const collectionsFilter = document.getElementById('collections-filter');
     const surveysFilter = document.getElementById('study-filter');
 
-    seriesFilter.addEventListener('change', function () {
-        const selectedSeries = Array.from(seriesFilter.selectedOptions).map(option => option.value);
+    collectionsFilter.addEventListener('change', function () {
+        const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
         const selectedStudies = Array.from(surveysFilter.selectedOptions).map(option => option.value);
 
-        fetch(`/api/get-surveys-by-series/?series_ids=${selectedSeries.join(',')}`)
+        fetch(`/api/get-surveys-by-collections/?collections_ids=${selectedCollections.join(',')}`)
             .then(response => response.json())
             .then(data => {
                 surveysFilter.innerHTML = '';
@@ -184,8 +184,8 @@ $(document).ready(function() {
         return $('#study-filter').val() || [];
     }
 
-    function getSerieFilter() {
-        return $('#series-filter').val() || [];
+    function getCollectionFilter() {
+        return $('#collections-filter').val() || [];
     }
 
     function getSearchLocation() {
@@ -219,7 +219,7 @@ $(document).ready(function() {
             "data": function(d) {
                 d.q = "{{ request.GET.q }}";
                 d.study = getStudyFilter();
-                d.series = getSerieFilter();
+                d.collections = getCollectionFilter();
                 d.search_location = getSearchLocation();
             },
             "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },

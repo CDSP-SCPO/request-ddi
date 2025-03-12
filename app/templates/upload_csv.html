@@ -5,7 +5,7 @@
     <div class="container-custom mt-4">
         <div class="text-center mb-3">
             <h1 class="mb-2">Import de fichier CSV</h1>
-            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Créer une nouvelle série</a>
+            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Créer une nouvelle collection</a>
         </div>
 
         <!-- Section CSV -->
@@ -30,7 +30,7 @@
             <form method="POST" enctype="multipart/form-data" id="csvUploadForm" action="{% url 'app:upload_csv' %}">
                 {% csrf_token %}
                 <div class="mb-3">
-                    {{ csv_form.series.label_tag }} {{ csv_form.series }}
+                    {{ csv_form.collections.label_tag }} {{ csv_form.collections }}
                 </div>
                 <div class="mb-3">
                     <label for="csv_file">Sélectionnez un fichier CSV :</label>
@@ -59,7 +59,7 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form method="POST" enctype="multipart/form-data" id="csvUploadForm" action="{% url 'app:upload_csv_collection' %}">
+                    <form method="POST" enctype="multipart/form-data" id="csvUploadFormCollection" action="{% url 'app:upload_csv_collection' %}">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="csv_file">Sélectionnez un fichier CSV :</label>

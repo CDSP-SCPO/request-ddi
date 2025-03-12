@@ -5,7 +5,7 @@
     <div class="container-custom mt-4">
     <div class="text-center mb-3">
         <h1 class="mb-2">Import de fichiers CSV et XML</h1>
-        <a href="{% url 'app:create-serie' %}" class="btn btn-warning">Créer une nouvelle série</a>
+        <a href="{% url 'app:create-collection' %}" class="btn btn-warning">Créer une nouvelle collection</a>
     </div>
         
 
@@ -33,7 +33,7 @@
                 <form class="d-flex flex-column" method="POST" enctype="multipart/form-data" id="csvUploadForm" action="{% url 'app:upload_csv' %}">
                     {% csrf_token %}
                     <div class="mb-2">
-                    {{ csv_form.series.label_tag }} {{ csv_form.series }}
+                    {{ csv_form.collections.label_tag }} {{ csv_form.collections }}
                     </div>
                     <div>
                     {{ csv_form.csv_file.label_tag }} {{ csv_form.csv_file }}
@@ -67,7 +67,7 @@
                 <form class="d-flex flex-column" method="POST" enctype="multipart/form-data" id="xmlUploadForm" action="{% url 'app:upload_xml' %}">
                     {% csrf_token %}
                     <div class="mb-2">
-                    {{ xml_form.series.label_tag }} {{ xml_form.series }}
+                    {{ xml_form.collections.label_tag }} {{ xml_form.collections }}
                     </div>
                     <div>
                     {{ xml_form.xml_file.label_tag }} {{ xml_form.xml_file }}

@@ -3,11 +3,11 @@
 
 {% block content %}
     <div class="container mt-5">
-        <h1 class="text-center mb-4">Les enquêtes {{ serie.name }}</h1>
+        <h1 class="text-center mb-4">Les enquêtes {{ collection.name }}</h1>
         <div class="row">
             {% for survey in surveys %}
             <div class="col-12 col-md-6 d-flex justify-content-center mb-4">
-                <a href="{% url 'app:search_results' %}?survey={{ survey.id }}&serie={{ serie.id }}" class="survey-card-link">
+                <a href="{% url 'app:search_results' %}?survey={{ survey.id }}&collection={{ collection.id }}" class="survey-card-link">
                     <div class="survey-card d-flex align-items-center">
                         <div class="survey-card-content pl-4 custom-survey-name">
                             <h5>{{ survey.name }}</h5>
@@ -16,7 +16,7 @@
                 </a>
             </div>
             {% empty %}
-            <p class="text-center">Aucune enquête disponible pour cette série.</p>
+            <p class="text-center">Aucune enquête disponible pour cette collection.</p>
             {% endfor %}
         </div>
     </div>
