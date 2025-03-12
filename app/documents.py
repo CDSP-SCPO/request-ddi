@@ -15,7 +15,9 @@ class BindingSurveyDocument(Document):
         'id': fields.IntegerField(),
         'name': fields.TextField(),
         'external_ref': fields.TextField(),
-        'serie_id': fields.IntegerField()
+        'subcollection': fields.ObjectField(properties={
+            'collection_id': fields.IntegerField()
+        })
     })
     variable = fields.ObjectField(properties={
         'question_text': fields.TextField(analyzer='custom_analyzer'),
@@ -107,7 +109,9 @@ class BindingSurveyDocument(Document):
                 "id": instance.survey.id,
                 "name": instance.survey.name,
                 "external_ref": instance.survey.external_ref,
-                "serie_id": instance.survey.serie.id if instance.survey.serie else None
+                "subcollection": {
+                    "collection_id": instance.survey.subcollection.collection.id if instance.survey.subcollection and instance.survey.subcollection.collection else None
+                }
             },
             "variable": {
                 "question_text": instance.variable.question_text,

@@ -12,19 +12,12 @@ from django.contrib import messages
 from bs4 import BeautifulSoup
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .models import Serie, BindingSurveyRepresentedVariable, Publisher
+from .models import BindingSurveyRepresentedVariable, Distributor, Survey, Collection, Subcollection
 
 
 class CSVUploadForm(forms.Form):
-    series = forms.ModelChoiceField(
-        queryset=Serie.objects.all(),
-        label="Sélectionnez une série",
-        required=True,
-        widget=forms.Select(attrs={'class': 'selectpicker', 'data-live-search': 'true'})
-    )
     csv_file = forms.FileField(label='Select a CSV file')
-
-    required_columns = ['ddi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label']
+    required_columns = ['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'producer', 'start_date', 'geographic_coverage']
     validate_duplicates = True
 
     def clean_csv_file(self):
@@ -71,17 +64,16 @@ class CSVUploadForm(forms.Form):
 
 
 class XMLUploadForm(forms.Form):
-    series = forms.ModelChoiceField(
-        queryset=Serie.objects.all(),
-        label="Sélectionnez une série",
-        required=True,
-        widget=forms.Select(attrs={'class': 'selectpicker', 'data-live-search': 'true'})
-    )
+
     xml_file = forms.FileField(label='Select an XML file')
 
     # Liste des balises obligatoires et attributs
-    required_tags = ['IDNo', 'titl', 'var', 'catValu', 'labl', 'catgry', 'qstnLit', 'universe', 'notes']
+    required_tags = ['IDNo', 'titl', 'var', 'catValu', 'labl', 'catgry', 'qstnLit', 'producer', 'timePrd', 'nation']
     required_attributes = {'var': 'name'}
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
     def clean_xml_file(self):
         xml_file = self.cleaned_data['xml_file']
@@ -141,18 +133,18 @@ class CustomAuthenticationForm(AuthenticationForm):
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
 
-class SerieForm(ModelForm):
-    publisher = forms.ModelChoiceField(
-            queryset=Publisher.objects.all(),
-            label="Éditeur",
+class CollectionForm(ModelForm):
+    distributor = forms.ModelChoiceField(
+            queryset=Distributor.objects.all(),
+            label="Diffuseur",
             widget=forms.Select(attrs={
                 'class': 'form-control form-control-lg selectpicker',
                 'data-live-search': 'true',
             }),
-            empty_label="Choisissez un éditeur"
+            empty_label="Choisissez un diffuseur"
         )
     class Meta:
-        model = Serie
+        model = Collection
         fields = "__all__"
 
         widgets = {
@@ -166,3 +158,53 @@ class SerieForm(ModelForm):
                 'placeholder': 'Entrez le résumé ici...'
             }),
         }
+
+# forms.py
+
+class CSVUploadFormCollection(forms.Form):
+    csv_file = forms.FileField(label='Sélectionnez un fichier CSV')
+
+    required_columns = ['diffuseur', 'collection', 'sous-collection', 'doi', 'title', 'xml-lang']
+    validate_duplicates = True
+
+    def clean_csv_file(self):
+        csv_file = self.cleaned_data['csv_file']
+        if not csv_file.name.endswith('.csv'):
+            raise forms.ValidationError("Le fichier doit être au format CSV.")
+        try:
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            sample = '\n'.join(decoded_file[:2])
+            sniffer = csv.Sniffer()
+            delimiter = sniffer.sniff(sample).delimiter
+            reader = csv.DictReader(decoded_file, delimiter=delimiter)
+            # Validation des colonnes manquantes
+            missing_columns = [col for col in self.required_columns if col not in reader.fieldnames]
+            if missing_columns:
+                raise forms.ValidationError(f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}")
+
+            self.cleaned_data['decoded_csv'] = decoded_file
+            self.cleaned_data['delimiter'] = delimiter
+
+            return decoded_file  # Si tout va bien, renvoie le fichier décodé pour un traitement ultérieur
+
+        except Exception as e:
+            raise forms.ValidationError(f"Erreur lors de la lecture du fichier CSV : {str(e)}")
+
+    def validate_duplicates_check(self):
+        """Vérifie les doublons après validation des colonnes."""
+        if not self.cleaned_data.get('decoded_csv') or not self.validate_duplicates:
+            return  # Évite de répéter le check si une erreur a été trouvée précédemment
+
+        decoded_file = self.cleaned_data['decoded_csv']
+        reader = csv.DictReader(decoded_file)
+        duplicate_variables = []
+
+        for row in reader:
+            doi = row.get('doi')
+            if doi and Survey.objects.filter(external_ref=doi).exists():
+                duplicate_variables.append(doi)
+
+        if duplicate_variables:
+            raise forms.ValidationError({
+                'csv_file': f"Les enquêtes suivantes existent déjà : {', '.join(duplicate_variables)}"
+            })

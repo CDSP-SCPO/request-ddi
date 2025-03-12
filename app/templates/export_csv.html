@@ -4,12 +4,12 @@
     <div class="mt-4">
         <h1 class="text-center mb-4">Export en CSV</h1>
         <form method="GET" action="{% url 'export_questions_csv' %}" class="d-flex flex-column align-items-center">
-            <!-- Sélection de la série -->
+            <!-- Sélection de la collection -->
             <div class="mb-3">
-                <label for="series-filter" class="form-label">Choisissez une ou plusieurs séries :</label>
-                <select name="series" id="series-filter" class="selectpicker form-select" multiple data-live-search="true">
-                    {% for serie in series %}
-                        <option value="{{ serie.id }}">{{ serie.name }}</option>
+                <label for="collections-filter" class="form-label">Choisissez une ou plusieurs collections :</label>
+                <select name="collections" id="collections-filter" class="selectpicker form-select" multiple data-live-search="true">
+                    {% for collection in collections %}
+                        <option value="{{ collection.id }}">{{ collection.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -50,14 +50,14 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const seriesFilter = document.getElementById('series-filter');
+        const collectionsFilter = document.getElementById('collections-filter');
         const surveyFilter = document.getElementById('survey-filter');
         $('.selectpicker').selectpicker();
 
-        seriesFilter.addEventListener('change', function () {
-            const selectedSeries = Array.from(seriesFilter.selectedOptions).map(option => option.value);
+        collectionsFilter.addEventListener('change', function () {
+            const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
 
-            fetch(`/api/get-surveys-by-series/?series_ids=${selectedSeries.join(',')}`)
+            fetch(`/api/get-surveys-by-collections/?collections_ids=${selectedCollections.join(',')}`)
                 .then(response => response.json())
                 .then(data => {
                     surveyFilter.innerHTML = '';

@@ -5,7 +5,7 @@
     <div class="container-custom mt-4">
         <div class="text-center mb-3">
             <h1 class="mb-2">Import de fichier CSV</h1>
-            <a href="{% url 'app:create-serie' %}" class="btn btn-warning">Créer une nouvelle série</a>
+            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Créer une nouvelle collection</a>
         </div>
 
         <!-- Section CSV -->
@@ -30,7 +30,7 @@
             <form method="POST" enctype="multipart/form-data" id="csvUploadForm" action="{% url 'app:upload_csv' %}">
                 {% csrf_token %}
                 <div class="mb-3">
-                    {{ csv_form.series.label_tag }} {{ csv_form.series }}
+                    {{ csv_form.collections.label_tag }} {{ csv_form.collections }}
                 </div>
                 <div class="mb-3">
                     <label for="csv_file">Sélectionnez un fichier CSV :</label>
@@ -46,6 +46,29 @@
         <div class="spinner-container">
             <div class="spinner"></div>
             <div class="spinner-text">Traitement en cours...</div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="csvUploadModal" tabindex="-1" aria-labelledby="csvUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="csvUploadModalLabel">Importer un fichier CSV</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" enctype="multipart/form-data" id="csvUploadFormCollection" action="{% url 'app:upload_csv_collection' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="csv_file">Sélectionnez un fichier CSV :</label>
+                            <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Importer le fichier CSV</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}
@@ -102,81 +125,80 @@
 
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{% static 'js/upload_csv_collection.js' %}"></script>
     <script>
-        document.getElementById('csvUploadForm').addEventListener('submit', function(event) {
-            event.preventDefault();  // Empêche l'envoi immédiat du formulaire
-            var formData = new FormData(this);
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById('csvUploadForm').addEventListener('submit', function(event) {
+                event.preventDefault();  // Empêche l'envoi immédiat du formulaire
+                var formData = new FormData(this);
 
-            // Affiche l'overlay de chargement
-            document.getElementById('overlay').classList.add('show');
+                // Affiche l'overlay de chargement
+                document.getElementById('overlay').classList.add('show');
 
-            // Vérification des doublons
-            fetch("{% url 'app:check_duplicates' %}", {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'exists') {
-                    Swal.fire({
-                        title: 'Doublons détectés',
-                        text: 'Certaines variables de ce document existent déjà. Voulez-vous les mettre à jour ?',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Oui, mettre à jour',
-                        cancelButtonText: 'Annuler',
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // Confirme l'envoi final du formulaire
-                            document.getElementById('csvUploadForm').submit();
-                        } else {
-                            document.getElementById('overlay').classList.remove('show');
-                        }
-                    });
-                } else {
-                    document.getElementById('csvUploadForm').submit();
-                }
-            })
-            .catch(error => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur',
-                    text: 'Une erreur s\'est produite lors de la vérification des doublons.'
-                });
-                document.getElementById('overlay').classList.remove('show');
-            });
-        });
-
-
-
-        // Gestion des erreurs affichées depuis le serveur via messages
-        document.addEventListener('DOMContentLoaded', function() {
-            // Affichage des erreurs passées via le contexte `errors`
-            {% if errors %}
-                let errorMessages = "";
-                {% for error in errors %}
-                    errorMessages += "{{ error|escapejs }}<br>";
-                {% endfor %}
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur lors de l\'import',
-                    html: errorMessages
-                });
-            {% endif %}
-
-            // Gestion des messages passés via Django `messages`
-            {% if messages %}
-                {% for message in messages %}
-                    {% if "error" in message.tags %}
+                // Vérification des doublons
+                fetch("{% url 'app:check_duplicates' %}", {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'exists') {
                         Swal.fire({
-                            icon: 'error',
-                            title: 'Erreur lors de l\'import',
-                            html: "{{ message|escapejs }}"
+                            title: 'Doublons détectés',
+                            text: 'Certaines variables de ce document existent déjà. Voulez-vous les mettre à jour ?',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Oui, mettre à jour',
+                            cancelButtonText: 'Annuler',
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // Confirme l'envoi final du formulaire
+                                document.getElementById('csvUploadForm').submit();
+                            } else {
+                                document.getElementById('overlay').classList.remove('show');
+                            }
                         });
-                    {% endif %}
-                {% endfor %}
-            {% endif %}
-        });
+                    } else {
+                        document.getElementById('csvUploadForm').submit();
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: 'Une erreur s\'est produite lors de la vérification des doublons.'
+                    });
+                    document.getElementById('overlay').classList.remove('show');
+                });
+            });
+
+
+                // Affichage des erreurs passées via le contexte `errors`
+                {% if errors %}
+                    let errorMessages = "";
+                    {% for error in errors %}
+                        errorMessages += "{{ error|escapejs }}<br>";
+                    {% endfor %}
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur lors de l\'import',
+                        html: errorMessages
+                    });
+                {% endif %}
+
+                // Gestion des messages passés via Django `messages`
+                {% if messages %}
+                    {% for message in messages %}
+                        {% if "error" in message.tags %}
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur lors de l\'import',
+                                html: "{{ message|escapejs }}"
+                            });
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            });
 
 
 

@@ -9,7 +9,7 @@ from .views import (
     RepresentedVariableSearchView, SearchResultsDataView, XMLUploadView,
     autocomplete, check_duplicates, export_page, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions, CreateSerie, check_media_root, SerieSurveysView, get_surveys_by_series, create_publisher, get_publishers
+    similar_representative_variable_questions, check_media_root, CollectionSurveysView, get_surveys_by_collections, create_distributor, get_distributor, CSVUploadViewCollection
 )
 
 from django.contrib.auth.views import LogoutView
@@ -31,14 +31,15 @@ urlpatterns = [
 
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    path('create-serie/', CreateSerie.as_view(), name='create-serie'),
     path('check-duplicates/', check_duplicates, name='check_duplicates'),
     path('check-media-root/', check_media_root),
-    path('serie/<int:serie_id>/surveys/', SerieSurveysView.as_view(), name='serie_surveys'),
+    path('collection/<int:collection_id>/surveys/', CollectionSurveysView.as_view(), name='collection_surveys'),
 
-    path('api/get-surveys-by-series/', get_surveys_by_series, name='get_surveys_by_series'),
-    path('add-publisher/', create_publisher, name='create_publisher'),
-    path('get-publishers/', get_publishers, name='get_publishers'),
+    path('api/get-surveys-by-collections/', get_surveys_by_collections, name='get_surveys_by_collections'),
+    path('add-distributor/', create_distributor, name='create_distributor'),
+    path('get-distributors/', get_distributor, name='get_distributor'),
+
+    path('upload-csv-collection/', CSVUploadViewCollection.as_view(), name='upload_csv_collection'),
 ]
 
 if settings.DEBUG:
