@@ -284,9 +284,7 @@ class CSVUploadView(BaseUploadView):
 
     def get_or_create_survey(self, doi, title, author, producer, start_date, geographic_coverage, geographic_unit, unit_of_analysis, contact, citation, date_last_version):
         """Créer ou récupérer une enquête."""
-        print("test get_or_create_survey",doi)
         survey = Survey.objects.filter(external_ref=doi).first()
-        print("test get_or_create_survey 2", survey)
         if not survey:
             raise ValueError(f"Aucune enquête existante trouvée pour le DOI '{doi}'.")
         survey.name = title
@@ -406,30 +404,41 @@ class XMLUploadView(BaseUploadView):
                         date_tag_distStmt = None
 
             verStmt_tag = soup.find("verStmt")
+            verStmt_tag_version = None
             if verStmt_tag:
+                verStmt_tag_version = verStmt_tag.find("version")
+            if verStmt_tag_version:
                 # Vérifier l'attribut date
-                if verStmt_tag.get("date"):
+                if verStmt_tag_version.get("date"):
                     try:
-                        date_verStmt = datetime.strptime(verStmt_tag.get("date").strip(), "%Y-%m-%d").date()
+                        date_verStmt = datetime.strptime(verStmt_tag_version.get("date").strip(), "%Y-%m-%d").date()
                     except ValueError:
                         date_verStmt = None
 
                 # Vérifier l'attribut version
-                elif verStmt_tag.get("version"):
+                elif verStmt_tag_version.get("version"):
                     try:
-                        date_verStmt = datetime.strptime(verStmt_tag.get("version").strip(), "%Y-%m-%d").date()
+                        date_verStmt = datetime.strptime(verStmt_tag_version.get("version").strip(), "%Y-%m-%d").date()
                     except ValueError:
                         date_verStmt = None
 
                 # Vérifier l'attribut type
-                elif verStmt_tag.get("type"):
+                elif verStmt_tag_version.get("type"):
                     try:
-                        date_verStmt = datetime.strptime(verStmt_tag.get("type").strip(), "%Y-%m-%d").date()
+                        date_verStmt = datetime.strptime(verStmt_tag_version.get("type").strip(), "%Y-%m-%d").date()
                     except ValueError:
                         date_verStmt = None
+                        
+            author=""
+            author_element = soup.find("AuthEnty")
+            if author_element:
+                text_content = author_element.get_text(strip=True)
+                affiliation = author_element.get("affiliation", "").strip()
+                author = f"{text_content}; {affiliation}" if affiliation else text_content
+            else:
+                author = ""
 
-            author = soup.find("AuthEnty").get("affiliation", "") if soup.find("AuthEnty") else ""
-            producer = soup.find("producer").get("abbr", "") if soup.find("producer") else ""
+            producer = soup.find("producer").text.strip() if soup.find("producer") else ""
             start_date = soup.find("timePrd", attrs={"event": "start"}).get("date", "") if soup.find("timePrd", attrs={"event": "start"}) else ""
             geographic_coverage = soup.find("nation").get_text(strip=True) if soup.find("nation") else ""
             geographic_unit = soup.find("geoCover").get_text(strip=True) if soup.find("geoCover") else ""
