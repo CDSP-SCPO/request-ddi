@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-center align-items-center position-relative mb-4">
         <h1 class="text-center mb-0">Création de série d'enquêtes</h1>
         <button type="button" class="btn btn-primary position-absolute" style="right: 0;" data-toggle="modal" data-target="#editorModal">
-            Ajouter un éditeur
+            Ajouter un diffuseur
         </button>
     </div>
     
@@ -23,10 +23,10 @@
             </div>
 
             <div class="mb-3">
-                {{ form.publisher }}
-                {% if form.publisher.errors %}
+                {{ form.distributor }}
+                {% if form.distributor.errors %}
                     <div class="text-danger small">
-                        {{ form.publisher.errors }}
+                        {{ form.distributor.errors }}
                     </div>
                 {% endif %}
             </div>
@@ -60,17 +60,17 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editorModalLabel">Ajouter un éditeur</h5>
+                <h5 class="modal-title" id="editorModalLabel">Ajouter un diffuseur</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <form id="createPublisherForm">
+                <form id="createDistributorForm">
                     {% csrf_token %}
                     <div class="form-group">
-                        <label for="editor-name">Nom de l'éditeur</label>
-                        <input type="text" class="form-control" id="editor-name" name="name" placeholder="Entrez le nom de l'éditeur" required>
+                        <label for="editor-name">Nom du diffuseur</label>
+                        <input type="text" class="form-control" id="editor-name" name="name" placeholder="Entrez le nom du diffuseur" required>
                     </div>
                     <button type="submit" class="btn btn-primary">Créer</button>
                 </form>
@@ -85,8 +85,8 @@
 <script>
     $(document).ready(function() {
         $('.selectpicker').selectpicker();
-        const form = document.getElementById('createPublisherForm');
-        const publisherSelect = document.querySelector('select[name="publisher"]');
+        const form = document.getElementById('createDistributorForm');
+        const distributorSelect = document.querySelector('select[name="distributor"]');
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -94,9 +94,9 @@
             const formData = new FormData(form);
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-            const selectedPublisher = publisherSelect.value;
+            const selectedDistributor = distributorSelect.value;
 
-            fetch("{% url 'app:create_publisher' %}", {
+            fetch("{% url 'app:create_distributor' %}", {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken,
@@ -117,30 +117,30 @@
                         confirmButtonText: 'OK'
                     });
 
-                    fetch("{% url 'app:get_publishers' %}")
+                    fetch("{% url 'app:get_distributor' %}")
                         .then(response => response.json())
                         .then(data => {
-                            if (data.publishers) {
-                                publisherSelect.innerHTML = '';
+                            if (data.distributors) {
+                                distributorSelect.innerHTML = '';
 
                                 const emptyOption = document.createElement('option');
                                 emptyOption.value = "";
-                                emptyOption.textContent = "Choisissez un éditeur";
-                                publisherSelect.appendChild(emptyOption);
+                                emptyOption.textContent = "Choisissez un diffuseur";
+                                distributorSelect.appendChild(emptyOption);
 
-                                data.publishers.forEach(publisher => {
+                                data.distributors.forEach(distributor => {
                                     const option = document.createElement('option');
-                                    option.value = publisher.id;
-                                    option.textContent = publisher.name;
-                                    publisherSelect.appendChild(option);
+                                    option.value = distributor.id;
+                                    option.textContent = distributor.name;
+                                    distributorSelect.appendChild(option);
                                 });
 
-                                publisherSelect.value = selectedPublisher || "";
+                                distributorSelect.value = selectedDistributor || "";
 
                                 $('.selectpicker').selectpicker('refresh');
                             }
                         })
-                        .catch(error => console.error('Erreur lors de la mise à jour des publishers:', error));
+                        .catch(error => console.error('Erreur lors de la mise à jour des distributors:', error));
                 } else {
                     Swal.fire({
                         title: 'Erreur',
