@@ -1,23 +1,27 @@
 # forms.py
 # -- STDLIB
 import csv
+import io
 
 # -- DJANGO
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from django.core.exceptions import ValidationError
 from django.forms import ModelForm
-from django.contrib import messages
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .models import BindingSurveyRepresentedVariable, Distributor, Survey, Collection, Subcollection
+from .models import (
+    BindingSurveyRepresentedVariable, Collection, Distributor, Subcollection,
+    Survey,
+)
 
 
 class CSVUploadForm(forms.Form):
     csv_file = forms.FileField(label='Select a CSV file')
-    required_columns = ['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'producer', 'start_date', 'geographic_coverage']
+    required_columns = ['doi', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes']
     validate_duplicates = True
 
     def clean_csv_file(self):
@@ -32,16 +36,25 @@ class CSVUploadForm(forms.Form):
             reader = csv.DictReader(decoded_file, delimiter=delimiter)
 
             # Validation des colonnes manquantes
-            missing_columns = [col for col in self.required_columns if col not in reader.fieldnames]
-            if missing_columns:
-                raise forms.ValidationError(f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}")
+            self.validate_columns(reader.fieldnames)
 
             self.cleaned_data['decoded_csv'] = decoded_file
 
-            return decoded_file  # Si tout va bien, renvoie le fichier décodé pour un traitement ultérieur
-
-        except Exception as e:
+            return decoded_file
+        except csv.Error as e:
             raise forms.ValidationError(f"Erreur lors de la lecture du fichier CSV : {str(e)}")
+        except UnicodeDecodeError:
+            raise forms.ValidationError("Erreur de décodage du fichier CSV. Assurez-vous qu'il est encodé en UTF-8.")
+        except forms.ValidationError as ve:
+            raise ve
+        except Exception as e:
+            raise forms.ValidationError(f"Erreur inattendue : {str(e)}")
+
+    def validate_columns(self, fieldnames):
+        """Valide les colonnes manquantes dans le fichier CSV."""
+        missing_columns = [col for col in self.required_columns if col not in fieldnames]
+        if missing_columns:
+            raise forms.ValidationError(f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}")
 
     def validate_duplicates_check(self):
         """Check des doublons après validation des colonnes."""
@@ -63,69 +76,68 @@ class CSVUploadForm(forms.Form):
             })
 
 
+
 class XMLUploadForm(forms.Form):
+        xml_file = forms.FileField(label='Select an XML file')
 
-    xml_file = forms.FileField(label='Select an XML file')
+        # Liste des balises obligatoires et attributs
+        required_tags = ['IDNo', 'var', 'catValu', 'labl', 'catgry', 'qstnLit']
+        required_attributes = {'var': 'name'}
 
-    # Liste des balises obligatoires et attributs
-    required_tags = ['IDNo', 'titl', 'var', 'catValu', 'labl', 'catgry', 'qstnLit', 'producer', 'timePrd', 'nation']
-    required_attributes = {'var': 'name'}
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
 
+        def clean_xml_file(self):
+            xml_file = self.cleaned_data['xml_file']
+            if not xml_file.name.endswith('.xml'):
+                raise forms.ValidationError("Le fichier doit être au format XML.")
 
-    def clean_xml_file(self):
-        xml_file = self.cleaned_data['xml_file']
-        if not xml_file.name.endswith('.xml'):
-            raise forms.ValidationError("Le fichier doit être au format XML.")
+            try:
+                content = xml_file.read().decode('utf-8')
 
-        try:
-            content = xml_file.read().decode('utf-8')
+                # Analyse du fichier XML avec BeautifulSoup
+                soup = BeautifulSoup(content, 'xml')
 
-            # Analyse du fichier XML avec BeautifulSoup
-            soup = BeautifulSoup(content, 'xml')
+                # Extraire l'espace de noms par défaut (si présent)
+                namespaces = {prefix: uri for prefix, uri in soup.find_all('xmlns')}
+                default_ns = namespaces.get(None, '')
 
-            # Extraire l'espace de noms par défaut (si présent)
-            namespaces = {prefix: uri for prefix, uri in soup.find_all('xmlns')}
-            default_ns = namespaces.get(None, '')
+                missing_tags = []
+                missing_attributes = []
 
-            missing_tags = []
-            missing_attributes = []
+                # Vérification des balises obligatoires
+                for tag in self.required_tags:
+                    # Chercher la balise avec ou sans espace de noms
+                    tag_found = soup.find(f"{tag}") or soup.find(f"{{{default_ns}}}{tag}")
 
-            # Vérification des balises obligatoires
-            for tag in self.required_tags:
-                # Chercher la balise avec ou sans espace de noms
-                tag_found = soup.find(f"{tag}") or soup.find(f"{{{default_ns}}}{tag}")
+                    if not tag_found:
+                        missing_tags.append(tag)
 
-                if not tag_found:
-                    missing_tags.append(tag)
+                # Vérification des attributs obligatoires
+                for tag, attr in self.required_attributes.items():
+                    # Recherche de la balise correspondante
+                    tag_found = soup.find(f"{tag}") or soup.find(f"{{{default_ns}}}{tag}")
 
-            # Vérification des attributs obligatoires
-            for tag, attr in self.required_attributes.items():
-                # Recherche de la balise correspondante
-                tag_found = soup.find(f"{tag}") or soup.find(f"{{{default_ns}}}{tag}")
+                    if tag_found:
+                        # Vérifier la présence de l'attribut
+                        if not tag_found.has_attr(attr):
+                            missing_attributes.append(f"{attr} in <{tag}>")
+                    else:
+                        missing_tags.append(tag)  # La balise elle-même est manquante
 
-                if tag_found:
-                    # Vérifier la présence de l'attribut
-                    if not tag_found.has_attr(attr):
-                        missing_attributes.append(f"{attr} in <{tag}>")
-                else:
-                    missing_tags.append(tag)  # La balise elle-même est manquante
+                # Si des balises ou attributs manquent, lever une erreur
+                if missing_tags or missing_attributes:
+                    error_message = []
+                    if missing_tags:
+                        error_message.append(f"Les balises suivantes sont manquantes : {', '.join(missing_tags)}")
+                    if missing_attributes:
+                        error_message.append(f"Les attributs suivants sont manquants : {', '.join(missing_attributes)}")
+                    raise forms.ValidationError(' '.join(error_message))
 
-            # Si des balises ou attributs manquent, lever une erreur
-            if missing_tags or missing_attributes:
-                error_message = []
-                if missing_tags:
-                    error_message.append(f"Les balises suivantes sont manquantes : {', '.join(missing_tags)}")
-                if missing_attributes:
-                    error_message.append(f"Les attributs suivants sont manquants : {', '.join(missing_attributes)}")
-                raise forms.ValidationError(' '.join(error_message))
+                return content  # Renvoie le contenu pour traitement ultérieur
 
-            return content  # Renvoie le contenu pour traitement ultérieur
-
-        except Exception as e:
-            raise forms.ValidationError(f"Erreur lors de la lecture du fichier XML : {str(e)}")
+            except Exception as e:
+                raise forms.ValidationError(f"Erreur lors de la lecture du fichier XML : {str(e)}")
 
 
 class CustomAuthenticationForm(AuthenticationForm):
@@ -135,14 +147,15 @@ class CustomAuthenticationForm(AuthenticationForm):
 
 class CollectionForm(ModelForm):
     distributor = forms.ModelChoiceField(
-            queryset=Distributor.objects.all(),
-            label="Diffuseur",
-            widget=forms.Select(attrs={
-                'class': 'form-control form-control-lg selectpicker',
-                'data-live-search': 'true',
-            }),
-            empty_label="Choisissez un diffuseur"
-        )
+        queryset=Distributor.objects.all(),
+        label="Diffuseur",
+        widget=forms.Select(attrs={
+            'class': 'form-control form-control-lg selectpicker',
+            'data-live-search': 'true',
+        }),
+        empty_label="Choisissez un diffuseur"
+    )
+
     class Meta:
         model = Collection
         fields = "__all__"
@@ -159,12 +172,27 @@ class CollectionForm(ModelForm):
             }),
         }
 
+
 # forms.py
 
 class CSVUploadFormCollection(forms.Form):
     csv_file = forms.FileField(label='Sélectionnez un fichier CSV')
 
-    required_columns = ['diffuseur', 'collection', 'sous-collection', 'doi', 'title', 'xml-lang']
+    required_columns = ["doi",
+                        "xml_lang",
+                        "title",
+                        "author",
+                        "producer",
+                        "diffuseur",
+                        "start_date",
+                        "geographic_coverage",
+                        "geographic_unit",
+                        "unit_of_analysis",
+                        "contact",
+                        "citation",
+                        "date_last_version",
+                        'collection',
+                        'sous-collection']
     validate_duplicates = True
 
     def clean_csv_file(self):
@@ -185,26 +213,9 @@ class CSVUploadFormCollection(forms.Form):
             self.cleaned_data['decoded_csv'] = decoded_file
             self.cleaned_data['delimiter'] = delimiter
 
+
+
             return decoded_file  # Si tout va bien, renvoie le fichier décodé pour un traitement ultérieur
 
         except Exception as e:
             raise forms.ValidationError(f"Erreur lors de la lecture du fichier CSV : {str(e)}")
-
-    def validate_duplicates_check(self):
-        """Vérifie les doublons après validation des colonnes."""
-        if not self.cleaned_data.get('decoded_csv') or not self.validate_duplicates:
-            return  # Évite de répéter le check si une erreur a été trouvée précédemment
-
-        decoded_file = self.cleaned_data['decoded_csv']
-        reader = csv.DictReader(decoded_file)
-        duplicate_variables = []
-
-        for row in reader:
-            doi = row.get('doi')
-            if doi and Survey.objects.filter(external_ref=doi).exists():
-                duplicate_variables.append(doi)
-
-        if duplicate_variables:
-            raise forms.ValidationError({
-                'csv_file': f"Les enquêtes suivantes existent déjà : {', '.join(duplicate_variables)}"
-            })

@@ -1,5 +1,7 @@
-import unicodedata
+# -- STDLIB
 import re
+import unicodedata
+
 
 def normalize_string_for_database(value):
     if not isinstance(value, str):

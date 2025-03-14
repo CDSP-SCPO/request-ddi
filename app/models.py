@@ -1,5 +1,7 @@
 # -- DJANGO
 from django.db import models
+
+# -- BASEDEQUESTIONS (LOCAL)
 from .utils.normalize_string import normalize_string_for_comparison
 
 # class Entites(models.Model):
@@ -32,15 +34,8 @@ class Subcollection(models.Model):
         return f"{self.name}"
 
 class Survey(models.Model):
-    # auteur
-    # producteur
-    # date de prod
-    # pays
-    # unite geographique
-    # unite d analyse
-    # methode temporel
     subcollection = models.ForeignKey(Subcollection, on_delete=models.CASCADE, null=True)
-    external_ref = models.CharField(max_length=255)
+    external_ref = models.CharField(max_length=255, unique=True)
     name = models.TextField()
     date_last_version = models.DateField(null=True, blank=True)
     language = models.CharField(max_length=255, default="")
@@ -105,8 +100,6 @@ class RepresentedVariable(models.Model):
             normalize_string_for_comparison(var.question_text): var
             for var in cls.objects.all()
         }
-
-
 
 
 class BindingSurveyRepresentedVariable(models.Model):

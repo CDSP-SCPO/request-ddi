@@ -1,18 +1,19 @@
 # -- DJANGO
-from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth.views import LogoutView
+from django.urls import path
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .views import (
-    CSVUploadView, CustomLoginView, QuestionDetailView,
-    RepresentedVariableSearchView, SearchResultsDataView, XMLUploadView,
-    autocomplete, check_duplicates, export_page, search_results,
+    CollectionSurveysView, CSVUploadView, CSVUploadViewCollection,
+    CustomLoginView, QuestionDetailView, RepresentedVariableSearchView,
+    SearchResultsDataView, XMLUploadView, autocomplete, check_duplicates,
+    check_media_root, create_distributor, export_page, get_distributor,
+    get_surveys_by_collections, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions, check_media_root, CollectionSurveysView, get_surveys_by_collections, create_distributor, get_distributor, CSVUploadViewCollection
+    similar_representative_variable_questions,
 )
-
-from django.contrib.auth.views import LogoutView
 
 app_name = 'app'
 
