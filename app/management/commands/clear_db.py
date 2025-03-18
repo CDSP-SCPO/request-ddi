@@ -3,8 +3,9 @@ from django.core.management.base import BaseCommand
 
 # -- BASEDEQUESTIONS
 from app.models import (
-    BindingConcept, BindingSurveyRepresentedVariable, Category, Concept,
-    ConceptualVariable, RepresentedVariable, Collection, Subcollection, Survey, Distributor
+    BindingConcept, BindingSurveyRepresentedVariable, Category, Collection,
+    Concept, ConceptualVariable, Distributor, RepresentedVariable,
+    Subcollection, Survey,
 )
 
 
