@@ -111,6 +111,7 @@ class BindingSurveyDocument(Document):
                 "name": instance.survey.name,
                 "external_ref": instance.survey.external_ref,
                 "subcollection": {
+                    "id": instance.survey.subcollection.id if instance.survey.subcollection else None,
                     "collection_id": instance.survey.subcollection.collection.id if instance.survey.subcollection and instance.survey.subcollection.collection else None
                 }
             },
