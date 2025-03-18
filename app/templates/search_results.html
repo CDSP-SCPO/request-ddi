@@ -20,10 +20,20 @@
         </div>
 
         <div class="input-group mr-2">
-            <select name="survey" id="study-filter" class="selectpicker form-control" multiple title="Études">
-                {% for study in studies %}
-                    <option value="{{ study.id }}" {% if study.id|stringformat:"s" in selected_studies %}selected{% endif %}>
-                        {{ study.name }}
+            <select name="subcollection" id="subcollections-filter" class="selectpicker form-control" multiple title="Sous-Collections">
+                {% for subcollection in subcollections %}
+                    <option value="{{ subcollection.id }}" {% if subcollection.id|stringformat:"s" in selected_subcollections %}selected{% endif %}>
+                        {{ subcollection.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="input-group mr-2">
+            <select name="survey" id="survey-filter" class="selectpicker form-control" multiple title="Études">
+                {% for survey in surveys %}
+                    <option value="{{ survey.id }}" {% if survey.id|stringformat:"s" in selected_surveys %}selected{% endif %}>
+                        {{ survey.name }}
                     </option>
                 {% endfor %}
             </select>
@@ -134,30 +144,63 @@
 $(document).ready(function() {
 
     const collectionsFilter = document.getElementById('collections-filter');
-    const surveysFilter = document.getElementById('study-filter');
+    const subcollectionsFilter = document.getElementById('subcollections-filter');
+    const surveysFilter = document.getElementById('survey-filter');
 
     collectionsFilter.addEventListener('change', function () {
         const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
-        const selectedStudies = Array.from(surveysFilter.selectedOptions).map(option => option.value);
 
-        fetch(`/api/get-surveys-by-collections/?collections_ids=${selectedCollections.join(',')}`)
+        fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
             .then(response => response.json())
             .then(data => {
+                subcollectionsFilter.innerHTML = '';
+                data.subcollections.forEach(subcollection => {
+                    const option = document.createElement('option');
+                    option.value = subcollection.id;
+                    option.text = subcollection.name;
+                    subcollectionsFilter.appendChild(option);
+                });
                 surveysFilter.innerHTML = '';
-
                 data.surveys.forEach(survey => {
                     const option = document.createElement('option');
                     option.value = survey.id;
                     option.text = survey.name;
-                    if (selectedStudies.includes(String(survey.id))) {
-                        option.selected = true;
-                    }
                     surveysFilter.appendChild(option);
                 });
                 $('.selectpicker').selectpicker('refresh');
             });
+
+        // Reset surveys when collections change
+        surveysFilter.innerHTML = '';
+        $('.selectpicker').selectpicker('refresh');
         $('#survey-table').DataTable().ajax.reload();
     });
+
+    subcollectionsFilter.addEventListener('change', function () {
+        const selectedSubcollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
+        const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
+
+        fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubcollections.join(',')}&collections_ids=${selectedCollections.join(',')}`)
+            .then(response => response.json())
+            .then(data => {
+                surveysFilter.innerHTML = '';
+                data.surveys.forEach(survey => {
+                    const option = document.createElement('option');
+                    option.value = survey.id;
+                    option.text = survey.name;
+                    surveysFilter.appendChild(option);
+                });
+                $('.selectpicker').selectpicker('refresh');
+            });
+
+        $('#survey-table').DataTable().ajax.reload();
+    });
+
+    $('#survey-filter').on('change', function() {
+        $('#survey-table').DataTable().ajax.reload();
+    });
+
+
     $(document).on('click', '.badge-category', function() {
         var dropdown = $(this).siblings('.category-dropdown');
         $('.category-dropdown').not(dropdown).hide();
@@ -180,12 +223,16 @@ $(document).ready(function() {
             }
         });
     });
-    function getStudyFilter() {
-        return $('#study-filter').val() || [];
+    function getSurveyFilter() {
+        return $('#survey-filter').val() || [];
     }
 
     function getCollectionFilter() {
         return $('#collections-filter').val() || [];
+    }
+
+    function getSubCollectionFilter() {
+        return $('#subcollections-filter').val() || [];
     }
 
     function getSearchLocation() {
@@ -218,8 +265,9 @@ $(document).ready(function() {
             "async": true,
             "data": function(d) {
                 d.q = "{{ request.GET.q }}";
-                d.study = getStudyFilter();
+                d.survey = getSurveyFilter();
                 d.collections = getCollectionFilter();
+                d.sub_collections = getSubCollectionFilter();
                 d.search_location = getSearchLocation();
             },
             "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },
@@ -240,7 +288,7 @@ $(document).ready(function() {
                             </h5>
                             <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
                             <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Label interne : ` + row.internal_label + `</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Libellé de la variable : ` + row.internal_label + `</h6>
                                                  <!-- Bouton pour afficher les catégories -->
                             <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Modalités</button>
                             
@@ -266,7 +314,7 @@ $(document).ready(function() {
         }
     });
 
-    $('#study-filter').on('change', function() {
+    $('#survey-filter').on('change', function() {
         $('#survey-table').DataTable().ajax.reload();
     });
 });

@@ -365,7 +365,6 @@ class XMLUploadView(BaseUploadView):
             try:
                 # Créer ou récupérer l'enquête (Survey)
                 survey = Survey.objects.get(external_ref=doi)
-                print("survey", survey)
 
                 for question_data in questions:
                     variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
@@ -388,15 +387,12 @@ class XMLUploadView(BaseUploadView):
 
             except Survey.DoesNotExist:
                 error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
-                print('OUIOUI', error_message)
                 error_files.append(error_message)
             except ValueError as ve:
                 error_message = f"DOI '{doi}': Erreur de valeur : {ve}"
-                print(error_message)
                 error_files.append(error_message)
             except Exception as e:
                 error_message = f"DOI '{doi}': Erreur inattendue : {e}"
-                print(error_message)
                 error_files.append(error_message)
 
         # Si des erreurs ont été rencontrées, on les affiche
@@ -426,21 +422,58 @@ class RepresentedVariableSearchView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['collection'] = Collection.objects.all()
+        context['collections'] = Collection.objects.all()
         context['success_message'] = self.request.GET.get('success_message', None)
         context['upload_stats'] = self.request.GET.get('upload_stats', None)
         return context
 
 
 def search_results(request):
+    selected_surveys = request.GET.getlist('survey')
+    selected_sub_collection = request.GET.getlist('sub_collection')
     selected_collection = request.GET.getlist('collection')
-    selected_studies = request.GET.getlist('survey')
 
-    collections = Collection.objects.all()
-    studies = Survey.objects.all()
+
+    collections = Collection.objects.all().order_by("name")
+    subcollections = Subcollection.objects.all().order_by("name")
+    surveys = Survey.objects.all().order_by("name")
     search_location = request.GET.get('search_location', 'questions')
     context = locals()
     return render(request, 'search_results.html', context)
+
+def get_subcollections_by_collections(request):
+    collection_ids = request.GET.get('collections_ids', '').split(',')
+    collection_ids = [id for id in collection_ids if id]
+    if not collection_ids:
+        subcollections = Subcollection.objects.all()
+        surveys = Survey.objects.all()
+    else:
+
+        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids)
+        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
+    data = {
+        'subcollections': [{'id': sc.id, 'name': sc.name} for sc in subcollections],
+        'surveys': [{'id': s.id, 'name': s.name} for s in surveys],
+    }
+
+    return JsonResponse(data)
+
+def get_surveys_by_subcollections(request):
+    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
+    subcollection_ids = [id for id in subcollection_ids if id]
+
+    if not subcollection_ids:
+        collection_ids = request.GET.get('collections_ids', '').split(',')
+        collection_ids = [id for id in collection_ids if id]
+
+        if collection_ids:
+            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
+        else:
+            surveys = Survey.objects.all()
+    else:
+        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids)
+    data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
+    return JsonResponse(data)
 
 
 def apply_highlight(full_text, highlights):
@@ -459,11 +492,13 @@ class SearchResultsDataView(ListView):
     def get_queryset(self):
         search_value = self.request.GET.get('q', '').strip().lower()
         search_location = self.request.GET.get('search_location', 'questions')
-        study_filter = self.request.GET.getlist('study[]', None)
+        survey_filter = self.request.GET.getlist('survey[]', None)
+        subcollection_filter = self.request.GET.getlist('sub_collections[]', None)
         collections_filter = self.request.GET.getlist('collections[]', None)
 
         # Convertir le filtre en liste d'entiers
-        study_filter = [int(study_id) for study_id in study_filter if study_id.isdigit()]
+        survey_filter = [int(survey_id) for survey_id in survey_filter if survey_id.isdigit()]
+        subcollection_filter = [int(subcollection_id) for subcollection_id in subcollection_filter if subcollection_id.isdigit()]
         collections_filter = [int(collection_id) for collection_id in collections_filter if collection_id.isdigit()]
 
         # Configuration de la recherche Elasticsearch
@@ -482,10 +517,13 @@ class SearchResultsDataView(ListView):
             .highlight('variable.internal_label', fragment_size=10000)
 
         # Appliquer le filtre par étude
-        if collections_filter:
+        if survey_filter:
+            search = search.filter('terms', **{"survey.id": survey_filter})
+        elif subcollection_filter:
+            search = search.filter('terms', **{"survey.subcollection.id": subcollection_filter})
+        elif collections_filter:
             search = search.filter('terms', **{"survey.subcollection.collection_id": collections_filter})
-        if study_filter:
-            search = search.filter('terms', **{"survey.id": study_filter})
+
 
         # Pagination (start et length) depuis DataTables
         start = int(self.request.GET.get('start', 0))
@@ -913,7 +951,7 @@ class CollectionSurveysView(View):
         collection = get_object_or_404(Collection, id=collection_id)
         subcollections = Subcollection.objects.filter(collection=collection).order_by('name')
         return render(request, 'collection_subcollections.html',
-                      {'collecton': collection, 'subcollections': subcollections})
+                      {'collection': collection, 'subcollections': subcollections})
 
 
 def get_surveys_by_collections(request):
@@ -1019,7 +1057,7 @@ class CSVUploadViewCollection(FormView):
             # Conversion de survey_start_date en objet date (année uniquement)
             if survey_start_date:
                 try:
-                    survey_start_date = datetime.strptime(survey_start_date, '%Y').date()
+                    survey_start_date = datetime.strptime(survey_start_date, '%Y-%m-%d').date()
                 except ValueError:
                     raise ValueError(
                         f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}")
@@ -1052,3 +1090,14 @@ class CSVUploadViewCollection(FormView):
                 citation=survey_citation,
                 date_last_version=survey_date_last_version,
             )
+
+
+
+class SubcollectionSurveysView(View):
+    def get(self, request, subcollection_id):
+        subcollection = get_object_or_404(Subcollection, id=subcollection_id)
+        surveys = Survey.objects.filter(subcollection=subcollection).order_by('name')
+        return render(request, 'list_surveys.html', {
+            'subcollection': subcollection,
+            'surveys': surveys
+        })

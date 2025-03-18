@@ -3,20 +3,20 @@
 
 {% block content %}
     <div class="container mt-5">
-        <h1 class="text-center mb-4">Les sous-collections de {{ collection }}</h1>
+        <h1 class="text-center mb-4">Les enquêtes de la sous-collection {{ subcollection.name }}</h1>
         <div class="row">
-            {% for subcollection in subcollections %}
+            {% for survey in surveys %}
             <div class="col-12 col-md-6 d-flex justify-content-center mb-4">
-                <a href="{% url 'app:subcollection_surveys' subcollection.id %}" class="subcollection-card-link">
+                <a href="{% url 'app:search_results' %}?survey={{ survey.id }}" class="survey-card-link">
                     <div class="survey-card d-flex align-items-center">
-                        <div class="custom-survey-name">
-                            <h5>{{ subcollection.name }}</h5>
+                        <div class="survey-card-content pl-4 custom-survey-name">
+                            <h5>{{ survey.name }}</h5>
                         </div>
                     </div>
                 </a>
             </div>
             {% empty %}
-            <p class="text-center">Aucune sous-collection disponible pour cette collection.</p>
+            <p class="text-center">Aucune enquête disponible pour cette sous-collection.</p>
             {% endfor %}
         </div>
     </div>

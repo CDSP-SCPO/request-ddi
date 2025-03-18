@@ -16,6 +16,7 @@ class BindingSurveyDocument(Document):
         'name': fields.TextField(),
         'external_ref': fields.TextField(),
         'subcollection': fields.ObjectField(properties={
+            'id': fields.IntegerField(),
             'collection_id': fields.IntegerField()
         })
     })
