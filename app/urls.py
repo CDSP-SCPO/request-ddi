@@ -12,7 +12,7 @@ from .views import (
     check_media_root, create_distributor, export_page, get_distributor,
     get_surveys_by_collections, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions,
+    similar_representative_variable_questions, export_surveys_csv,
     SubcollectionSurveysView,
     get_subcollections_by_collections,
     get_surveys_by_subcollections,
@@ -50,6 +50,7 @@ urlpatterns = [
     path('api/get-subcollections-by-collections/', get_subcollections_by_collections, name='get_subcollections_by_collections'),
     path('api/get-surveys-by-subcollections/', get_surveys_by_subcollections, name='get_surveys_by_subcollections'),
 
+    path('export/surveys/', export_surveys_csv, name='export_surveys_csv'),
 ]
 
 if settings.DEBUG:

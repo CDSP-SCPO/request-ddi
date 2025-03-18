@@ -1101,3 +1101,26 @@ class SubcollectionSurveysView(View):
             'subcollection': subcollection,
             'surveys': surveys
         })
+        
+import csv
+from django.http import HttpResponse
+from .models import Collection, Subcollection, Survey
+
+def export_surveys_csv(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="surveys.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['External Ref', 'Name', 'Date Last Version', 'Language', 'Author', 'Producer', 'Start Date', 'Geographic Coverage', 'Geographic Unit', 'Unit of Analysis', 'Contact', 'Citation', 'Collection', 'Sous-collection'])
+
+    surveys = Survey.objects.all()
+    for survey in surveys:
+        collection_name = survey.subcollection.collection.name if survey.subcollection and survey.subcollection.collection else ''
+        subcollection_name = survey.subcollection.name if survey.subcollection else ''
+        writer.writerow([
+            survey.external_ref, survey.name, survey.date_last_version, survey.language, survey.author,
+            survey.producer, survey.start_date, survey.geographic_coverage, survey.geographic_unit,
+            survey.unit_of_analysis, survey.contact, survey.citation, collection_name, subcollection_name
+        ])
+
+    return response
