@@ -12,7 +12,10 @@ from .views import (
     check_media_root, create_distributor, export_page, get_distributor,
     get_surveys_by_collections, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions, export_surveys_csv
+    similar_representative_variable_questions, export_surveys_csv,
+    SubcollectionSurveysView,
+    get_subcollections_by_collections,
+    get_surveys_by_subcollections,
 )
 
 app_name = 'app'
@@ -34,13 +37,19 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('check-duplicates/', check_duplicates, name='check_duplicates'),
     path('check-media-root/', check_media_root),
-    path('collection/<int:collection_id>/surveys/', CollectionSurveysView.as_view(), name='collection_surveys'),
+    path('collection/<int:collection_id>/surveys/', CollectionSurveysView.as_view(), name='collection_subcollections'),
 
     path('api/get-surveys-by-collections/', get_surveys_by_collections, name='get_surveys_by_collections'),
     path('add-distributor/', create_distributor, name='create_distributor'),
     path('get-distributors/', get_distributor, name='get_distributor'),
 
     path('upload-csv-collection/', CSVUploadViewCollection.as_view(), name='upload_csv_collection'),
+
+    path('subcollection/<int:subcollection_id>/', SubcollectionSurveysView.as_view(), name='subcollection_surveys'),
+
+    path('api/get-subcollections-by-collections/', get_subcollections_by_collections, name='get_subcollections_by_collections'),
+    path('api/get-surveys-by-subcollections/', get_surveys_by_subcollections, name='get_surveys_by_subcollections'),
+
     path('export/surveys/', export_surveys_csv, name='export_surveys_csv'),
 ]
 
