@@ -57,14 +57,20 @@ class BaseUploadView(FormView):
 
     @transaction.atomic
     def form_valid(self, form):
+        self.errors = []  # Initialiser self.errors comme une liste vide
         data = self.get_data(form)
         question_datas = list(self.convert_data(data))
 
-        if hasattr(self, 'errors') and self.errors:
+        if self.errors:
             return self.form_invalid(form)
 
         try:
             num_records, num_new_surveys, num_new_variables, num_new_bindings = self.process_data(question_datas)
+
+            # Vérifier s'il y a des erreurs après l'appel à process_data
+            if self.errors:
+                return self.form_invalid(form)
+
             messages.success(self.request,
                              "Le fichier a été traité avec succès :<br/>"
                              "<ul>"
@@ -72,7 +78,7 @@ class BaseUploadView(FormView):
                              f"<li>{num_new_surveys} nouvelles enquêtes créées.</li>"
                              f"<li>{num_new_variables} nouvelles variables représentées créées.</li>"
                              "</ul>",
-                             extra_tags='safe')  # Assurez-vous que le HTML est interprété
+                             extra_tags='safe')
             return super().form_valid(form)
 
         except ValueError as ve:
@@ -345,47 +351,58 @@ class XMLUploadView(BaseUploadView):
         num_new_surveys = 0
         num_new_variables = 0
         num_new_bindings = 0
-        error_lines = []
+        error_files = []
 
-        for line_number, question_data in enumerate(question_datas, start=1):
+        # Utiliser un dictionnaire pour regrouper les données par DOI
+        data_by_doi = {}
+        for question_data in question_datas:
+            doi = question_data[0]
+            if doi not in data_by_doi:
+                data_by_doi[doi] = []
+            data_by_doi[doi].append(question_data)
+
+        for doi, questions in data_by_doi.items():
             try:
-                doi, variable_name, variable_label, question_text, category_label, universe, notes = question_data
-
                 # Créer ou récupérer l'enquête (Survey)
                 survey = Survey.objects.get(external_ref=doi)
+                print("survey", survey)
 
-                # Créer ou récupérer la variable représentée (RepresentedVariable)
-                represented_variable, created_variable = self.get_or_create_represented_variable(
-                    variable_name, question_text, category_label, variable_label
-                )
-                if created_variable:
-                    num_new_variables += 1
+                for question_data in questions:
+                    variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
 
-                # Créer ou récupérer la liaison (BindingSurveyRepresentedVariable)
-                _, created_binding = self.get_or_create_binding(
-                    survey, represented_variable, variable_name, universe, notes
-                )
-                if created_binding:
-                    num_new_bindings += 1
+                    # Créer ou récupérer la variable représentée (RepresentedVariable)
+                    represented_variable, created_variable = self.get_or_create_represented_variable(
+                        variable_name, question_text, category_label, variable_label
+                    )
+                    if created_variable:
+                        num_new_variables += 1
 
-                num_records += 1
+                    # Créer ou récupérer la liaison (BindingSurveyRepresentedVariable)
+                    _, created_binding = self.get_or_create_binding(
+                        survey, represented_variable, variable_name, universe, notes
+                    )
+                    if created_binding:
+                        num_new_bindings += 1
+
+                    num_records += 1
 
             except Survey.DoesNotExist:
-                error_message = f"Ligne {line_number}: DOI '{doi}' non trouvé dans la base de données."
-                print(error_message)
-                error_lines.append(error_message)
+                error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
+                print('OUIOUI', error_message)
+                error_files.append(error_message)
             except ValueError as ve:
-                error_message = f"Ligne {line_number}: Erreur de valeur : {ve}"
+                error_message = f"DOI '{doi}': Erreur de valeur : {ve}"
                 print(error_message)
-                error_lines.append(error_message)
+                error_files.append(error_message)
             except Exception as e:
-                error_message = f"Ligne {line_number}: Erreur inattendue : {e}"
+                error_message = f"DOI '{doi}': Erreur inattendue : {e}"
                 print(error_message)
-                error_lines.append(error_message)
+                error_files.append(error_message)
 
         # Si des erreurs ont été rencontrées, on les affiche
-        if error_lines:
-            error_summary = "<br/>".join(error_lines)
+        if error_files:
+            self.errors = error_files
+            error_summary = "<br/>".join(error_files)
             raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
