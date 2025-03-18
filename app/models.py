@@ -10,7 +10,7 @@ from .utils.normalize_string import normalize_string_for_comparison
 #     affiliation
 
 class Distributor(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=510)
 
     def __str__(self):
         return self.name
@@ -35,17 +35,17 @@ class Subcollection(models.Model):
 
 class Survey(models.Model):
     subcollection = models.ForeignKey(Subcollection, on_delete=models.CASCADE, null=True)
-    external_ref = models.CharField(max_length=255)
+    external_ref = models.CharField(max_length=255, unique=True)
     name = models.TextField()
     date_last_version = models.DateField(null=True, blank=True)
-    language = models.CharField(max_length=255, default="")
+    language = models.CharField(max_length=510, default="")
 
-    author = models.CharField(max_length=255, null=True, blank=True)
-    producer = models.CharField(max_length=255, null=True, blank=True)
+    author = models.CharField(max_length=510, null=True, blank=True)
+    producer = models.CharField(max_length=510, null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)
-    geographic_coverage = models.CharField(max_length=255, null=True, blank=True)
-    geographic_unit = models.CharField(max_length=255, null=True, blank=True)
-    unit_of_analysis = models.CharField(max_length=255, null=True, blank=True)
+    geographic_coverage = models.CharField(max_length=510, null=True, blank=True)
+    geographic_unit = models.CharField(max_length=510, null=True, blank=True)
+    unit_of_analysis = models.CharField(max_length=510, null=True, blank=True)
     contact = models.EmailField(null=True, blank=True)
     citation = models.TextField(null=True, blank=True)
 
@@ -85,7 +85,7 @@ class RepresentedVariable(models.Model):
 
     conceptual_var = models.ForeignKey(ConceptualVariable, on_delete=models.CASCADE)
     question_text = models.TextField(null=True)  # uniquement pour les questions, sinon a none
-    internal_label = models.CharField(null=True, max_length=255)  # init a variable_label le plus recent?
+    internal_label = models.CharField(null=True, max_length=510)  # init a variable_label le plus recent?
 
     categories = models.ManyToManyField(Category, related_name="variables")  # plutot faire une autre class ? (BindingCategory)
     type_categories = models.CharField(max_length=255, choices=(('code', 'code'), ('text', 'text'), ('numerical', 'numerical'), ('date', 'date')))
@@ -114,7 +114,7 @@ class BindingSurveyRepresentedVariable(models.Model):
 
 
 class Concept(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=510)
     description = models.TextField()
 
     def __str__(self):
