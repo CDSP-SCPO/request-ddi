@@ -1052,3 +1052,21 @@ class CSVUploadViewCollection(FormView):
                 citation=survey_citation,
                 date_last_version=survey_date_last_version,
             )
+
+
+import csv
+from django.http import HttpResponse
+from .models import Collection, Subcollection, Survey
+
+def export_surveys_csv(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="surveys.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['External Ref', 'Name', 'Date Last Version', 'Language', 'Author', 'Producer', 'Start Date', 'Geographic Coverage', 'Geographic Unit', 'Unit of Analysis', 'Contact', 'Citation'])
+
+    surveys = Survey.objects.all().values_list('external_ref', 'name', 'date_last_version', 'language', 'author', 'producer', 'start_date', 'geographic_coverage', 'geographic_unit', 'unit_of_analysis', 'contact', 'citation')
+    for survey in surveys:
+        writer.writerow(survey)
+
+    return response

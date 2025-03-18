@@ -12,7 +12,7 @@ from .views import (
     check_media_root, create_distributor, export_page, get_distributor,
     get_surveys_by_collections, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions,
+    similar_representative_variable_questions, export_surveys_csv
 )
 
 app_name = 'app'
@@ -41,6 +41,7 @@ urlpatterns = [
     path('get-distributors/', get_distributor, name='get_distributor'),
 
     path('upload-csv-collection/', CSVUploadViewCollection.as_view(), name='upload_csv_collection'),
+    path('export/surveys/', export_surveys_csv, name='export_surveys_csv'),
 ]
 
 if settings.DEBUG:
