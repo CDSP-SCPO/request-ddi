@@ -35,7 +35,7 @@ class Subcollection(models.Model):
 
 class Survey(models.Model):
     subcollection = models.ForeignKey(Subcollection, on_delete=models.CASCADE, null=True)
-    external_ref = models.CharField(max_length=255, unique=True)
+    external_ref = models.CharField(max_length=255)
     name = models.TextField()
     date_last_version = models.DateField(null=True, blank=True)
     language = models.CharField(max_length=255, default="")
