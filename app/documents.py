@@ -15,6 +15,7 @@ class BindingSurveyDocument(Document):
         'id': fields.IntegerField(),
         'name': fields.TextField(),
         'external_ref': fields.TextField(),
+        "start_date": fields.DateField(),
         'subcollection': fields.ObjectField(properties={
             'id': fields.IntegerField(),
             'collection_id': fields.IntegerField()
@@ -110,6 +111,7 @@ class BindingSurveyDocument(Document):
                 "id": instance.survey.id,
                 "name": instance.survey.name,
                 "external_ref": instance.survey.external_ref,
+                "start_date": instance.survey.start_date,
                 "subcollection": {
                     "id": instance.survey.subcollection.id if instance.survey.subcollection else None,
                     "collection_id": instance.survey.subcollection.collection.id if instance.survey.subcollection and instance.survey.subcollection.collection else None
@@ -119,7 +121,8 @@ class BindingSurveyDocument(Document):
                 "question_text": instance.variable.question_text,
                 "internal_label": instance.variable.internal_label,
                 "categories": categories
-            }
+            },
+            "is_question_text_empty": not bool(instance.variable.question_text.strip())
         }
 
 

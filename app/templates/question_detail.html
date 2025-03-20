@@ -6,7 +6,7 @@
     <h1>Détails de la Question</h1>
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">{{ question_represented_var.question_text|default:question_represented_var.internal_label }}</h5>
+            <h5 class="card-title">{{ question_represented_var.question_text }}</h5>
             <h6 class="card-subtitle mb-2 text-muted">
                 <span class="detail-label">Enquête:</span> {{ question_survey.name }}
                 {% if question_survey.dist_date %}
