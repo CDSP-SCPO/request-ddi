@@ -20,7 +20,10 @@
                 <span class="detail-label">Libellé de la variable:</span> {{ question_represented_var.internal_label }}
             </h6>
             <h6 class="card-subtitle mb-3 text-muted">
-                <span class="detail-label">DOI:</span> {{ question_survey.external_ref }}
+                <span class="detail-label">DOI:</span>
+                <a href="https://doi.org/{{ question_survey.external_ref }}" target="_blank">
+                    {{ question_survey.external_ref' }}
+                </a>
             </h6>
     
             {% if question.universe %}
