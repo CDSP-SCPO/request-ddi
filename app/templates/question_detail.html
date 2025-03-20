@@ -16,8 +16,11 @@
             <h6 class="card-subtitle mb-2 text-muted">
                 <span class="detail-label">Nom de la variable:</span> {{ question.variable_name }}
             </h6>
-            <h6 class="card-subtitle mb-3 text-muted">
+            <h6 class="card-subtitle mb-2 text-muted">
                 <span class="detail-label">Libellé de la variable:</span> {{ question_represented_var.internal_label }}
+            </h6>
+            <h6 class="card-subtitle mb-3 text-muted">
+                <span class="detail-label">DOI:</span> {{ question_survey.external_ref }}
             </h6>
     
             {% if question.universe %}
