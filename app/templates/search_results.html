@@ -8,31 +8,34 @@
     <form method="GET" action="{% url 'app:search_results' %}" class="search-bar form-inline mb-4">
         <div class="input-group mr-2">
             <input type="text" name="q" class="form-control" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
+            <div class="input-group-append">
+                <button class="input-group-text" type="submit">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+            </div>
         </div>
         <div class="input-group mr-2">
             <select name="collection" id="collections-filter" class="selectpicker form-control" multiple title="Collections">
                 {% for collection in collections %}
-                    <option value="{{ collection.id }}" {% if collection.id|stringformat:"s" in selected_collections %}selected{% endif %}>
+                    <option value="{{ collection.id }}" {% if collection.id|stringformat:"s" in request.session.selected_collection %}selected{% endif %}>
                         {{ collection.name }}
                     </option>
                 {% endfor %}
             </select>
         </div>
-
         <div class="input-group mr-2">
             <select name="subcollection" id="subcollections-filter" class="selectpicker form-control" multiple title="Sous-Collections">
                 {% for subcollection in subcollections %}
-                    <option value="{{ subcollection.id }}" {% if subcollection.id|stringformat:"s" in selected_subcollections %}selected{% endif %}>
+                    <option value="{{ subcollection.id }}" {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}selected{% endif %}>
                         {{ subcollection.name }}
                     </option>
                 {% endfor %}
             </select>
         </div>
-
         <div class="input-group mr-2">
             <select name="survey" id="survey-filter" class="selectpicker form-control" multiple title="Études">
                 {% for survey in surveys %}
-                    <option value="{{ survey.id }}" {% if survey.id|stringformat:"s" in selected_surveys %}selected{% endif %}>
+                    <option value="{{ survey.id }}" {% if survey.id|stringformat:"s" in request.session.selected_surveys %}selected{% endif %}>
                         {{ survey.name }}
                     </option>
                 {% endfor %}
@@ -40,13 +43,15 @@
         </div>
         <div class="input-group mr-2">
             <select name="search_location" id="search-location" class="form-select selectpicker">
-                <option value="questions" {% if search_location == 'questions' %}selected{% endif %}>Questions</option>
-                <option value="categories" {% if search_location == 'categories' %}selected{% endif %}>Modalités</option>
-                <option value="variable_name" {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la variable</option>
-                <option value="internal_label" {% if search_location == 'internal_label' %}selected{% endif %}>Libellé de la variable</option>
+                <option value="questions" {% if request.session.search_location == 'questions' %}selected{% endif %}>Questions</option>
+                <option value="categories" {% if request.session.search_location == 'categories' %}selected{% endif %}>Modalités</option>
+                <option value="variable_name" {% if request.session.search_location == 'variable_name' %}selected{% endif %}>Nom de la variable</option>
+                <option value="internal_label" {% if request.session.search_location == 'internal_label' %}selected{% endif %}>Libellé de la variable</option>
             </select>
         </div>
-        <button type="submit" class="btn btn-outline-primary mx-2"><i class="fa-solid fa-magnifying-glass pr-2"></i>Rechercher</button>
+        <div class="input-group mr-2">
+            <input type="text" id="date-range-picker" class="form-control" placeholder="Sélectionner une plage de dates" readonly>
+        </div>
     </form>
     <table id="survey-table" class="table table-striped table-bordered display" style="width:100%">
         <thead class="table-dark" style="display:none">
@@ -59,6 +64,7 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
 <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
 <style>
     .badge-category {
@@ -137,6 +143,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <meta name="autocomplete-url" content="{% url 'autocomplete' %}">
 <script src="{% static 'js/search_elastic.js' %}"></script>
 <script>
@@ -147,8 +155,49 @@ $(document).ready(function() {
     const subcollectionsFilter = document.getElementById('subcollections-filter');
     const surveysFilter = document.getElementById('survey-filter');
 
+
+    const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
+    const selectedSubCollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
+    const selectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
+
+    fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
+        .then(response => response.json())
+        .then(data => {
+            subcollectionsFilter.innerHTML = '';
+            data.subcollections.forEach(subcollection => {
+                const option = document.createElement('option');
+                option.value = subcollection.id;
+                option.text = subcollection.name;
+                if (selectedSubCollections.includes(option.value)) {
+                        option.selected = true;
+                    }
+                subcollectionsFilter.appendChild(option);
+            });
+            $('.selectpicker').selectpicker('refresh');
+        });
+
+
+    fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubCollections.join(',')}&collections_ids=${selectedCollections.join(',')}`)
+        .then(response => response.json())
+        .then(data => {
+            surveysFilter.innerHTML = '';
+            data.surveys.forEach(survey => {
+                const option = document.createElement('option');
+                option.value = survey.id;
+                option.text = survey.name;
+                if (selectedSurveys.includes(option.value)) {
+                    option.selected = true;
+                }
+                surveysFilter.appendChild(option);
+            });
+            $('.selectpicker').selectpicker('refresh');
+        });
+        
     collectionsFilter.addEventListener('change', function () {
         const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
+
+        const previouslySelectedSubCollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
+        const previouslySelectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
 
         fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
             .then(response => response.json())
@@ -158,6 +207,9 @@ $(document).ready(function() {
                     const option = document.createElement('option');
                     option.value = subcollection.id;
                     option.text = subcollection.name;
+                    if (previouslySelectedSubCollections.includes(option.value)) {
+                        option.selected = true;
+                    }
                     subcollectionsFilter.appendChild(option);
                 });
                 surveysFilter.innerHTML = '';
@@ -165,6 +217,9 @@ $(document).ready(function() {
                     const option = document.createElement('option');
                     option.value = survey.id;
                     option.text = survey.name;
+                    if (previouslySelectedSurveys.includes(option.value)) {
+                        option.selected = true;
+                    }
                     surveysFilter.appendChild(option);
                 });
                 $('.selectpicker').selectpicker('refresh');
@@ -180,6 +235,8 @@ $(document).ready(function() {
         const selectedSubcollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
         const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
 
+        const previouslySelectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
+
         fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubcollections.join(',')}&collections_ids=${selectedCollections.join(',')}`)
             .then(response => response.json())
             .then(data => {
@@ -188,6 +245,9 @@ $(document).ready(function() {
                     const option = document.createElement('option');
                     option.value = survey.id;
                     option.text = survey.name;
+                    if (previouslySelectedSurveys.includes(option.value)) {
+                        option.selected = true;
+                    }
                     surveysFilter.appendChild(option);
                 });
                 $('.selectpicker').selectpicker('refresh');
@@ -235,6 +295,21 @@ $(document).ready(function() {
         return $('#subcollections-filter').val() || [];
     }
 
+    function getDateRange() {
+        var dateRange = $('#date-range-picker').val();
+        if (dateRange) {
+            var dates = dateRange.split(' - ');
+            return {
+                startDate: dates[0],
+                endDate: dates[1]
+            };
+        }
+        return {
+            startDate: null,
+            endDate: null
+        };
+    }
+
     function getSearchLocation() {
         return $('#search-location').val() || 'questions';
     }
@@ -269,6 +344,11 @@ $(document).ready(function() {
                 d.collections = getCollectionFilter();
                 d.sub_collections = getSubCollectionFilter();
                 d.search_location = getSearchLocation();
+                var dateRange = getDateRange();
+                if (dateRange.startDate && dateRange.endDate) {
+                    d.startDate = dateRange.startDate;
+                    d.endDate = dateRange.endDate;
+                }
             },
             "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },
         },
@@ -317,6 +397,22 @@ $(document).ready(function() {
     $('#survey-filter').on('change', function() {
         $('#survey-table').DataTable().ajax.reload();
     });
+
+    $('#date-range-picker').daterangepicker({
+        locale: {
+            format: 'DD/MM/YYYY'
+        },
+        opens: 'left',
+        autoUpdateInput: false,
+        showDropdowns: true,
+        linkedCalendars: false,
+    }).on('apply.daterangepicker', function(ev, picker) {
+        $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+        $('#survey-table').DataTable().ajax.reload();
+    }).on('cancel.daterangepicker', function(ev, picker) {
+        $(this).val('');
+        $('#survey-table').DataTable().ajax.reload();
+    });
 });
 
 
@@ -332,5 +428,28 @@ function toggleCategories(categoryId) {
         categoriesDiv.style.display = "none"; // Cache la liste
     }
 }
+
+document.querySelector('form').addEventListener('submit', function(event) {
+    // Récupérer les valeurs des filtres
+    const selectedSurveys = Array.from(document.querySelector('#survey-filter').selectedOptions).map(option => option.value);
+    const selectedSubCollections = Array.from(document.querySelector('#subcollections-filter').selectedOptions).map(option => option.value);
+    const selectedCollections = Array.from(document.querySelector('#collections-filter').selectedOptions).map(option => option.value);
+    const searchLocation = document.querySelector('#search-location').value;
+    
+
+    // Stocker les valeurs dans le localStorage
+    localStorage.setItem('selectedSurveys', JSON.stringify(selectedSurveys));
+    localStorage.setItem('selectedSubCollections', JSON.stringify(selectedSubCollections));
+    localStorage.setItem('selectedCollections', JSON.stringify(selectedCollections));
+    localStorage.setItem('searchLocation', searchLocation);
+
+    // Déclencher l'événement change sur collectionsFilter pour mettre à jour les sous-collections et les études
+    const collectionsFilter = document.getElementById('collections-filter');
+    const changeEvent = new Event('change', { bubbles: true });
+    collectionsFilter.dispatchEvent(changeEvent);
+    
+    // Permettre la soumission du formulaire
+    return true;
+});
 </script>
 {% endblock %}

@@ -430,15 +430,28 @@ class RepresentedVariableSearchView(ListView):
 
 def search_results(request):
     selected_surveys = request.GET.getlist('survey')
-    selected_sub_collection = request.GET.getlist('sub_collection')
+    selected_sub_collection = request.GET.getlist('subcollection')
     selected_collection = request.GET.getlist('collection')
-
+    search_location = request.GET.get('search_location', 'questions')
+    request.session['selected_surveys'] = selected_surveys
+    request.session['selected_sub_collection'] = selected_sub_collection
+    request.session['selected_collection'] = selected_collection
+    request.session['search_location'] = search_location
 
     collections = Collection.objects.all().order_by("name")
     subcollections = Subcollection.objects.all().order_by("name")
     surveys = Survey.objects.all().order_by("name")
+
     search_location = request.GET.get('search_location', 'questions')
-    context = locals()
+    context = {
+        'collections': collections,
+        'subcollections': subcollections,
+        'surveys': surveys,
+        'search_location': search_location,
+        'selected_surveys': selected_surveys,
+        'selected_sub_collection': selected_sub_collection,
+        'selected_collection': selected_collection,
+    }
     return render(request, 'search_results.html', context)
 
 def get_subcollections_by_collections(request):
@@ -495,6 +508,10 @@ class SearchResultsDataView(ListView):
         survey_filter = self.request.GET.getlist('survey[]', None)
         subcollection_filter = self.request.GET.getlist('sub_collections[]', None)
         collections_filter = self.request.GET.getlist('collections[]', None)
+        start_date = self.request.GET.get('startDate')
+        end_date = self.request.GET.get('endDate')
+
+
 
         # Convertir le filtre en liste d'entiers
         survey_filter = [int(survey_id) for survey_id in survey_filter if survey_id.isdigit()]
@@ -503,6 +520,8 @@ class SearchResultsDataView(ListView):
 
         # Configuration de la recherche Elasticsearch
         search = BindingSurveyDocument.search()
+        
+        search = search.filter('term', is_question_text_empty=False)
 
         # Appliquer les filtres de recherche en fonction de `search_location`
         if search_value:
@@ -524,6 +543,17 @@ class SearchResultsDataView(ListView):
         elif collections_filter:
             search = search.filter('terms', **{"survey.subcollection.collection_id": collections_filter})
 
+        if start_date and end_date:
+            start_date = datetime.strptime(start_date, '%d/%m/%Y')
+            end_date = datetime.strptime(end_date, '%d/%m/%Y')
+            date_range_query = Q('range', **{
+                'survey.start_date': {
+                    'gte': start_date,
+                    'lte': end_date
+                }
+            })
+            no_start_date_query = Q('term', has_start_date=False)
+            search = search.query('bool', should=[date_range_query, no_start_date_query], minimum_should_match=1)
 
         # Pagination (start et length) depuis DataTables
         start = int(self.request.GET.get('start', 0))
@@ -637,8 +667,8 @@ class SearchResultsDataView(ListView):
     def get(self, request, *args, **kwargs):
         response = self.get_queryset()
 
-        # Total records pour DataTables
-        total_records = BindingSurveyDocument.search().count()
+        # Total records pour DataTables, le total_record correspond à toutes les variables, auxquelles on a enlevé celles sans question_text
+        total_records = BindingSurveyDocument.search().filter('term', is_question_text_empty=False).count()
         filtered_records = response.hits.total.value
 
         # Formater les données pour DataTables
