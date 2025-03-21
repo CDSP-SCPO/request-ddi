@@ -363,11 +363,14 @@ class XMLUploadView(BaseUploadView):
 
         for doi, questions in data_by_doi.items():
             try:
+                print(f"Traitement du DOI: {doi}")
                 # Créer ou récupérer l'enquête (Survey)
                 survey = Survey.objects.get(external_ref=doi)
+                print(f"Enquête trouvée: {survey}")
 
                 for question_data in questions:
                     variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
+                    print(f"Traitement de la question: {variable_name}, {question_text}")
 
                     # Créer ou récupérer la variable représentée (RepresentedVariable)
                     represented_variable, created_variable = self.get_or_create_represented_variable(
@@ -375,25 +378,34 @@ class XMLUploadView(BaseUploadView):
                     )
                     if created_variable:
                         num_new_variables += 1
+                        print(f"Nouvelle variable représentée créée: {represented_variable}")
 
                     # Créer ou récupérer la liaison (BindingSurveyRepresentedVariable)
-                    _, created_binding = self.get_or_create_binding(
-                        survey, represented_variable, variable_name, universe, notes
-                    )
-                    if created_binding:
-                        num_new_bindings += 1
+                    try:
+                        binding, created_binding = self.get_or_create_binding(
+                            survey, represented_variable, variable_name, universe, notes
+                        )
+                        if created_binding:
+                            num_new_bindings += 1
+                            print(f"Nouvelle liaison créée: {binding}")
+                    except Exception as e:
+                        print(f"Erreur lors de la création de la liaison: {e}")
+                        raise
 
                     num_records += 1
 
             except Survey.DoesNotExist:
                 error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
                 error_files.append(error_message)
+                print(error_message)
             except ValueError as ve:
                 error_message = f"DOI '{doi}': Erreur de valeur : {ve}"
                 error_files.append(error_message)
+                print(error_message)
             except Exception as e:
                 error_message = f"DOI '{doi}': Erreur inattendue : {e}"
                 error_files.append(error_message)
+                print(error_message)
 
         # Si des erreurs ont été rencontrées, on les affiche
         if error_files:
