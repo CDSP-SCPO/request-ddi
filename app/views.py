@@ -138,15 +138,25 @@ class BaseUploadView(FormView):
         pass
 
     def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
-        binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
-            variable_name=variable_name,
-            defaults={
-                'survey': survey,
-                'variable': represented_variable,
-                'universe': universe,
-                'notes': notes,
-            }
-        )
+        try:
+            binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
+                variable_name=variable_name,
+                defaults={
+                    'survey': survey,
+                    'variable': represented_variable,
+                    'universe': universe,
+                    'notes': notes,
+                }
+            )
+        except BindingSurveyRepresentedVariable.MultipleObjectsReturned:
+            bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name)
+            if all(binding.variable == represented_variable for binding in bindings):
+                binding = bindings.first()
+                created = False
+            else:
+                raise ValueError(
+                    "Multiple bindings found with the same variable_name but different represented_variable.")
+
         if not created:
             # Mise à jour des champs de la liaison si elle existe déjà
             binding.survey = survey
