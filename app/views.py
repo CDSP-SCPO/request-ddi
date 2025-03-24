@@ -381,7 +381,6 @@ class XMLUploadView(BaseUploadView):
 
                 for question_data in questions:
                     variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
-                    print(f"Traitement de la question: {variable_name}, {question_text}")
 
                     # Créer ou récupérer la variable représentée (RepresentedVariable)
                     represented_variable, created_variable = self.get_or_create_represented_variable(
@@ -389,7 +388,6 @@ class XMLUploadView(BaseUploadView):
                     )
                     if created_variable:
                         num_new_variables += 1
-                        print(f"Nouvelle variable représentée créée: {represented_variable}")
 
                     # Créer ou récupérer la liaison (BindingSurveyRepresentedVariable)
                     try:
@@ -778,7 +776,7 @@ class ExportQuestionsCSVView(View):
         questions = BindingSurveyRepresentedVariable.objects.all()
 
         if selected_collections:
-            questions = questions.filter(survey__collection__id__in=selected_collections)
+            questions = questions.filter(survey__subcollection__collection__id__in=selected_collections)
         if selected_surveys:
             questions = questions.filter(survey__id__in=selected_surveys)
 
