@@ -141,6 +141,7 @@ class BaseUploadView(FormView):
         try:
             binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
                 variable_name=variable_name,
+                variable = represented_variable,
                 defaults={
                     'survey': survey,
                     'variable': represented_variable,
