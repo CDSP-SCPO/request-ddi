@@ -15,6 +15,8 @@ from django.db import IntegrityError, transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from html import unescape
+
 # views.py
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -475,22 +477,25 @@ def search_results(request):
     }
     return render(request, 'search_results.html', context)
 
+
 def get_subcollections_by_collections(request):
     collection_ids = request.GET.get('collections_ids', '').split(',')
     collection_ids = [id for id in collection_ids if id]
-    if not collection_ids:
-        subcollections = Subcollection.objects.all()
-        surveys = Survey.objects.all()
-    else:
 
-        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids)
-        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
+    if not collection_ids:
+        subcollections = Subcollection.objects.all().order_by('name')
+        surveys = Survey.objects.all().order_by('name')
+    else:
+        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids).order_by('name')
+        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
+
     data = {
         'subcollections': [{'id': sc.id, 'name': sc.name} for sc in subcollections],
         'surveys': [{'id': s.id, 'name': s.name} for s in surveys],
     }
 
     return JsonResponse(data)
+
 
 def get_surveys_by_subcollections(request):
     subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
@@ -501,11 +506,12 @@ def get_surveys_by_subcollections(request):
         collection_ids = [id for id in collection_ids if id]
 
         if collection_ids:
-            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
+            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
         else:
-            surveys = Survey.objects.all()
+            surveys = Survey.objects.all().order_by('name')
     else:
-        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids)
+        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids).order_by('name')
+
     data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
     return JsonResponse(data)
 
@@ -525,6 +531,9 @@ class SearchResultsDataView(ListView):
 
     def get_queryset(self):
         search_value = self.request.GET.get('q', '').strip().lower()
+        search_value = unescape(search_value)
+
+        print("search_value", search_value)
         search_location = self.request.GET.get('search_location', 'questions')
         survey_filter = self.request.GET.getlist('survey[]', None)
         subcollection_filter = self.request.GET.getlist('sub_collections[]', None)
