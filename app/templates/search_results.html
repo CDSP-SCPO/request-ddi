@@ -326,73 +326,76 @@ $(document).ready(function() {
     });
     $('.selectpicker').selectpicker('refresh');
 
-    $('#survey-table').DataTable({
-        "ordering": false,
-        "dom": '<"top"i>rt<"bottom"lp><"clear">',
-        'order': [[0, 'desc']],
-        "lengthMenu": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"] ],
-        "processing": true,
-        "serverSide": true,
-        "pagingType": "full_numbers",
-        "ajax": {
-            "url": "{% url 'app:search_results_data' %}",
-            "type": "GET",
-            "async": true,
-            "data": function(d) {
-                d.q = "{{ request.GET.q }}";
-                d.survey = getSurveyFilter();
-                d.collections = getCollectionFilter();
-                d.sub_collections = getSubCollectionFilter();
-                d.search_location = getSearchLocation();
-                var dateRange = getDateRange();
-                if (dateRange.startDate && dateRange.endDate) {
-                    d.startDate = dateRange.startDate;
-                    d.endDate = dateRange.endDate;
-                }
-            },
-            "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },
-        },
-        "columns": [
-        {
-                "data": "id",  
-                "render": function (data, type, row) {
-                    var url = '/question/' + row.id + '/';
-                    var categoriesDisplay = row.categories.map(function(category) {
-                        return `${category}`;
-                    }).join("<br>");
-                    return `
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <a class="custom-name-card" href="` + url + `">` + (row.question_text || row.internal_label) + `</a>
-                            </h5>
-                            <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Libellé de la variable : ` + row.internal_label + `</h6>
-                                                 <!-- Bouton pour afficher les catégories -->
-                            <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Modalités</button>
-                            
-                            <!-- Liste des catégories, affichée directement si is_category_search est True -->
-                            <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">
-                                ` + categoriesDisplay + `
-                            </div>
-                        </div>
-                    </div>`;
-                }
-            },
-        ],
-        "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
-            "processing": "",
-            "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
-            "paginate": {
-                "first": "Première",
-                "last": "Dernière",
-                "next": "Suivante",
-                "previous": "Précédente"
+
+$('#survey-table').DataTable({
+    "ordering": false,
+    "dom": '<"top"i>rt<"bottom"lp><"clear">',
+    'order': [[0, 'desc']],
+    "lengthMenu": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"] ],
+    "processing": true,
+    "serverSide": true,
+    "pagingType": "full_numbers",
+    "ajax": {
+        "url": "{% url 'app:search_results_data' %}",
+        "type": "GET",
+        "async": true,
+        "data": function(d) {
+            d.q = "{{ request.GET.q }}";
+            d.survey = getSurveyFilter();
+            d.collections = getCollectionFilter();
+            d.sub_collections = getSubCollectionFilter();
+            d.search_location = getSearchLocation();
+            var dateRange = getDateRange();
+            if (dateRange.startDate && dateRange.endDate) {
+                d.startDate = dateRange.startDate;
+                d.endDate = dateRange.endDate;
             }
+            console.log('Data sent:', d); // Log des données envoyées
+        },
+        "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },
+        "error": function(jqXHR, textStatus, errorThrown) {
+            console.error('DataTables AJAX Error:', textStatus, errorThrown);
+            alert('Une erreur est survenue lors du chargement des données : ' + textStatus);
         }
-    });
+    },
+    "columns": [
+        {
+            "data": "id",
+            "render": function (data, type, row) {
+                var url = '/question/' + row.id + '/';
+                var categoriesDisplay = row.categories.map(function(category) {
+                    return `${category}`;
+                }).join("<br>");
+                return `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a class="custom-name-card" href="` + url + `">` + (row.question_text || row.internal_label) + `</a>
+                        </h5>
+                        <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
+                        <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
+                        <h6 class="card-subtitle mb-2 text-muted">Libellé de la variable : ` + row.internal_label + `</h6>
+                        <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Modalités</button>
+                        <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">
+                            ` + categoriesDisplay + `
+                        </div>
+                    </div>
+                </div>`;
+            }
+        },
+    ],
+    "language": {
+        "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
+        "processing": "",
+        "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
+        "paginate": {
+            "first": "Première",
+            "last": "Dernière",
+            "next": "Suivante",
+            "previous": "Précédente"
+        }
+    }
+});
 
     $('#survey-filter').on('change', function() {
         $('#survey-table').DataTable().ajax.reload();
