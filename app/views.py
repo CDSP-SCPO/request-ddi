@@ -143,6 +143,7 @@ class BaseUploadView(FormView):
         try:
             binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
                 variable_name=variable_name,
+                survey=survey,
                 variable = represented_variable,
                 defaults={
                     'survey': survey,
@@ -533,7 +534,6 @@ class SearchResultsDataView(ListView):
         search_value = self.request.GET.get('q', '').strip().lower()
         search_value = unescape(search_value)
 
-        print("search_value", search_value)
         search_location = self.request.GET.get('search_location', 'questions')
         survey_filter = self.request.GET.getlist('survey[]', None)
         subcollection_filter = self.request.GET.getlist('sub_collections[]', None)
@@ -550,12 +550,14 @@ class SearchResultsDataView(ListView):
 
         # Configuration de la recherche Elasticsearch
         search = BindingSurveyDocument.search()
+        print("search", search)
         
         search = search.filter('term', is_question_text_empty=False)
 
         # Appliquer les filtres de recherche en fonction de `search_location`
         if search_value:
             search = self.apply_search_filters(search, search_value, search_location)
+            print("search2", search)
 
         # Appliquer le surlignage
         search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"],
@@ -591,7 +593,9 @@ class SearchResultsDataView(ListView):
         if length == -1:
             length = search.count()
 
-        return search[start:start + length].execute()
+        x = search[start:start + length].execute()
+        print("xxxxx", x)
+        return x
 
     def apply_search_filters(self, search, search_value, search_location):
         """Applique des filtres de recherche en fonction du `search_location`."""
@@ -599,9 +603,8 @@ class SearchResultsDataView(ListView):
             search = search.query(
                 'bool',
                 should=[
-                    {"term": {"variable.question_text.keyword": {"value": search_value, "boost": 10}}},
-                    {"match_phrase": {"variable.question_text": {"query": search_value, "boost": 5}}},
-                    {"match_phrase_prefix": {"variable.question_text": {"query": search_value, "boost": 1}}}
+                    {"match_phrase_prefix": {"variable.question_text": {"query": search_value, "boost": 10}}},
+                    {"match": {"variable.question_text": {"query": search_value, "operator": "and", "boost": 5}}}
                 ],
                 minimum_should_match=1
             )
@@ -609,10 +612,10 @@ class SearchResultsDataView(ListView):
             search = search.query('nested', path='variable.categories', query={
                 'bool': {
                     'should': [
-                        {"term": {"variable.categories.category_label.keyword": {"value": search_value, "boost": 10}}},
-                        {"match_phrase": {"variable.categories.category_label": {"query": search_value, "boost": 5}}},
                         {"match_phrase_prefix": {
-                            "variable.categories.category_label": {"query": search_value, "boost": 1}}}
+                            "variable.categories.category_label": {"query": search_value, "boost": 10}}},
+                        {"match": {"variable.categories.category_label": {"query": search_value, "operator": "and",
+                                                                          "boost": 5}}}
                     ],
                     "minimum_should_match": 1
                 }
@@ -621,9 +624,8 @@ class SearchResultsDataView(ListView):
             search = search.query(
                 'bool',
                 should=[
-                    {"term": {"variable_name.keyword": {"value": search_value, "boost": 10}}},
-                    {"match_phrase": {"variable_name": {"query": search_value, "boost": 5}}},
-                    {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 1}}}
+                    {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 10}}},
+                    {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
                 ],
                 minimum_should_match=1
             )
@@ -631,9 +633,8 @@ class SearchResultsDataView(ListView):
             search = search.query(
                 'bool',
                 should=[
-                    {"term": {"variable.internal_label.keyword": {"value": search_value, "boost": 10}}},
-                    {"match_phrase": {"variable.internal_label": {"query": search_value, "boost": 5}}},
-                    {"match_phrase_prefix": {"variable.internal_label": {"query": search_value, "boost": 1}}}
+                    {"match_phrase_prefix": {"variable.internal_label": {"query": search_value, "boost": 10}}},
+                    {"match": {"variable.internal_label": {"query": search_value, "operator": "and", "boost": 5}}}
                 ],
                 minimum_should_match=1
             )
@@ -764,7 +765,7 @@ def autocomplete(request):
                     if text not in seen:
                         seen.add(text)
                         suggestions.append(text)
-
+    print("suggestions", suggestions)
     return JsonResponse({"suggestions": suggestions})
 
 
@@ -1018,9 +1019,9 @@ def get_surveys_by_collections(request):
     collections_ids = request.GET.get('collections_ids')
     if collections_ids:
         collections_ids = [int(id) for id in collections_ids.split(',')]
-        surveys = Survey.objects.filter(subcollection__collection__id__in=collections_ids)
+        surveys = Survey.objects.filter(subcollection__collection__id__in=collections_ids).order_by('name')
     else:
-        surveys = Survey.objects.all()
+        surveys = Survey.objects.all().order_by('name')
 
     surveys_data = [{'id': survey.id, 'name': survey.name} for survey in surveys]
     return JsonResponse({'surveys': surveys_data})
