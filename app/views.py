@@ -550,18 +550,16 @@ class SearchResultsDataView(ListView):
 
         # Configuration de la recherche Elasticsearch
         search = BindingSurveyDocument.search()
-        print("search", search)
-        
+
         search = search.filter('term', is_question_text_empty=False)
 
         # Appliquer les filtres de recherche en fonction de `search_location`
         if search_value:
             search = self.apply_search_filters(search, search_value, search_location)
-            print("search2", search)
 
         # Appliquer le surlignage
         search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"],
-                                          post_tags=["</mark>"]) \
+                                          post_tags=["</mark>"], number_of_fragments=0, fragment_size=10000) \
             .highlight('variable.question_text', fragment_size=10000) \
             .highlight('variable.categories.category_label', fragment_size=10000) \
             .highlight('variable_name', fragment_size=10000) \
@@ -593,9 +591,7 @@ class SearchResultsDataView(ListView):
         if length == -1:
             length = search.count()
 
-        x = search[start:start + length].execute()
-        print("xxxxx", x)
-        return x
+        return search[start:start + length].execute()
 
     def apply_search_filters(self, search, search_value, search_location):
         """Applique des filtres de recherche en fonction du `search_location`."""
@@ -765,7 +761,6 @@ def autocomplete(request):
                     if text not in seen:
                         seen.add(text)
                         suggestions.append(text)
-    print("suggestions", suggestions)
     return JsonResponse({"suggestions": suggestions})
 
 
