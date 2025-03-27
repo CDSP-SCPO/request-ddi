@@ -526,38 +526,35 @@ def apply_highlight(full_text, highlights):
 
 
 class SearchResultsDataView(ListView):
-    model = BindingSurveyDocument  # Juste à titre indicatif, sans effet direct ici
+    model = BindingSurveyDocument
     context_object_name = 'results'
-    paginate_by = 10  # Par défaut
+    paginate_by = 10
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
     def get_queryset(self):
-        search_value = self.request.GET.get('q', '').strip().lower()
+        search_value = self.request.POST.get('q', '').strip().lower()
         search_value = unescape(search_value)
 
-        search_location = self.request.GET.get('search_location', 'questions')
-        survey_filter = self.request.GET.getlist('survey[]', None)
-        subcollection_filter = self.request.GET.getlist('sub_collections[]', None)
-        collections_filter = self.request.GET.getlist('collections[]', None)
-        start_date = self.request.GET.get('startDate')
-        end_date = self.request.GET.get('endDate')
+        search_location = self.request.POST.get('search_location', 'questions')
+        survey_filter = self.request.POST.getlist('survey[]', None)
+        subcollection_filter = self.request.POST.getlist('sub_collections[]', None)
+        collections_filter = self.request.POST.getlist('collections[]', None)
+        start_date = self.request.POST.get('startDate')
+        end_date = self.request.POST.get('endDate')
 
-
-
-        # Convertir le filtre en liste d'entiers
         survey_filter = [int(survey_id) for survey_id in survey_filter if survey_id.isdigit()]
         subcollection_filter = [int(subcollection_id) for subcollection_id in subcollection_filter if subcollection_id.isdigit()]
         collections_filter = [int(collection_id) for collection_id in collections_filter if collection_id.isdigit()]
 
-        # Configuration de la recherche Elasticsearch
         search = BindingSurveyDocument.search()
-
         search = search.filter('term', is_question_text_empty=False)
 
-        # Appliquer les filtres de recherche en fonction de `search_location`
         if search_value:
             search = self.apply_search_filters(search, search_value, search_location)
 
-        # Appliquer le surlignage
         search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"],
                                           post_tags=["</mark>"], number_of_fragments=0, fragment_size=10000) \
             .highlight('variable.question_text', fragment_size=10000) \
@@ -565,7 +562,6 @@ class SearchResultsDataView(ListView):
             .highlight('variable_name', fragment_size=10000) \
             .highlight('variable.internal_label', fragment_size=10000)
 
-        # Appliquer le filtre par étude
         if survey_filter:
             search = search.filter('terms', **{"survey.id": survey_filter})
         elif subcollection_filter:
@@ -585,16 +581,14 @@ class SearchResultsDataView(ListView):
             no_start_date_query = Q('term', has_start_date=False)
             search = search.query('bool', should=[date_range_query, no_start_date_query], minimum_should_match=1)
 
-        # Pagination (start et length) depuis DataTables
-        start = int(self.request.GET.get('start', 0))
-        length = int(self.request.GET.get('length', self.paginate_by))
+        start = int(self.request.POST.get('start', 0))
+        length = int(self.request.POST.get('length', self.paginate_by))
         if length == -1:
             length = search.count()
 
         return search[start:start + length].execute()
 
     def apply_search_filters(self, search, search_value, search_location):
-        """Applique des filtres de recherche en fonction du `search_location`."""
         if search_location == 'questions':
             search = search.query(
                 'bool',
@@ -637,14 +631,12 @@ class SearchResultsDataView(ListView):
         return search
 
     def format_search_results(self, response, search_location):
-        """Formate les résultats de la recherche pour DataTables."""
         data = []
         is_category_search = search_location == 'categories'
 
         for result in response.hits:
             original_question = getattr(result.variable, 'question_text', "N/A")
 
-            # Logique de surlignage
             highlighted_question = (
                 result.meta.highlight['variable.question_text'][0]
                 if hasattr(result.meta, 'highlight') and 'variable.question_text' in result.meta.highlight
@@ -652,10 +644,9 @@ class SearchResultsDataView(ListView):
             )
 
             category_matched = None
-            all_clean_categories = []  # Initialisation de full_cat
+            all_clean_categories = []
             sorted_categories = sorted(result.variable.categories,
                                        key=lambda cat: int(cat.code) if cat.code.isdigit() else cat.code)
-            # Récupérer la catégorie correspondante
             if search_location == 'categories' and hasattr(result.meta, 'highlight'):
                 if 'variable.categories.category_label' in result.meta.highlight:
                     category_highlight = result.meta.highlight['variable.categories.category_label']
@@ -678,7 +669,6 @@ class SearchResultsDataView(ListView):
             if search_location == 'internal_label' and hasattr(result.meta,
                                                                'highlight') and 'variable.internal_label' in result.meta.highlight:
                 internal_label = result.meta.highlight['variable.internal_label'][0]
-            # Collecte des données formatées
             data.append({
                 "id": result.meta.id,
                 "variable_name": variable_name,
@@ -691,20 +681,18 @@ class SearchResultsDataView(ListView):
             })
         return data
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         response = self.get_queryset()
 
-        # Total records pour DataTables, le total_record correspond à toutes les variables, auxquelles on a enlevé celles sans question_text
         total_records = BindingSurveyDocument.search().filter('term', is_question_text_empty=False).count()
         filtered_records = response.hits.total.value
 
-        # Formater les données pour DataTables
-        data = self.format_search_results(response, request.GET.get('search_location', 'questions'))
+        data = self.format_search_results(response, request.POST.get('search_location', 'questions'))
 
         return JsonResponse({
             "recordsTotal": total_records,
             "recordsFiltered": filtered_records,
-            "draw": int(request.GET.get('draw', 1)),
+            "draw": int(request.POST.get('draw', 1)),
             "data": data
         })
 
