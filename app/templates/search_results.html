@@ -2,371 +2,406 @@
 {% load static %}
 
 {% block content %}
-<div class="container mt-4">
-    
-    <h1 class="mb-4">Résultats de la recherche</h1>
-    <form method="GET" action="{% url 'app:search_results' %}" class="search-bar form-inline mb-4">
-        <div class="input-group mr-2">
-            <input type="text" name="q" class="form-control" placeholder="Rechercher une question..." value="{{ request.GET.q }}" id="autocomplete-input">
-            <div class="input-group-append">
-                <button class="input-group-text" type="submit">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
+    <div class="container mt-4">
+
+        <h1 class="mb-4">Résultats de la recherche</h1>
+        <form method="GET" action="{% url 'app:search_results' %}" class="search-bar form-inline mb-4">
+            <div class="input-group mr-2">
+                <input type="text" name="q" class="form-control" placeholder="Rechercher une question..."
+                       value="{{ request.GET.q }}" id="autocomplete-input">
+                <div class="input-group-append">
+                    <button class="input-group-text" type="submit">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
             </div>
-        </div>
-        <div class="input-group mr-2">
-            <select name="collection" id="collections-filter" class="selectpicker form-control" multiple title="Collections">
-                {% for collection in collections %}
-                    <option value="{{ collection.id }}" {% if collection.id|stringformat:"s" in request.session.selected_collection %}selected{% endif %}>
-                        {{ collection.name }}
+            <div class="input-group mr-2">
+                <select name="collection" id="collections-filter" class="selectpicker form-control" multiple
+                        title="Collections">
+                    {% for collection in collections %}
+                        <option value="{{ collection.id }}"
+                                {% if collection.id|stringformat:"s" in request.session.selected_collection %}selected{% endif %}>
+                            {{ collection.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="input-group mr-2">
+                <select name="subcollection" id="subcollections-filter" class="selectpicker form-control" multiple
+                        title="Sous-Collections">
+                    {% for subcollection in subcollections %}
+                        <option value="{{ subcollection.id }}"
+                                {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}selected{% endif %}>
+                            {{ subcollection.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="input-group mr-2">
+                <select name="survey" id="survey-filter" class="selectpicker form-control" multiple title="Études">
+                    {% for survey in surveys %}
+                        <option value="{{ survey.id }}"
+                                {% if survey.id|stringformat:"s" in request.session.selected_surveys %}selected{% endif %}>
+                            {{ survey.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="input-group mr-2">
+                <select name="search_location" id="search-location" class="form-select selectpicker">
+                    <option value="questions"
+                            {% if request.session.search_location == 'questions' %}selected{% endif %}>Questions
                     </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="input-group mr-2">
-            <select name="subcollection" id="subcollections-filter" class="selectpicker form-control" multiple title="Sous-Collections">
-                {% for subcollection in subcollections %}
-                    <option value="{{ subcollection.id }}" {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}selected{% endif %}>
-                        {{ subcollection.name }}
+                    <option value="categories"
+                            {% if request.session.search_location == 'categories' %}selected{% endif %}>Modalités
                     </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="input-group mr-2">
-            <select name="survey" id="survey-filter" class="selectpicker form-control" multiple title="Études">
-                {% for survey in surveys %}
-                    <option value="{{ survey.id }}" {% if survey.id|stringformat:"s" in request.session.selected_surveys %}selected{% endif %}>
-                        {{ survey.name }}
+                    <option value="variable_name"
+                            {% if request.session.search_location == 'variable_name' %}selected{% endif %}>Nom de la
+                        variable
                     </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="input-group mr-2">
-            <select name="search_location" id="search-location" class="form-select selectpicker">
-                <option value="questions" {% if request.session.search_location == 'questions' %}selected{% endif %}>Questions</option>
-                <option value="categories" {% if request.session.search_location == 'categories' %}selected{% endif %}>Modalités</option>
-                <option value="variable_name" {% if request.session.search_location == 'variable_name' %}selected{% endif %}>Nom de la variable</option>
-                <option value="internal_label" {% if request.session.search_location == 'internal_label' %}selected{% endif %}>Libellé de la variable</option>
-            </select>
-        </div>
-        <div class="input-group mr-2">
-            <input type="text" id="date-range-picker" class="form-control" placeholder="Sélectionner une plage de dates" readonly>
-        </div>
-    </form>
-    <table id="survey-table" class="table table-striped table-bordered display" style="width:100%">
-        <thead class="table-dark" style="display:none">
+                    <option value="internal_label"
+                            {% if request.session.search_location == 'internal_label' %}selected{% endif %}>Libellé de
+                        la variable
+                    </option>
+                </select>
+            </div>
+            <div class="input-group mr-2">
+                <input type="text" id="date-range-picker" class="form-control"
+                       placeholder="Sélectionner une plage de dates" readonly>
+            </div>
+        </form>
+        <table id="survey-table" class="table table-striped table-bordered display" style="width:100%">
+            <thead class="table-dark" style="display:none">
             <tr>
                 <th>Enquête</th>
             </tr>
-        </thead>
-    </table>
-</div>
+            </thead>
+        </table>
+    </div>
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
-<link rel="stylesheet" href="{% static 'css/search_results.css' %}">
-<style>
-    .badge-category {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background-color: #007bff;
-        color: white;
-        padding: 2px 5px;
-        border-radius: 3px;
-        font-size: 0.8em;  /* Taille des lettres du badge */
-        cursor: pointer;
-        z-index: 1; /* S'assurer que le badge est au-dessus du texte */
-        width: 15rem;
-    }
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
+    <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
+    <style>
+        .badge-category {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #007bff;
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.8em; /* Taille des lettres du badge */
+            cursor: pointer;
+            z-index: 1; /* S'assurer que le badge est au-dessus du texte */
+            width: 15rem;
+        }
 
-    .category-dropdown {
-        display: none;
-        position: absolute;
-        top: 30px;
-        right: 10px;
-        background-color: white;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        z-index: 1;
-        width: 15rem;
-        padding: 10px;
-        border-radius: 3px;
+        .category-dropdown {
+            display: none;
+            position: absolute;
+            top: 30px;
+            right: 10px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1;
+            width: 15rem;
+            padding: 10px;
+            border-radius: 3px;
 
-        /* Limiter la hauteur du dropdown à la hauteur de la carte */
-        max-height: calc(100% - 40px); /* Limite à la hauteur de la carte parent, en laissant 40px de marge */
-        overflow-y: auto; /* Scroll si nécessaire */
-    }
+            /* Limiter la hauteur du dropdown à la hauteur de la carte */
+            max-height: calc(100% - 40px); /* Limite à la hauteur de la carte parent, en laissant 40px de marge */
+            overflow-y: auto; /* Scroll si nécessaire */
+        }
 
-    .category-item {
-        padding: 5px;
-        font-size: 0.75em;  /* Réduit la taille du texte dans les catégories */
-    }
+        .category-item {
+            padding: 5px;
+            font-size: 0.75em; /* Réduit la taille du texte dans les catégories */
+        }
 
-    /* Surlignement de la catégorie correspondante */
-    .highlight-category {
-        background-color: yellow;
-        font-weight: bold;
-    }
+        /* Surlignement de la catégorie correspondante */
+        .highlight-category {
+            background-color: yellow;
+            font-weight: bold;
+        }
 
-    /* Style pour le dropdown */
-    .category-dropdown a {
-        display: block;
-        padding: 5px;
-        text-decoration: none;
-        color: black;
-        font-size: 0.75em; /* Réduit la taille du texte dans les liens */
-    }
+        /* Style pour le dropdown */
+        .category-dropdown a {
+            display: block;
+            padding: 5px;
+            text-decoration: none;
+            color: black;
+            font-size: 0.75em; /* Réduit la taille du texte dans les liens */
+        }
 
-    .category-dropdown a:hover {
-        background-color: #f1f1f1;
-    }
+        .category-dropdown a:hover {
+            background-color: #f1f1f1;
+        }
 
-    /* Le conteneur de la carte doit être positionné */
-    .card {
-        position: relative; /* Important pour confiner le dropdown à la carte */
-        margin-bottom: 20px;
+        /* Le conteneur de la carte doit être positionné */
+        .card {
+            position: relative; /* Important pour confiner le dropdown à la carte */
+            margin-bottom: 20px;
 
-        overflow: hidden; /* Empêche le dépassement du contenu */
-    }
+            overflow: hidden; /* Empêche le dépassement du contenu */
+        }
 
-    .bootstrap-select .btn {
-        max-width: 200px; /* Limite la largeur maximale du bouton */
-        max-height: 40px; /* Limite la hauteur maximale du bouton */
-        overflow: hidden; /* Cache le texte qui dépasse */
-        text-overflow: ellipsis; /* Affiche "..." si le texte est trop long */
-        white-space: nowrap; /* Empêche le texte de passer à la ligne */
-    }
-    
-</style>
+        .bootstrap-select .btn {
+            max-width: 200px; /* Limite la largeur maximale du bouton */
+            max-height: 40px; /* Limite la hauteur maximale du bouton */
+            overflow: hidden; /* Cache le texte qui dépasse */
+            text-overflow: ellipsis; /* Affiche "..." si le texte est trop long */
+            white-space: nowrap; /* Empêche le texte de passer à la ligne */
+        }
+
+    </style>
 
 {% endblock %}
 
 {% block extra_js %}
-<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-<meta name="autocomplete-url" content="{% url 'autocomplete' %}">
-<script src="{% static 'js/search_elastic.js' %}"></script>
-<script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <meta name="autocomplete-url" content="{% url 'autocomplete' %}">
+    <script src="{% static 'js/search_elastic.js' %}"></script>
+    <script>
 
-$(document).ready(function() {
+        $(document).ready(function () {
 
-    const collectionsFilter = document.getElementById('collections-filter');
-    const subcollectionsFilter = document.getElementById('subcollections-filter');
-    const surveysFilter = document.getElementById('survey-filter');
+            const collectionsFilter = document.getElementById('collections-filter');
+            const subcollectionsFilter = document.getElementById('subcollections-filter');
+            const surveysFilter = document.getElementById('survey-filter');
 
 
-    const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
-    const selectedSubCollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
-    const selectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
+            const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
+            const selectedSubCollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
+            const selectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
 
-    fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
-        .then(response => response.json())
-        .then(data => {
-            subcollectionsFilter.innerHTML = '';
-            data.subcollections.forEach(subcollection => {
-                const option = document.createElement('option');
-                option.value = subcollection.id;
-                option.text = subcollection.name;
-                if (selectedSubCollections.includes(option.value)) {
-                        option.selected = true;
-                    }
-                subcollectionsFilter.appendChild(option);
+            fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
+                .then(response => response.json())
+                .then(data => {
+                    subcollectionsFilter.innerHTML = '';
+                    data.subcollections.forEach(subcollection => {
+                        const option = document.createElement('option');
+                        option.value = subcollection.id;
+                        option.text = subcollection.name;
+                        if (selectedSubCollections.includes(option.value)) {
+                            option.selected = true;
+                        }
+                        subcollectionsFilter.appendChild(option);
+                    });
+                    $('.selectpicker').selectpicker('refresh');
+                });
+
+
+            fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubCollections.join(',')}&collections_ids=${selectedCollections.join(',')}`)
+                .then(response => response.json())
+                .then(data => {
+                    surveysFilter.innerHTML = '';
+                    data.surveys.forEach(survey => {
+                        const option = document.createElement('option');
+                        option.value = survey.id;
+                        option.text = survey.name;
+                        if (selectedSurveys.includes(option.value)) {
+                            option.selected = true;
+                        }
+                        surveysFilter.appendChild(option);
+                    });
+                    $('.selectpicker').selectpicker('refresh');
+                });
+
+            collectionsFilter.addEventListener('change', function () {
+                const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
+
+                const previouslySelectedSubCollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
+                const previouslySelectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
+
+                fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        subcollectionsFilter.innerHTML = '';
+                        data.subcollections.forEach(subcollection => {
+                            const option = document.createElement('option');
+                            option.value = subcollection.id;
+                            option.text = subcollection.name;
+                            if (previouslySelectedSubCollections.includes(option.value)) {
+                                option.selected = true;
+                            }
+                            subcollectionsFilter.appendChild(option);
+                        });
+                        surveysFilter.innerHTML = '';
+                        data.surveys.forEach(survey => {
+                            const option = document.createElement('option');
+                            option.value = survey.id;
+                            option.text = survey.name;
+                            if (previouslySelectedSurveys.includes(option.value)) {
+                                option.selected = true;
+                            }
+                            surveysFilter.appendChild(option);
+                        });
+                        $('.selectpicker').selectpicker('refresh');
+                    });
+
+                // Reset surveys when collections change
+                surveysFilter.innerHTML = '';
+                $('.selectpicker').selectpicker('refresh');
+                $('#survey-table').DataTable().ajax.reload();
             });
-            $('.selectpicker').selectpicker('refresh');
-        });
+
+            subcollectionsFilter.addEventListener('change', function () {
+                const selectedSubcollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
+                const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
+
+                const previouslySelectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
+
+                fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubcollections.join(',')}&collections_ids=${selectedCollections.join(',')}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        surveysFilter.innerHTML = '';
+                        data.surveys.forEach(survey => {
+                            const option = document.createElement('option');
+                            option.value = survey.id;
+                            option.text = survey.name;
+                            if (previouslySelectedSurveys.includes(option.value)) {
+                                option.selected = true;
+                            }
+                            surveysFilter.appendChild(option);
+                        });
+                        $('.selectpicker').selectpicker('refresh');
+                    });
+
+                $('#survey-table').DataTable().ajax.reload();
+            });
+
+            $('#survey-filter').on('change', function () {
+                $('#survey-table').DataTable().ajax.reload();
+            });
 
 
-    fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubCollections.join(',')}&collections_ids=${selectedCollections.join(',')}`)
-        .then(response => response.json())
-        .then(data => {
-            surveysFilter.innerHTML = '';
-            data.surveys.forEach(survey => {
-                const option = document.createElement('option');
-                option.value = survey.id;
-                option.text = survey.name;
-                if (selectedSurveys.includes(option.value)) {
-                    option.selected = true;
+            $(document).on('click', '.badge-category', function () {
+                var dropdown = $(this).siblings('.category-dropdown');
+                $('.category-dropdown').not(dropdown).hide();
+                dropdown.toggle();
+            });
+
+            $(document).click(function (event) {
+                if (!$(event.target).closest('.badge-category, .category-dropdown').length) {
+                    $('.category-dropdown').hide();
                 }
-                surveysFilter.appendChild(option);
+            });
+            $(document).on('click', '.badge-category', function () {
+                var matchedCategory = $(this).text().trim();
+                var dropdown = $(this).siblings('.category-dropdown');
+                dropdown.find('.category-item').each(function () {
+                    if ($(this).text().trim() === matchedCategory) {
+                        $(this).addClass('highlight-category');
+                    } else {
+                        $(this).removeClass('highlight-category');
+                    }
+                });
+            });
+
+            function getSurveyFilter() {
+                return $('#survey-filter').val() || [];
+            }
+
+            function getCollectionFilter() {
+                return $('#collections-filter').val() || [];
+            }
+
+            function getSubCollectionFilter() {
+                return $('#subcollections-filter').val() || [];
+            }
+
+            function getDateRange() {
+                var dateRange = $('#date-range-picker').val();
+                if (dateRange) {
+                    var dates = dateRange.split(' - ');
+                    return {
+                        startDate: dates[0],
+                        endDate: dates[1]
+                    };
+                }
+                return {
+                    startDate: null,
+                    endDate: null
+                };
+            }
+
+            function getSearchLocation() {
+                return $('#search-location').val() || 'questions';
+            }
+
+            $('.selectpicker').selectpicker({
+                noneSelectedText: 'Sélectionner une ou plusieurs options',
+                showTick: true,
+                liveSearch: true,
+                actionsBox: true,
+                selectedTextFormat: 'count > 1',
+                countSelectedText: function (numSelected, numTotal) {
+                    return (numSelected === 1) ? "{0} sélectionnée" : "{0} sélectionnées";
+                },
             });
             $('.selectpicker').selectpicker('refresh');
-        });
-        
-    collectionsFilter.addEventListener('change', function () {
-        const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
 
-        const previouslySelectedSubCollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
-        const previouslySelectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
 
-        fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
-            .then(response => response.json())
-            .then(data => {
-                subcollectionsFilter.innerHTML = '';
-                data.subcollections.forEach(subcollection => {
-                    const option = document.createElement('option');
-                    option.value = subcollection.id;
-                    option.text = subcollection.name;
-                    if (previouslySelectedSubCollections.includes(option.value)) {
-                        option.selected = true;
+            $('#survey-table').DataTable({
+                "ordering": false,
+                "dom": '<"top"i>rt<"bottom"lp><"clear">',
+                'order': [[0, 'desc']],
+                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"]],
+                "processing": true,
+                "serverSide": true,
+                "pagingType": "full_numbers",
+                "ajax": {
+                    "url": "{% url 'app:search_results_data' %}",
+                    "type": "GET",
+                    "async": true,
+                    "data": function (d) {
+                        d.q = "{{ request.GET.q }}";
+                        d.survey = getSurveyFilter();
+                        d.collections = getCollectionFilter();
+                        d.sub_collections = getSubCollectionFilter();
+                        d.search_location = getSearchLocation();
+                        var dateRange = getDateRange();
+                        if (dateRange.startDate && dateRange.endDate) {
+                            d.startDate = dateRange.startDate;
+                            d.endDate = dateRange.endDate;
+                        }
+                        console.log('Data sent:', d); // Log des données envoyées
+                        console.log('Survey Filter:', d.survey);
+                        console.log('Collection Filter:', d.collections);
+                        console.log('Sub-Collection Filter:', d.sub_collections);
+                        console.log('Search Location:', d.search_location);
+                    },
+                    "headers": {'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()},
+                    "error": function (jqXHR, textStatus, errorThrown) {
+                        console.error('DataTables AJAX Error:', textStatus, errorThrown);
+                        console.log('Une erreur est survenue lors du chargement des données : ' + textStatus + '\n' +
+                            'Status: ' + jqXHR.status + '\n' +
+                            'Response Text: ' + jqXHR.responseText + '\n' +
+                            'Survey Filter: ' + getSurveyFilter() + '\n' +
+                            'Collection Filter: ' + getCollectionFilter() + '\n' +
+                            'Sub-Collection Filter: ' + getSubCollectionFilter() + '\n' +
+                            'Search Location: ' + getSearchLocation());
+                        alert('Une erreur est survenue lors du chargement des données : ' + textStatus + '\n' +
+                            'Status: ' + jqXHR.status + '\n' +
+                            'Response Text: ' + jqXHR.responseText + '\n' +
+                            'Survey Filter: ' + getSurveyFilter() + '\n' +
+                            'Collection Filter: ' + getCollectionFilter() + '\n' +
+                            'Sub-Collection Filter: ' + getSubCollectionFilter() + '\n' +
+                            'Search Location: ' + getSearchLocation());
                     }
-                    subcollectionsFilter.appendChild(option);
-                });
-                surveysFilter.innerHTML = '';
-                data.surveys.forEach(survey => {
-                    const option = document.createElement('option');
-                    option.value = survey.id;
-                    option.text = survey.name;
-                    if (previouslySelectedSurveys.includes(option.value)) {
-                        option.selected = true;
-                    }
-                    surveysFilter.appendChild(option);
-                });
-                $('.selectpicker').selectpicker('refresh');
-            });
-
-        // Reset surveys when collections change
-        surveysFilter.innerHTML = '';
-        $('.selectpicker').selectpicker('refresh');
-        $('#survey-table').DataTable().ajax.reload();
-    });
-
-    subcollectionsFilter.addEventListener('change', function () {
-        const selectedSubcollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
-        const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
-
-        const previouslySelectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
-
-        fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubcollections.join(',')}&collections_ids=${selectedCollections.join(',')}`)
-            .then(response => response.json())
-            .then(data => {
-                surveysFilter.innerHTML = '';
-                data.surveys.forEach(survey => {
-                    const option = document.createElement('option');
-                    option.value = survey.id;
-                    option.text = survey.name;
-                    if (previouslySelectedSurveys.includes(option.value)) {
-                        option.selected = true;
-                    }
-                    surveysFilter.appendChild(option);
-                });
-                $('.selectpicker').selectpicker('refresh');
-            });
-
-        $('#survey-table').DataTable().ajax.reload();
-    });
-
-    $('#survey-filter').on('change', function() {
-        $('#survey-table').DataTable().ajax.reload();
-    });
-
-
-    $(document).on('click', '.badge-category', function() {
-        var dropdown = $(this).siblings('.category-dropdown');
-        $('.category-dropdown').not(dropdown).hide();
-        dropdown.toggle();
-    });
-
-    $(document).click(function(event) {
-        if (!$(event.target).closest('.badge-category, .category-dropdown').length) {
-            $('.category-dropdown').hide();
-        }
-    });
-    $(document).on('click', '.badge-category', function() {
-        var matchedCategory = $(this).text().trim();
-        var dropdown = $(this).siblings('.category-dropdown');
-        dropdown.find('.category-item').each(function() {
-            if ($(this).text().trim() === matchedCategory) {
-                $(this).addClass('highlight-category');
-            } else {
-                $(this).removeClass('highlight-category');
-            }
-        });
-    });
-    function getSurveyFilter() {
-        return $('#survey-filter').val() || [];
-    }
-
-    function getCollectionFilter() {
-        return $('#collections-filter').val() || [];
-    }
-
-    function getSubCollectionFilter() {
-        return $('#subcollections-filter').val() || [];
-    }
-
-    function getDateRange() {
-        var dateRange = $('#date-range-picker').val();
-        if (dateRange) {
-            var dates = dateRange.split(' - ');
-            return {
-                startDate: dates[0],
-                endDate: dates[1]
-            };
-        }
-        return {
-            startDate: null,
-            endDate: null
-        };
-    }
-
-    function getSearchLocation() {
-        return $('#search-location').val() || 'questions';
-    }
-
-    $('.selectpicker').selectpicker({
-        noneSelectedText: 'Sélectionner une ou plusieurs options',
-        showTick: true,
-        liveSearch: true,
-        actionsBox: true,
-        selectedTextFormat: 'count > 1',
-        countSelectedText: function(numSelected, numTotal) {
-            return (numSelected === 1) ? "{0} sélectionnée" : "{0} sélectionnées";
-        },
-    });
-    $('.selectpicker').selectpicker('refresh');
-
-
-$('#survey-table').DataTable({
-    "ordering": false,
-    "dom": '<"top"i>rt<"bottom"lp><"clear">',
-    'order': [[0, 'desc']],
-    "lengthMenu": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"] ],
-    "processing": true,
-    "serverSide": true,
-    "pagingType": "full_numbers",
-    "ajax": {
-        "url": "{% url 'app:search_results_data' %}",
-        "type": "GET",
-        "async": true,
-        "data": function(d) {
-            d.q = "{{ request.GET.q }}";
-            d.survey = getSurveyFilter();
-            d.collections = getCollectionFilter();
-            d.sub_collections = getSubCollectionFilter();
-            d.search_location = getSearchLocation();
-            var dateRange = getDateRange();
-            if (dateRange.startDate && dateRange.endDate) {
-                d.startDate = dateRange.startDate;
-                d.endDate = dateRange.endDate;
-            }
-            console.log('Data sent:', d); // Log des données envoyées
-        },
-        "headers": {'X-CSRFToken' : $("input[name=csrfmiddlewaretoken]").val() },
-        "error": function(jqXHR, textStatus, errorThrown) {
-            console.error('DataTables AJAX Error:', textStatus, errorThrown);
-            alert('Une erreur est survenue lors du chargement des données : ' + textStatus);
-        }
-    },
-    "columns": [
-        {
-            "data": "id",
-            "render": function (data, type, row) {
-                var url = '/question/' + row.id + '/';
-                var categoriesDisplay = row.categories.map(function(category) {
-                    return `${category}`;
-                }).join("<br>");
-                return `
+                },
+                "columns": [
+                    {
+                        "data": "id",
+                        "render": function (data, type, row) {
+                            var url = '/question/' + row.id + '/';
+                            var categoriesDisplay = row.categories.map(function (category) {
+                                return `${category}`;
+                            }).join("<br>");
+                            return `
                 <div class="card mb-3">
                     <div class="card-body">
                         <h5 class="card-title">
@@ -381,78 +416,79 @@ $('#survey-table').DataTable({
                         </div>
                     </div>
                 </div>`;
-            }
-        },
-    ],
-    "language": {
-        "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
-        "processing": "",
-        "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
-        "paginate": {
-            "first": "Première",
-            "last": "Dernière",
-            "next": "Suivante",
-            "previous": "Précédente"
+                        }
+                    },
+                ],
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
+                    "processing": "",
+                    "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
+                    "paginate": {
+                        "first": "Première",
+                        "last": "Dernière",
+                        "next": "Suivante",
+                        "previous": "Précédente"
+                    }
+                }
+            });
+
+            $('#survey-filter').on('change', function () {
+                $('#survey-table').DataTable().ajax.reload();
+            });
+
+            $('#date-range-picker').daterangepicker({
+                locale: {
+                    format: 'DD/MM/YYYY'
+                },
+                opens: 'left',
+                autoUpdateInput: false,
+                showDropdowns: true,
+                linkedCalendars: false,
+            }).on('apply.daterangepicker', function (ev, picker) {
+                $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+                $('#survey-table').DataTable().ajax.reload();
+            }).on('cancel.daterangepicker', function (ev, picker) {
+                $(this).val('');
+                $('#survey-table').DataTable().ajax.reload();
+            });
+        });
+
+
+        function deleteSurvey(id) {
+            // Code pour supprimer l'enquête
+            alert('Supprimer l\'enquête ' + id);
         }
-    }
-});
 
-    $('#survey-filter').on('change', function() {
-        $('#survey-table').DataTable().ajax.reload();
-    });
+        function toggleCategories(categoryId) {
+            var categoriesDiv = document.getElementById(categoryId);
+            if (categoriesDiv.style.display === "none") {
+                categoriesDiv.style.display = "block"; // Affiche la liste
+            } else {
+                categoriesDiv.style.display = "none"; // Cache la liste
+            }
+        }
 
-    $('#date-range-picker').daterangepicker({
-        locale: {
-            format: 'DD/MM/YYYY'
-        },
-        opens: 'left',
-        autoUpdateInput: false,
-        showDropdowns: true,
-        linkedCalendars: false,
-    }).on('apply.daterangepicker', function(ev, picker) {
-        $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
-        $('#survey-table').DataTable().ajax.reload();
-    }).on('cancel.daterangepicker', function(ev, picker) {
-        $(this).val('');
-        $('#survey-table').DataTable().ajax.reload();
-    });
-});
+        document.querySelector('form').addEventListener('submit', function (event) {
+            // Récupérer les valeurs des filtres
+            const selectedSurveys = Array.from(document.querySelector('#survey-filter').selectedOptions).map(option => option.value);
+            const selectedSubCollections = Array.from(document.querySelector('#subcollections-filter').selectedOptions).map(option => option.value);
+            const selectedCollections = Array.from(document.querySelector('#collections-filter').selectedOptions).map(option => option.value);
+            const searchLocation = document.querySelector('#search-location').value;
 
 
-function deleteSurvey(id) {
-    // Code pour supprimer l'enquête
-    alert('Supprimer l\'enquête ' + id);
-}
-function toggleCategories(categoryId) {
-    var categoriesDiv = document.getElementById(categoryId);
-    if (categoriesDiv.style.display === "none") {
-        categoriesDiv.style.display = "block"; // Affiche la liste
-    } else {
-        categoriesDiv.style.display = "none"; // Cache la liste
-    }
-}
+            // Stocker les valeurs dans le localStorage
+            localStorage.setItem('selectedSurveys', JSON.stringify(selectedSurveys));
+            localStorage.setItem('selectedSubCollections', JSON.stringify(selectedSubCollections));
+            localStorage.setItem('selectedCollections', JSON.stringify(selectedCollections));
+            localStorage.setItem('searchLocation', searchLocation);
 
-document.querySelector('form').addEventListener('submit', function(event) {
-    // Récupérer les valeurs des filtres
-    const selectedSurveys = Array.from(document.querySelector('#survey-filter').selectedOptions).map(option => option.value);
-    const selectedSubCollections = Array.from(document.querySelector('#subcollections-filter').selectedOptions).map(option => option.value);
-    const selectedCollections = Array.from(document.querySelector('#collections-filter').selectedOptions).map(option => option.value);
-    const searchLocation = document.querySelector('#search-location').value;
-    
+            // Déclencher l'événement change sur collectionsFilter pour mettre à jour les sous-collections et les études
+            const collectionsFilter = document.getElementById('collections-filter');
+            const changeEvent = new Event('change', {bubbles: true});
+            collectionsFilter.dispatchEvent(changeEvent);
 
-    // Stocker les valeurs dans le localStorage
-    localStorage.setItem('selectedSurveys', JSON.stringify(selectedSurveys));
-    localStorage.setItem('selectedSubCollections', JSON.stringify(selectedSubCollections));
-    localStorage.setItem('selectedCollections', JSON.stringify(selectedCollections));
-    localStorage.setItem('searchLocation', searchLocation);
-
-    // Déclencher l'événement change sur collectionsFilter pour mettre à jour les sous-collections et les études
-    const collectionsFilter = document.getElementById('collections-filter');
-    const changeEvent = new Event('change', { bubbles: true });
-    collectionsFilter.dispatchEvent(changeEvent);
-    
-    // Permettre la soumission du formulaire
-    return true;
-});
-</script>
+            // Permettre la soumission du formulaire
+            return true;
+        });
+    </script>
 {% endblock %}
