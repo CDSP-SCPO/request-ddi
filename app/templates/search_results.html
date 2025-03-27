@@ -355,7 +355,7 @@
                 "pagingType": "full_numbers",
                 "ajax": {
                     "url": "{% url 'app:search_results_data' %}",
-                    "type": "GET",
+                    "type": "POST", // Changer GET en POST
                     "async": true,
                     "data": function (d) {
                         d.q = "{{ request.GET.q }}";
