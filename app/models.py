@@ -108,6 +108,7 @@ class BindingSurveyRepresentedVariable(models.Model):
     notes = models.TextField()
     variable_name = models.TextField()
     universe = models.TextField()
+    is_indexed = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Binding: {self.variable_name} - Survey: {self.survey.name}"

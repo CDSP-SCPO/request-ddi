@@ -1,28 +1,21 @@
 # -- DJANGO
-from django.db.models.signals import pre_delete
-from django.dispatch import receiver
+from django.db.models.signals import pre_delete, post_save, post_delete
+from django.dispatch import receiver, Signal
+from .models import BindingSurveyRepresentedVariable, Category, ConceptualVariable, RepresentedVariable, Survey
+from .documents import BindingSurveyDocument
 
-# -- BASEDEQUESTIONS (LOCAL)
-from .models import (
-    BindingSurveyRepresentedVariable, Category, ConceptualVariable,
-    RepresentedVariable, Survey,
-)
-
+# Définir un signal personnalisé
+data_imported = Signal()
 
 @receiver(pre_delete, sender=Survey)
 def delete_related_data_on_survey_delete(sender, instance, **kwargs):
     # Récupérer toutes les liaisons (bindings) associées à l'enquête avant suppression
     bindings = BindingSurveyRepresentedVariable.objects.filter(survey=instance)
-
     bindings.delete()  # Supprime toutes les liaisons associées à l'enquête
 
-    unlinked_represented_variables = RepresentedVariable.objects.filter(
-        bindingsurveyrepresentedvariable__isnull=True
-    )
+    unlinked_represented_variables = RepresentedVariable.objects.filter(bindingsurveyrepresentedvariable__isnull=True)
     unlinked_represented_variables.delete()
-    unlinked_conceptual_variables = ConceptualVariable.objects.filter(
-        representedvariable__isnull=True
-    )
+    unlinked_conceptual_variables = ConceptualVariable.objects.filter(representedvariable__isnull=True)
     unlinked_conceptual_variables.delete()
     print("unlinked_conceptual_variables", unlinked_conceptual_variables)
 
@@ -31,6 +24,17 @@ def delete_related_data_on_survey_delete(sender, instance, **kwargs):
     print("categories_without_variables", categories_without_variables)
     categories_without_variables.delete()
 
+@receiver(post_save, sender=BindingSurveyRepresentedVariable)
+def update_index(sender, instance, **kwargs):
+    BindingSurveyDocument().update(instance)
+
+@receiver(post_delete, sender=BindingSurveyRepresentedVariable)
+def delete_index(sender, instance, **kwargs):
+    BindingSurveyDocument().delete(instance)
+
+@receiver(data_imported)
+def handle_data_imported(sender, instance, **kwargs):
+    BindingSurveyDocument().update(instance)
 
 def delete_represented_variable_if_unused(represented_variable):
     categories = represented_variable.categories.all()
