@@ -20,6 +20,11 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, TemplateView
 from django.views.generic.edit import FormView
+from django.dispatch import receiver, Signal
+from django.db.models.signals import post_save, post_delete
+
+from .signals import data_imported
+
 
 # -- THIRDPARTY
 import requests
@@ -40,6 +45,7 @@ from .utils.csvimportexport import BindingSurveyResource
 from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
+
 
 
 def admin_required(user):
@@ -377,11 +383,13 @@ class XMLUploadView(BaseUploadView):
                         num_new_variables += 1
 
                     # Créer ou récupérer la liaison (BindingSurveyRepresentedVariable)
-                    _, created_binding = self.get_or_create_binding(
+                    binding, created_binding = self.get_or_create_binding(
                         survey, represented_variable, variable_name, universe, notes
                     )
                     if created_binding:
                         num_new_bindings += 1
+                    # Envoyer le signal après la création ou la mise à jour de chaque binding
+                    data_imported.send(sender=self.__class__, instance=binding)
 
                     num_records += 1
 
@@ -626,8 +634,7 @@ class SearchResultsDataView(ListView):
 
             category_matched = None
             all_clean_categories = []  # Initialisation de full_cat
-            sorted_categories = sorted(result.variable.categories,
-                                       key=lambda cat: int(cat.code) if cat.code.isdigit() else cat.code)
+            sorted_categories = sorted(result.variable.categories, key=lambda cat: (int(cat.code) if cat.code.isdigit() else float('inf'), cat.code))
             # Récupérer la catégorie correspondante
             if search_location == 'categories' and hasattr(result.meta, 'highlight'):
                 if 'variable.categories.category_label' in result.meta.highlight:
