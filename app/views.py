@@ -15,6 +15,8 @@ from django.db import IntegrityError, transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from html import unescape
+
 # views.py
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -144,15 +146,27 @@ class BaseUploadView(FormView):
         pass
 
     def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
-        binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
-            variable_name=variable_name,
-            defaults={
-                'survey': survey,
-                'variable': represented_variable,
-                'universe': universe,
-                'notes': notes,
-            }
-        )
+        try:
+            binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
+                variable_name=variable_name,
+                survey=survey,
+                variable = represented_variable,
+                defaults={
+                    'survey': survey,
+                    'variable': represented_variable,
+                    'universe': universe,
+                    'notes': notes,
+                }
+            )
+        except BindingSurveyRepresentedVariable.MultipleObjectsReturned:
+            bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name)
+            if all(binding.variable == represented_variable for binding in bindings):
+                binding = bindings.first()
+                created = False
+            else:
+                raise ValueError(
+                    "Multiple bindings found with the same variable_name but different represented_variable.")
+
         if not created:
             # Mise à jour des champs de la liaison si elle existe déjà
             binding.survey = survey
@@ -369,8 +383,10 @@ class XMLUploadView(BaseUploadView):
 
         for doi, questions in data_by_doi.items():
             try:
+                print(f"Traitement du DOI: {doi}")
                 # Créer ou récupérer l'enquête (Survey)
                 survey = Survey.objects.get(external_ref=doi)
+                print(f"Enquête trouvée: {survey}")
 
                 for question_data in questions:
                     variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
@@ -396,12 +412,15 @@ class XMLUploadView(BaseUploadView):
             except Survey.DoesNotExist:
                 error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
                 error_files.append(error_message)
+                print(error_message)
             except ValueError as ve:
                 error_message = f"DOI '{doi}': Erreur de valeur : {ve}"
                 error_files.append(error_message)
+                print(error_message)
             except Exception as e:
                 error_message = f"DOI '{doi}': Erreur inattendue : {e}"
                 error_files.append(error_message)
+                print(error_message)
 
         # Si des erreurs ont été rencontrées, on les affiche
         if error_files:
@@ -462,22 +481,25 @@ def search_results(request):
     }
     return render(request, 'search_results.html', context)
 
+
 def get_subcollections_by_collections(request):
     collection_ids = request.GET.get('collections_ids', '').split(',')
     collection_ids = [id for id in collection_ids if id]
-    if not collection_ids:
-        subcollections = Subcollection.objects.all()
-        surveys = Survey.objects.all()
-    else:
 
-        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids)
-        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
+    if not collection_ids:
+        subcollections = Subcollection.objects.all().order_by('name')
+        surveys = Survey.objects.all().order_by('name')
+    else:
+        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids).order_by('name')
+        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
+
     data = {
         'subcollections': [{'id': sc.id, 'name': sc.name} for sc in subcollections],
         'surveys': [{'id': s.id, 'name': s.name} for s in surveys],
     }
 
     return JsonResponse(data)
+
 
 def get_surveys_by_subcollections(request):
     subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
@@ -488,11 +510,12 @@ def get_surveys_by_subcollections(request):
         collection_ids = [id for id in collection_ids if id]
 
         if collection_ids:
-            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
+            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
         else:
-            surveys = Survey.objects.all()
+            surveys = Survey.objects.all().order_by('name')
     else:
-        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids)
+        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids).order_by('name')
+
     data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
     return JsonResponse(data)
 
@@ -506,44 +529,42 @@ def apply_highlight(full_text, highlights):
 
 
 class SearchResultsDataView(ListView):
-    model = BindingSurveyDocument  # Juste à titre indicatif, sans effet direct ici
+    model = BindingSurveyDocument
     context_object_name = 'results'
-    paginate_by = 10  # Par défaut
+    paginate_by = 10
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
     def get_queryset(self):
-        search_value = self.request.GET.get('q', '').strip().lower()
-        search_location = self.request.GET.get('search_location', 'questions')
-        survey_filter = self.request.GET.getlist('survey[]', None)
-        subcollection_filter = self.request.GET.getlist('sub_collections[]', None)
-        collections_filter = self.request.GET.getlist('collections[]', None)
-        start_date = self.request.GET.get('startDate')
-        end_date = self.request.GET.get('endDate')
+        search_value = self.request.POST.get('q', '').strip().lower()
+        search_value = unescape(search_value)
 
+        search_location = self.request.POST.get('search_location', 'questions')
+        survey_filter = self.request.POST.getlist('survey[]', None)
+        subcollection_filter = self.request.POST.getlist('sub_collections[]', None)
+        collections_filter = self.request.POST.getlist('collections[]', None)
+        start_date = self.request.POST.get('startDate')
+        end_date = self.request.POST.get('endDate')
 
-
-        # Convertir le filtre en liste d'entiers
         survey_filter = [int(survey_id) for survey_id in survey_filter if survey_id.isdigit()]
         subcollection_filter = [int(subcollection_id) for subcollection_id in subcollection_filter if subcollection_id.isdigit()]
         collections_filter = [int(collection_id) for collection_id in collections_filter if collection_id.isdigit()]
 
-        # Configuration de la recherche Elasticsearch
         search = BindingSurveyDocument.search()
-        
         search = search.filter('term', is_question_text_empty=False)
 
-        # Appliquer les filtres de recherche en fonction de `search_location`
         if search_value:
             search = self.apply_search_filters(search, search_value, search_location)
 
-        # Appliquer le surlignage
         search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"],
-                                          post_tags=["</mark>"]) \
+                                          post_tags=["</mark>"], number_of_fragments=0, fragment_size=10000) \
             .highlight('variable.question_text', fragment_size=10000) \
             .highlight('variable.categories.category_label', fragment_size=10000) \
             .highlight('variable_name', fragment_size=10000) \
             .highlight('variable.internal_label', fragment_size=10000)
 
-        # Appliquer le filtre par étude
         if survey_filter:
             search = search.filter('terms', **{"survey.id": survey_filter})
         elif subcollection_filter:
@@ -563,23 +584,20 @@ class SearchResultsDataView(ListView):
             no_start_date_query = Q('term', has_start_date=False)
             search = search.query('bool', should=[date_range_query, no_start_date_query], minimum_should_match=1)
 
-        # Pagination (start et length) depuis DataTables
-        start = int(self.request.GET.get('start', 0))
-        length = int(self.request.GET.get('length', self.paginate_by))
+        start = int(self.request.POST.get('start', 0))
+        length = int(self.request.POST.get('length', self.paginate_by))
         if length == -1:
             length = search.count()
 
         return search[start:start + length].execute()
 
     def apply_search_filters(self, search, search_value, search_location):
-        """Applique des filtres de recherche en fonction du `search_location`."""
         if search_location == 'questions':
             search = search.query(
                 'bool',
                 should=[
-                    {"term": {"variable.question_text.keyword": {"value": search_value, "boost": 10}}},
-                    {"match_phrase": {"variable.question_text": {"query": search_value, "boost": 5}}},
-                    {"match_phrase_prefix": {"variable.question_text": {"query": search_value, "boost": 1}}}
+                    {"match_phrase_prefix": {"variable.question_text": {"query": search_value, "boost": 10}}},
+                    {"match": {"variable.question_text": {"query": search_value, "operator": "and", "boost": 5}}}
                 ],
                 minimum_should_match=1
             )
@@ -587,10 +605,10 @@ class SearchResultsDataView(ListView):
             search = search.query('nested', path='variable.categories', query={
                 'bool': {
                     'should': [
-                        {"term": {"variable.categories.category_label.keyword": {"value": search_value, "boost": 10}}},
-                        {"match_phrase": {"variable.categories.category_label": {"query": search_value, "boost": 5}}},
                         {"match_phrase_prefix": {
-                            "variable.categories.category_label": {"query": search_value, "boost": 1}}}
+                            "variable.categories.category_label": {"query": search_value, "boost": 10}}},
+                        {"match": {"variable.categories.category_label": {"query": search_value, "operator": "and",
+                                                                          "boost": 5}}}
                     ],
                     "minimum_should_match": 1
                 }
@@ -599,9 +617,8 @@ class SearchResultsDataView(ListView):
             search = search.query(
                 'bool',
                 should=[
-                    {"term": {"variable_name.keyword": {"value": search_value, "boost": 10}}},
-                    {"match_phrase": {"variable_name": {"query": search_value, "boost": 5}}},
-                    {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 1}}}
+                    {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 10}}},
+                    {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
                 ],
                 minimum_should_match=1
             )
@@ -609,23 +626,20 @@ class SearchResultsDataView(ListView):
             search = search.query(
                 'bool',
                 should=[
-                    {"term": {"variable.internal_label.keyword": {"value": search_value, "boost": 10}}},
-                    {"match_phrase": {"variable.internal_label": {"query": search_value, "boost": 5}}},
-                    {"match_phrase_prefix": {"variable.internal_label": {"query": search_value, "boost": 1}}}
+                    {"match_phrase_prefix": {"variable.internal_label": {"query": search_value, "boost": 10}}},
+                    {"match": {"variable.internal_label": {"query": search_value, "operator": "and", "boost": 5}}}
                 ],
                 minimum_should_match=1
             )
         return search
 
     def format_search_results(self, response, search_location):
-        """Formate les résultats de la recherche pour DataTables."""
         data = []
         is_category_search = search_location == 'categories'
 
         for result in response.hits:
             original_question = getattr(result.variable, 'question_text', "N/A")
 
-            # Logique de surlignage
             highlighted_question = (
                 result.meta.highlight['variable.question_text'][0]
                 if hasattr(result.meta, 'highlight') and 'variable.question_text' in result.meta.highlight
@@ -658,7 +672,6 @@ class SearchResultsDataView(ListView):
             if search_location == 'internal_label' and hasattr(result.meta,
                                                                'highlight') and 'variable.internal_label' in result.meta.highlight:
                 internal_label = result.meta.highlight['variable.internal_label'][0]
-            # Collecte des données formatées
             data.append({
                 "id": result.meta.id,
                 "variable_name": variable_name,
@@ -671,20 +684,18 @@ class SearchResultsDataView(ListView):
             })
         return data
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         response = self.get_queryset()
 
-        # Total records pour DataTables, le total_record correspond à toutes les variables, auxquelles on a enlevé celles sans question_text
         total_records = BindingSurveyDocument.search().filter('term', is_question_text_empty=False).count()
         filtered_records = response.hits.total.value
 
-        # Formater les données pour DataTables
-        data = self.format_search_results(response, request.GET.get('search_location', 'questions'))
+        data = self.format_search_results(response, request.POST.get('search_location', 'questions'))
 
         return JsonResponse({
             "recordsTotal": total_records,
             "recordsFiltered": filtered_records,
-            "draw": int(request.GET.get('draw', 1)),
+            "draw": int(request.POST.get('draw', 1)),
             "data": data
         })
 
@@ -741,7 +752,6 @@ def autocomplete(request):
                     if text not in seen:
                         seen.add(text)
                         suggestions.append(text)
-
     return JsonResponse({"suggestions": suggestions})
 
 
@@ -762,7 +772,7 @@ class ExportQuestionsCSVView(View):
         questions = BindingSurveyRepresentedVariable.objects.all()
 
         if selected_collections:
-            questions = questions.filter(survey__collection__id__in=selected_collections)
+            questions = questions.filter(survey__subcollection__collection__id__in=selected_collections)
         if selected_surveys:
             questions = questions.filter(survey__id__in=selected_surveys)
 
@@ -995,9 +1005,9 @@ def get_surveys_by_collections(request):
     collections_ids = request.GET.get('collections_ids')
     if collections_ids:
         collections_ids = [int(id) for id in collections_ids.split(',')]
-        surveys = Survey.objects.filter(subcollection__collection__id__in=collections_ids)
+        surveys = Survey.objects.filter(subcollection__collection__id__in=collections_ids).order_by('name')
     else:
-        surveys = Survey.objects.all()
+        surveys = Survey.objects.all().order_by('name')
 
     surveys_data = [{'id': survey.id, 'name': survey.name} for survey in surveys]
     return JsonResponse({'surveys': surveys_data})
