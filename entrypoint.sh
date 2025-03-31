@@ -17,26 +17,6 @@ while ! nc -z elasticsearch 9200; do
 done
 echo "Elasticsearch est prêt."
 
-# Reconstitution de l'index de recherche
-echo "Reconstruction de l'index de recherche Elasticsearch..."
-python manage.py search_index --rebuild -f
-if [ $? -eq 0 ]; then
-    echo "Index de recherche reconstruit avec succès."
-else
-    echo "Erreur lors de la reconstruction de l'index de recherche."
-    exit 1
-fi
-
-# Mise à jour de l'index Elasticsearch
-echo "Mise à jour de l'index Elasticsearch..."
-python manage.py shell -c "from app.documents import BindingSurveyDocument; BindingSurveyDocument().update_index()"
-if [ $? -eq 0 ]; then
-    echo "Mise à jour de l'index réussie."
-else
-    echo "Erreur lors de la mise à jour de l'index."
-    exit 1
-fi
-
 # Collecte des fichiers statiques
 echo "Collecte des fichiers statiques..."
 python manage.py collectstatic --noinput
@@ -60,5 +40,15 @@ if [ $? -eq 0 ]; then
     echo "Serveur Gunicorn démarré avec succès."
 else
     echo "Erreur lors du démarrage du serveur Gunicorn."
+    exit 1
+fi
+
+# Mise à jour de l'index Elasticsearch
+echo "Mise à jour de l'index Elasticsearch..."
+python manage.py shell -c "from app.documents import BindingSurveyDocument; BindingSurveyDocument().update_index()"
+if [ $? -eq 0 ]; then
+    echo "Mise à jour de l'index réussie."
+else
+    echo "Erreur lors de la mise à jour de l'index."
     exit 1
 fi
