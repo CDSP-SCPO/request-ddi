@@ -15,7 +15,7 @@ from .views import (
     similar_representative_variable_questions, export_surveys_csv,
     SubcollectionSurveysView,
     get_subcollections_by_collections,
-    get_surveys_by_subcollections,
+    get_surveys_by_subcollections, CSVUploadViewCollection2
 )
 
 app_name = 'app'
@@ -44,6 +44,8 @@ urlpatterns = [
     path('get-distributors/', get_distributor, name='get_distributor'),
 
     path('upload-csv-collection/', CSVUploadViewCollection.as_view(), name='upload_csv_collection'),
+
+    path('upload-csv-collection2/', CSVUploadViewCollection2.as_view(), name='upload_csv_collection2'),
 
     path('subcollection/<int:subcollection_id>/', SubcollectionSurveysView.as_view(), name='subcollection_surveys'),
 
