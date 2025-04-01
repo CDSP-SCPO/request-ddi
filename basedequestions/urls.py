@@ -24,12 +24,11 @@ from django.urls import include, path
 import debug_toolbar
 
 # -- BASEDEQUESTIONS
-from app.views import ExportQuestionsCSVView, autocomplete
+from app.views import ExportQuestionsCSVView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('app.urls')),
-    path('autocomplete/', autocomplete, name='autocomplete'),
     path('export/questions/', ExportQuestionsCSVView.as_view(), name='export_questions_csv'),
 ]
 

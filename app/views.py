@@ -704,57 +704,6 @@ def remove_html_tags(text):
     """Supprime toutes les balises HTML d'une chaîne de caractères."""
     return re.sub(r'<[^>]+>', '', text)
 
-
-def autocomplete(request):
-    search_value = request.GET.get('q', '').lower()
-    search_location = request.GET.get('location', 'questions')
-
-    s = Search(using='default', index='binding_survey_variables')
-
-    if search_location == 'questions':
-        s = s.query(
-            "match",
-            variable__question_text={
-                "query": search_value,
-                "fuzziness": "AUTO",  # Autorise la recherche floue
-                "operator": "and"  # Rend la recherche plus stricte pour les multi-mots
-            }
-        )
-    elif search_location == 'categories':
-        s = s.query(
-            "nested",
-            path="variable.categories",
-            query={
-                "match": {
-                    "variable.categories.category_label": {
-                        "query": search_value,
-                        "fuzziness": "AUTO"  # Active la recherche floue dans les catégories également
-                    }
-                }
-            }
-        )
-
-    # Log de la requête et de la réponse
-    response = s.execute()
-
-    suggestions = []
-    seen = set()
-    for hit in response.hits:
-        if search_location == 'questions':
-            text = hit.variable.question_text.lower()
-            if text not in seen:
-                seen.add(text)
-                suggestions.append(text)
-        elif search_location == 'categories' and hit.variable.categories:
-            for category in hit.variable.categories:
-                if search_value in category.category_label.lower():
-                    text = category.category_label.lower()
-                    if text not in seen:
-                        seen.add(text)
-                        suggestions.append(text)
-    return JsonResponse({"suggestions": suggestions})
-
-
 class ExportQuestionsCSVView(View):
     def get(self, request, *args, **kwargs):
         selected_collections = request.GET.getlist('collections')
