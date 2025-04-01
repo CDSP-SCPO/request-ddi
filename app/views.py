@@ -37,7 +37,7 @@ from elasticsearch_dsl import A, Q, Search
 from .documents import BindingSurveyDocument
 from .forms import (
     CollectionForm, CSVUploadForm, CSVUploadFormCollection,
-    CustomAuthenticationForm, XMLUploadForm,
+    CustomAuthenticationForm, XMLUploadForm, CSVUploadFormCollection2
 )
 from .models import (
     BindingSurveyRepresentedVariable, Category, Collection, ConceptualVariable,
@@ -1086,6 +1086,49 @@ class CSVUploadViewCollection(FormView):
                 citation=survey_citation,
                 date_last_version=survey_date_last_version,
             )
+
+
+class CSVUploadViewCollection2(FormView):
+    template_name = 'upload_csv_collection2.html'
+    form_class = CSVUploadFormCollection2
+
+    def form_valid(self, form):
+        try:
+            data = self.get_data(form)
+            delimiter = form.cleaned_data['delimiter']
+            survey_datas = list(self.convert_data(data, delimiter))
+            self.update_titles(survey_datas)
+            return JsonResponse({'status': 'success', 'message': 'Le fichier CSV a été importé avec succès.'})
+        except forms.ValidationError as ve:
+            print(ve.messages)
+            return JsonResponse({'status': 'error', 'message': ve.messages})
+        except Exception as e:
+            return JsonResponse(
+                {'status': 'error', 'message': f"Erreur lors de l'importation du fichier CSV : {str(e)}"})
+
+    def form_invalid(self, form):
+        errors = form.errors.as_json()
+        return JsonResponse({'status': 'error', 'message': 'Le formulaire est invalide.', 'errors': errors})
+
+    def get_data(self, form):
+        return form.cleaned_data['decoded_csv']
+
+    def convert_data(self, content, delimiter):
+        reader = csv.DictReader(content, delimiter=delimiter)
+        return reader
+
+    @transaction.atomic
+    def update_titles(self, survey_datas):
+        for line_number, row in enumerate(survey_datas, start=1):
+            survey_doi = row['doi']
+            survey_title = row['title']
+
+            try:
+                survey = Survey.objects.get(external_ref=survey_doi)
+                survey.name = survey_title
+                survey.save()
+            except Survey.DoesNotExist:
+                raise ValueError(f"Aucune enquête trouvée avec le DOI : {survey_doi} à la ligne {line_number}")
 
 
 

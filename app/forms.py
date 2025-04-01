@@ -219,3 +219,31 @@ class CSVUploadFormCollection(forms.Form):
 
         except Exception as e:
             raise forms.ValidationError(f"Erreur lors de la lecture du fichier CSV : {str(e)}")
+
+class CSVUploadFormCollection2(forms.Form):
+    csv_file = forms.FileField(label='Sélectionnez un fichier CSV')
+
+    required_columns = ["doi", "title"]
+
+    def clean_csv_file(self):
+        csv_file = self.cleaned_data['csv_file']
+        if not csv_file.name.endswith('.csv'):
+            raise forms.ValidationError("Le fichier doit être au format CSV.")
+        try:
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            sample = '\n'.join(decoded_file[:2])
+            sniffer = csv.Sniffer()
+            delimiter = sniffer.sniff(sample).delimiter
+            reader = csv.DictReader(decoded_file, delimiter=delimiter)
+            # Validation des colonnes manquantes
+            missing_columns = [col for col in self.required_columns if col not in reader.fieldnames]
+            if missing_columns:
+                raise forms.ValidationError(f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}")
+
+            self.cleaned_data['decoded_csv'] = decoded_file
+            self.cleaned_data['delimiter'] = delimiter
+
+            return decoded_file  # Si tout va bien, renvoie le fichier décodé pour un traitement ultérieur
+
+        except Exception as e:
+            raise forms.ValidationError(f"Erreur lors de la lecture du fichier CSV : {str(e)}")
