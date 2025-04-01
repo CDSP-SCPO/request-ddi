@@ -1,8 +1,13 @@
 # -- DJANGO
-from django.db.models.signals import pre_delete, post_save, post_delete
-from django.dispatch import receiver, Signal
-from .models import BindingSurveyRepresentedVariable, Category, ConceptualVariable, RepresentedVariable, Survey
+from django.db.models.signals import post_delete, post_save, pre_delete
+from django.dispatch import Signal, receiver
+
+# -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
+from .models import (
+    BindingSurveyRepresentedVariable, Category, ConceptualVariable,
+    RepresentedVariable, Survey,
+)
 
 # Définir un signal personnalisé
 data_imported = Signal()

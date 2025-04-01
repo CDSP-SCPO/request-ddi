@@ -1,12 +1,17 @@
+# -- DJANGO
+from django.utils import timezone
+
 # -- THIRDPARTY
 from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
-from django.utils import timezone
-from elasticsearch.helpers import bulk
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .models import BindingSurveyRepresentedVariable, RepresentedVariable, Survey
+from .models import (
+    BindingSurveyRepresentedVariable, RepresentedVariable, Survey,
+)
+
 
 @registry.register_document
 class BindingSurveyDocument(Document):
