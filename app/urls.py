@@ -8,7 +8,7 @@ from django.urls import path
 from .views import (
     CollectionSurveysView, CSVUploadView, CSVUploadViewCollection,
     CustomLoginView, QuestionDetailView, RepresentedVariableSearchView,
-    SearchResultsDataView, XMLUploadView, autocomplete, check_duplicates,
+    SearchResultsDataView, XMLUploadView, check_duplicates,
     check_media_root, create_distributor, export_page, get_distributor,
     get_surveys_by_collections, search_results,
     similar_conceptual_variable_questions,
