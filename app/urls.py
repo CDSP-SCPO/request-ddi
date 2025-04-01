@@ -8,14 +8,12 @@ from django.urls import path
 from .views import (
     CollectionSurveysView, CSVUploadView, CSVUploadViewCollection,
     CustomLoginView, QuestionDetailView, RepresentedVariableSearchView,
-    SearchResultsDataView, XMLUploadView, check_duplicates,
-    check_media_root, create_distributor, export_page, get_distributor,
-    get_surveys_by_collections, search_results,
+    SearchResultsDataView, SubcollectionSurveysView, XMLUploadView,
+    check_duplicates, check_media_root, create_distributor, export_page,
+    get_distributor, get_subcollections_by_collections,
+    get_surveys_by_collections, get_surveys_by_subcollections, search_results,
     similar_conceptual_variable_questions,
-    similar_representative_variable_questions, export_surveys_csv,
-    SubcollectionSurveysView,
-    get_subcollections_by_collections,
-    get_surveys_by_subcollections, CSVUploadViewCollection2
+    similar_representative_variable_questions,
 )
 
 app_name = 'app'
@@ -45,14 +43,11 @@ urlpatterns = [
 
     path('upload-csv-collection/', CSVUploadViewCollection.as_view(), name='upload_csv_collection'),
 
-    path('upload-csv-collection2/', CSVUploadViewCollection2.as_view(), name='upload_csv_collection2'),
-
     path('subcollection/<int:subcollection_id>/', SubcollectionSurveysView.as_view(), name='subcollection_surveys'),
 
     path('api/get-subcollections-by-collections/', get_subcollections_by_collections, name='get_subcollections_by_collections'),
     path('api/get-surveys-by-subcollections/', get_surveys_by_subcollections, name='get_surveys_by_subcollections'),
 
-    path('export/surveys/', export_surveys_csv, name='export_surveys_csv'),
 ]
 
 if settings.DEBUG:

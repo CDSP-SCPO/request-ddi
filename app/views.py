@@ -4,6 +4,7 @@ import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from html import unescape
 
 # -- DJANGO
 from django import forms
@@ -12,21 +13,16 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.db import IntegrityError, transaction
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import Signal, receiver
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from html import unescape
-
 # views.py
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, TemplateView
 from django.views.generic.edit import FormView
-from django.dispatch import receiver, Signal
-from django.db.models.signals import post_save, post_delete
-
-from .signals import data_imported
-
 
 # -- THIRDPARTY
 import requests
@@ -37,17 +33,17 @@ from elasticsearch_dsl import A, Q, Search
 from .documents import BindingSurveyDocument
 from .forms import (
     CollectionForm, CSVUploadForm, CSVUploadFormCollection,
-    CustomAuthenticationForm, XMLUploadForm, CSVUploadFormCollection2
+    CustomAuthenticationForm, XMLUploadForm,
 )
 from .models import (
     BindingSurveyRepresentedVariable, Category, Collection, ConceptualVariable,
     Distributor, RepresentedVariable, Subcollection, Survey,
 )
+from .signals import data_imported
 from .utils.csvimportexport import BindingSurveyResource
 from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
-
 
 
 def admin_required(user):
@@ -1088,49 +1084,6 @@ class CSVUploadViewCollection(FormView):
             )
 
 
-class CSVUploadViewCollection2(FormView):
-    template_name = 'upload_csv_collection2.html'
-    form_class = CSVUploadFormCollection2
-
-    def form_valid(self, form):
-        try:
-            data = self.get_data(form)
-            delimiter = form.cleaned_data['delimiter']
-            survey_datas = list(self.convert_data(data, delimiter))
-            self.update_titles(survey_datas)
-            return JsonResponse({'status': 'success', 'message': 'Le fichier CSV a été importé avec succès.'})
-        except forms.ValidationError as ve:
-            print(ve.messages)
-            return JsonResponse({'status': 'error', 'message': ve.messages})
-        except Exception as e:
-            return JsonResponse(
-                {'status': 'error', 'message': f"Erreur lors de l'importation du fichier CSV : {str(e)}"})
-
-    def form_invalid(self, form):
-        errors = form.errors.as_json()
-        return JsonResponse({'status': 'error', 'message': 'Le formulaire est invalide.', 'errors': errors})
-
-    def get_data(self, form):
-        return form.cleaned_data['decoded_csv']
-
-    def convert_data(self, content, delimiter):
-        reader = csv.DictReader(content, delimiter=delimiter)
-        return reader
-
-    @transaction.atomic
-    def update_titles(self, survey_datas):
-        for line_number, row in enumerate(survey_datas, start=1):
-            survey_doi = row['doi']
-            survey_title = row['title']
-
-            try:
-                survey = Survey.objects.get(external_ref=survey_doi)
-                survey.name = survey_title
-                survey.save()
-            except Survey.DoesNotExist:
-                raise ValueError(f"Aucune enquête trouvée avec le DOI : {survey_doi} à la ligne {line_number}")
-
-
 
 class SubcollectionSurveysView(View):
     def get(self, request, subcollection_id):
@@ -1140,26 +1093,4 @@ class SubcollectionSurveysView(View):
             'subcollection': subcollection,
             'surveys': surveys
         })
-        
-import csv
-from django.http import HttpResponse
-from .models import Collection, Subcollection, Survey
 
-def export_surveys_csv(request):
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="surveys.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow(['External Ref', 'Name', 'Date Last Version', 'Language', 'Author', 'Producer', 'Start Date', 'Geographic Coverage', 'Geographic Unit', 'Unit of Analysis', 'Contact', 'Citation', 'Collection', 'Sous-collection'])
-
-    surveys = Survey.objects.all()
-    for survey in surveys:
-        collection_name = survey.subcollection.collection.name if survey.subcollection and survey.subcollection.collection else ''
-        subcollection_name = survey.subcollection.name if survey.subcollection else ''
-        writer.writerow([
-            survey.external_ref, survey.name, survey.date_last_version, survey.language, survey.author,
-            survey.producer, survey.start_date, survey.geographic_coverage, survey.geographic_unit,
-            survey.unit_of_analysis, survey.contact, survey.citation, collection_name, subcollection_name
-        ])
-
-    return response
