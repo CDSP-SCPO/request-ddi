@@ -7,7 +7,7 @@
         {% if messages %}
             <div class="messages">
                 {% for message in messages %}
-                    <div class="alert alert-success"> 
+                    <div class="alert alert-success">
                         {{ message|safe }}
                     </div>
                 {% endfor %}
@@ -22,21 +22,10 @@
             <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
                 <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}"
                        id="autocomplete-input">
-                <select name="search_location" id="search-location" class="selectpicker form-select shadow-none">
-                    <option value="questions" {% if request.GET.search_location == 'questions' %}selected{% endif %}>
-                        Questions
-                    </option>
-                    <option value="categories" {% if request.GET.search_location == 'categories' %}selected{% endif %}>
-                        Modalités
-                    </option>
-                    <option value="variable_name"
-                            {% if request.GET.search_location == 'variable_name' %}selected{% endif %}>Nom de la
-                        variable
-                    </option>
-                    <option value="internal_label" {% if request.GET.search_location == 'internal_label' %}selected{% endif %}>
-                        Libellé de la variable
-                    </option>
-                </select>
+                <input type="hidden" name="search_location[]" value="questions">
+                <input type="hidden" name="search_location[]" value="categories">
+                <input type="hidden" name="search_location[]" value="variable_name">
+                <input type="hidden" name="search_location[]" value="internal_label">
                 <button type="submit" class="btn btn-outline-primary mx-2"><i
                         class="fa-solid fa-magnifying-glass pr-2"></i>Rechercher
                 </button>
@@ -48,18 +37,19 @@
             <div class="container">
                 <div class="row">
                     {% for collection in collections %}
-                    <div class="col-12 col-md-6 d-flex justify-content-center mb-4">
-                        <a href="{% url 'app:collection_subcollections' collection.id %}" class="study-card-link">
-                            <div class="study-card d-flex align-items-center">
-                                {% if collection.photo %}
-                                    <img src="{{ collection.photo.url }}" alt="{{ collection.name }}" class="study-card-image">
-                                {% endif %}
-                                <div class="study-card-content pl-4">
-                                    <h5>{{ collection.name }}</h5>
+                        <div class="col-12 col-md-6 d-flex justify-content-center mb-4">
+                            <a href="{% url 'app:collection_subcollections' collection.id %}" class="study-card-link">
+                                <div class="study-card d-flex align-items-center">
+                                    {% if collection.photo %}
+                                        <img src="{{ collection.photo.url }}" alt="{{ collection.name }}"
+                                             class="study-card-image">
+                                    {% endif %}
+                                    <div class="study-card-content pl-4">
+                                        <h5>{{ collection.name }}</h5>
+                                    </div>
                                 </div>
-                            </div>
-                        </a>
-                    </div>
+                            </a>
+                        </div>
                     {% endfor %}
                 </div>
             </div>
