@@ -48,19 +48,20 @@
                 </select>
             </div>
             <div class="input-group mr-2">
-                <select name="search_location" id="search-location" class="form-select selectpicker">
+                <select name="search_location" id="search-location" class="selectpicker form-control" multiple
+                        title="Rechercher dans">
                     <option value="questions"
-                            {% if request.session.search_location == 'questions' %}selected{% endif %}>Questions
+                            {% if 'questions' in request.session.search_location %}selected{% endif %}>Questions
                     </option>
                     <option value="categories"
-                            {% if request.session.search_location == 'categories' %}selected{% endif %}>Modalités
+                            {% if 'categories' in request.session.search_location %}selected{% endif %}>Modalités
                     </option>
                     <option value="variable_name"
-                            {% if request.session.search_location == 'variable_name' %}selected{% endif %}>Nom de la
+                            {% if 'variable_name' in request.session.search_location %}selected{% endif %}>Nom de la
                         variable
                     </option>
                     <option value="internal_label"
-                            {% if request.session.search_location == 'internal_label' %}selected{% endif %}>Libellé de
+                            {% if 'internal_label' in request.session.search_location %}selected{% endif %}>Libellé de
                         la variable
                     </option>
                 </select>
@@ -271,10 +272,6 @@
                 $('#survey-table').DataTable().ajax.reload();
             });
 
-            $('#survey-filter').on('change', function () {
-                $('#survey-table').DataTable().ajax.reload();
-            });
-
 
             $(document).on('click', '.badge-category', function () {
                 var dropdown = $(this).siblings('.category-dropdown');
@@ -353,7 +350,7 @@
                 "pagingType": "full_numbers",
                 "ajax": {
                     "url": "{% url 'app:search_results_data' %}",
-                    "type": "POST", // Changer GET en POST
+                    "type": "POST",
                     "async": true,
                     "data": function (d) {
                         d.q = "{{ request.GET.q }}";
@@ -366,11 +363,7 @@
                             d.startDate = dateRange.startDate;
                             d.endDate = dateRange.endDate;
                         }
-                        console.log('Data sent:', d); // Log des données envoyées
-                        console.log('Survey Filter:', d.survey);
-                        console.log('Collection Filter:', d.collections);
-                        console.log('Sub-Collection Filter:', d.sub_collections);
-                        console.log('Search Location:', d.search_location);
+
                     },
                     "headers": {'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()},
                     "error": function (jqXHR, textStatus, errorThrown) {
@@ -400,20 +393,20 @@
                                 return `${category}`;
                             }).join("<br>");
                             return `
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <a class="custom-name-card" href="` + url + `">` + (row.question_text || row.internal_label) + `</a>
-                        </h5>
-                        <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
-                        <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
-                        <h6 class="card-subtitle mb-2 text-muted">Libellé de la variable : ` + row.internal_label + `</h6>
-                        <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Modalités</button>
-                        <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">
-                            ` + categoriesDisplay + `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a class="custom-name-card" href="` + url + `">` + (row.question_text || row.internal_label) + `</a>
+                            </h5>
+                            <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Libellé de la variable : ` + row.internal_label + `</h6>
+                            <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Modalités</button>
+                            <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">
+                                ` + categoriesDisplay + `
+                            </div>
                         </div>
-                    </div>
-                </div>`;
+                    </div>`;
                         }
                     },
                 ],
@@ -431,6 +424,10 @@
             });
 
             $('#survey-filter').on('change', function () {
+                $('#survey-table').DataTable().ajax.reload();
+            });
+
+            $('#search-location').on('change', function () {
                 $('#survey-table').DataTable().ajax.reload();
             });
 
@@ -465,28 +462,8 @@
                 categoriesDiv.style.display = "none"; // Cache la liste
             }
         }
-
-        document.querySelector('form').addEventListener('submit', function (event) {
-            // Récupérer les valeurs des filtres
-            const selectedSurveys = Array.from(document.querySelector('#survey-filter').selectedOptions).map(option => option.value);
-            const selectedSubCollections = Array.from(document.querySelector('#subcollections-filter').selectedOptions).map(option => option.value);
-            const selectedCollections = Array.from(document.querySelector('#collections-filter').selectedOptions).map(option => option.value);
-            const searchLocation = document.querySelector('#search-location').value;
+        $('.selectpicker').selectpicker('refresh');
 
 
-            // Stocker les valeurs dans le localStorage
-            localStorage.setItem('selectedSurveys', JSON.stringify(selectedSurveys));
-            localStorage.setItem('selectedSubCollections', JSON.stringify(selectedSubCollections));
-            localStorage.setItem('selectedCollections', JSON.stringify(selectedCollections));
-            localStorage.setItem('searchLocation', searchLocation);
-
-            // Déclencher l'événement change sur collectionsFilter pour mettre à jour les sous-collections et les études
-            const collectionsFilter = document.getElementById('collections-filter');
-            const changeEvent = new Event('change', {bubbles: true});
-            collectionsFilter.dispatchEvent(changeEvent);
-
-            // Permettre la soumission du formulaire
-            return true;
-        });
     </script>
 {% endblock %}

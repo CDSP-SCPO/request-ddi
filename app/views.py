@@ -455,22 +455,26 @@ def search_results(request):
     selected_surveys = request.GET.getlist('survey')
     selected_sub_collection = request.GET.getlist('subcollection')
     selected_collection = request.GET.getlist('collection')
-    search_location = request.GET.get('search_location', 'questions')
+    search_locations = request.GET.getlist('search_location')
+
+    # Initialiser search_location avec toutes les options si elle est vide
+    if not search_locations:
+        search_locations = ['questions', 'categories', 'variable_name', 'internal_label']
+
     request.session['selected_surveys'] = selected_surveys
     request.session['selected_sub_collection'] = selected_sub_collection
     request.session['selected_collection'] = selected_collection
-    request.session['search_location'] = search_location
+    request.session['search_location'] = search_locations
 
     collections = Collection.objects.all().order_by("name")
     subcollections = Subcollection.objects.all().order_by("name")
     surveys = Survey.objects.all().order_by("name")
 
-    search_location = request.GET.get('search_location', 'questions')
     context = {
         'collections': collections,
         'subcollections': subcollections,
         'surveys': surveys,
-        'search_location': search_location,
+        'search_location': search_locations,
         'selected_surveys': selected_surveys,
         'selected_sub_collection': selected_sub_collection,
         'selected_collection': selected_collection,
@@ -516,14 +520,6 @@ def get_surveys_by_subcollections(request):
     return JsonResponse(data)
 
 
-def apply_highlight(full_text, highlights):
-    for highlight in highlights:
-        # Remplacer chaque partie du texte original par la version surlignée
-        full_text = full_text.replace(
-            highlight.replace("<mark style='background-color: yellow;'>", "").replace("</mark>", ""), highlight)
-    return full_text
-
-
 class SearchResultsDataView(ListView):
     model = BindingSurveyDocument
     context_object_name = 'results'
@@ -531,13 +527,15 @@ class SearchResultsDataView(ListView):
 
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
+        if 'search_location' not in self.request.session or not self.request.session['search_location']:
+            self.request.session['search_location'] = ['questions', 'categories', 'variable_name', 'internal_label']
         return super().dispatch(*args, **kwargs)
 
     def get_queryset(self):
         search_value = self.request.POST.get('q', '').strip().lower()
         search_value = unescape(search_value)
 
-        search_location = self.request.POST.get('search_location', 'questions')
+        search_locations = self.request.POST.getlist('search_location[]', ['questions', 'categories', 'variable_name', 'internal_label'])
         survey_filter = self.request.POST.getlist('survey[]', None)
         subcollection_filter = self.request.POST.getlist('sub_collections[]', None)
         collections_filter = self.request.POST.getlist('collections[]', None)
@@ -545,14 +543,15 @@ class SearchResultsDataView(ListView):
         end_date = self.request.POST.get('endDate')
 
         survey_filter = [int(survey_id) for survey_id in survey_filter if survey_id.isdigit()]
-        subcollection_filter = [int(subcollection_id) for subcollection_id in subcollection_filter if subcollection_id.isdigit()]
+        subcollection_filter = [int(subcollection_id) for subcollection_id in subcollection_filter if
+                                subcollection_id.isdigit()]
         collections_filter = [int(collection_id) for collection_id in collections_filter if collection_id.isdigit()]
 
         search = BindingSurveyDocument.search()
         search = search.filter('term', is_question_text_empty=False)
 
         if search_value:
-            search = self.apply_search_filters(search, search_value, search_location)
+            search = self.apply_search_filters(search, search_value, search_locations)
 
         search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"],
                                           post_tags=["</mark>"], number_of_fragments=0, fragment_size=10000) \
@@ -587,51 +586,60 @@ class SearchResultsDataView(ListView):
 
         return search[start:start + length].execute()
 
-    def apply_search_filters(self, search, search_value, search_location):
-        if search_location == 'questions':
-            search = search.query(
-                'bool',
-                should=[
-                    {"match_phrase_prefix": {"variable.question_text": {"query": search_value, "boost": 10}}},
+    def apply_search_filters(self, search, search_value, search_locations):
+        queries = []
+        for search_location in search_locations:
+            if search_location == 'questions':
+                queries.append(
+                    {"match_phrase_prefix": {"variable.question_text": {"query": search_value, "boost": 10}}}
+                )
+                queries.append(
                     {"match": {"variable.question_text": {"query": search_value, "operator": "and", "boost": 5}}}
-                ],
-                minimum_should_match=1
-            )
-        elif search_location == 'categories':
-            search = search.query('nested', path='variable.categories', query={
-                'bool': {
-                    'should': [
-                        {"match_phrase_prefix": {
-                            "variable.categories.category_label": {"query": search_value, "boost": 10}}},
-                        {"match": {"variable.categories.category_label": {"query": search_value, "operator": "and",
-                                                                          "boost": 5}}}
-                    ],
-                    "minimum_should_match": 1
-                }
-            })
-        elif search_location == 'variable_name':
-            search = search.query(
-                'bool',
-                should=[
-                    {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 10}}},
+                )
+            elif search_location == 'categories':
+                queries.append(
+                    {"nested": {
+                        "path": "variable.categories",
+                        "query": {
+                            "bool": {
+                                "should": [
+                                    {"match_phrase_prefix": {
+                                        "variable.categories.category_label": {"query": search_value, "boost": 10}}},
+                                    {"match": {
+                                        "variable.categories.category_label": {"query": search_value, "operator": "and",
+                                                                               "boost": 5}}}
+                                ],
+                                "minimum_should_match": 1
+                            }
+                        }
+                    }}
+                )
+            elif search_location == 'variable_name':
+                queries.append(
+                    {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 10}}}
+                )
+                queries.append(
                     {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
-                ],
-                minimum_should_match=1
-            )
-        elif search_location == 'internal_label':
+                )
+            elif search_location == 'internal_label':
+                queries.append(
+                    {"match_phrase_prefix": {"variable.internal_label": {"query": search_value, "boost": 10}}}
+                )
+                queries.append(
+                    {"match": {"variable.internal_label": {"query": search_value, "operator": "and", "boost": 5}}}
+                )
+
+        if queries:
             search = search.query(
                 'bool',
-                should=[
-                    {"match_phrase_prefix": {"variable.internal_label": {"query": search_value, "boost": 10}}},
-                    {"match": {"variable.internal_label": {"query": search_value, "operator": "and", "boost": 5}}}
-                ],
+                should=queries,
                 minimum_should_match=1
             )
         return search
 
-    def format_search_results(self, response, search_location):
+    def format_search_results(self, response, search_locations):
         data = []
-        is_category_search = search_location == 'categories'
+        is_category_search = 'categories' in search_locations
 
         for result in response.hits:
             original_question = getattr(result.variable, 'question_text', "N/A")
@@ -643,10 +651,11 @@ class SearchResultsDataView(ListView):
             )
 
             category_matched = None
-            all_clean_categories = []  # Initialisation de full_cat
-            sorted_categories = sorted(result.variable.categories, key=lambda cat: (int(cat.code) if cat.code.isdigit() else float('inf'), cat.code))
-            # Récupérer la catégorie correspondante
-            if search_location == 'categories' and hasattr(result.meta, 'highlight'):
+            all_clean_categories = []
+            sorted_categories = sorted(result.variable.categories, key=lambda cat: (
+                int(cat.code) if cat.code.isdigit() else float('inf'), cat.code))
+
+            if 'categories' in search_locations and hasattr(result.meta, 'highlight'):
                 if 'variable.categories.category_label' in result.meta.highlight:
                     category_highlight = result.meta.highlight['variable.categories.category_label']
                     category_matched = category_highlight[0] if category_highlight else None
@@ -660,14 +669,15 @@ class SearchResultsDataView(ListView):
                     all_clean_categories.append(f"{cat.code} : {cat.category_label}")
 
             variable_name = result.variable_name
-            if search_location == 'variable_name' and hasattr(result.meta,
-                                                              'highlight') and 'variable_name' in result.meta.highlight:
+            if 'variable_name' in search_locations and hasattr(result.meta,
+                                                               'highlight') and 'variable_name' in result.meta.highlight:
                 variable_name = result.meta.highlight['variable_name'][0]
 
             internal_label = result.variable.internal_label
-            if search_location == 'internal_label' and hasattr(result.meta,
-                                                               'highlight') and 'variable.internal_label' in result.meta.highlight:
+            if 'internal_label' in search_locations and hasattr(result.meta,
+                                                                'highlight') and 'variable.internal_label' in result.meta.highlight:
                 internal_label = result.meta.highlight['variable.internal_label'][0]
+
             data.append({
                 "id": result.meta.id,
                 "variable_name": variable_name,
@@ -685,8 +695,7 @@ class SearchResultsDataView(ListView):
 
         total_records = BindingSurveyDocument.search().filter('term', is_question_text_empty=False).count()
         filtered_records = response.hits.total.value
-
-        data = self.format_search_results(response, request.POST.get('search_location', 'questions'))
+        data = self.format_search_results(response, request.POST.getlist('search_location[]', ['questions', 'categories', 'variable_name', 'internal_label']))
 
         return JsonResponse({
             "recordsTotal": total_records,
