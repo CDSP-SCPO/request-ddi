@@ -1,5 +1,3 @@
-version: '3.11'
-
 services:
   basedequestions:
     image: question_base-backend:local
