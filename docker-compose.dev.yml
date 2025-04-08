@@ -21,7 +21,7 @@ services:
 
 
   db_dev:
-    image: postgres:14
+    image: postgres:13
     env_file:
       - .env
     environment:
