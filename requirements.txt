@@ -14,4 +14,3 @@ isort
 Pillow ==11.0.0
 django-debug-toolbar
 requests
-wheel
