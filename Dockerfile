@@ -17,6 +17,7 @@ RUN mkdir -p /app/static && chown -R appuser:appuser /app/static
 RUN mkdir -p /app/collected_static && chown -R appuser:appuser /app/collected_static
 
 
+RUN python -m pip install --upgrade pip setuptools wheel
 
 # Copie le fichier requirements.txt et installe les dépendances
 COPY requirements.txt .
