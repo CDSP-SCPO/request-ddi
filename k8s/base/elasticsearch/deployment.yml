@@ -27,7 +27,13 @@ spec:
           volumeMounts:
             - name: elasticsearch-data
               mountPath: /var/lib/elasticsearch  # Le chemin où Elasticsearch stocke ses données
+            - name: elasticsearch-config
+              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml  # Remplacer le fichier de config par celui du ConfigMap
+              subPath: elasticsearch.yml  # Cela permet de monter un fichier spécifique du ConfigMap
       volumes:
         - name: elasticsearch-data
           persistentVolumeClaim:
             claimName: elasticsearch-pvc  # Le PVC que nous avons créé précédemment
+        - name: elasticsearch-config
+          configMap:
+            name: elasticsearch-config  # Le ConfigMap contenant ton fichier de config
