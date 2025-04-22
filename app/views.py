@@ -588,6 +588,8 @@ class SearchResultsDataView(ListView):
 
     def apply_search_filters(self, search, search_value, search_locations):
         queries = []
+        terms = search_value.split()
+
         for search_location in search_locations:
             if search_location == 'questions':
                 queries.append(
@@ -596,6 +598,10 @@ class SearchResultsDataView(ListView):
                 queries.append(
                     {"match": {"variable.question_text": {"query": search_value, "operator": "and", "boost": 5}}}
                 )
+                for term in terms:
+                    queries.append(
+                        {"match": {"variable.question_text": {"query": term, "operator": "or", "boost": 1}}}
+                    )
             elif search_location == 'categories':
                 queries.append(
                     {"nested": {
@@ -607,7 +613,13 @@ class SearchResultsDataView(ListView):
                                         "variable.categories.category_label": {"query": search_value, "boost": 10}}},
                                     {"match": {
                                         "variable.categories.category_label": {"query": search_value, "operator": "and",
-                                                                               "boost": 5}}}
+                                                                               "boost": 5}}},
+                                    *[
+                                        {"match": {
+                                            "variable.categories.category_label": {"query": term, "operator": "or",
+                                                                                   "boost": 1}}}
+                                        for term in terms
+                                    ]
                                 ],
                                 "minimum_should_match": 1
                             }
@@ -616,11 +628,24 @@ class SearchResultsDataView(ListView):
                 )
             elif search_location == 'variable_name':
                 queries.append(
-                    {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 10}}}
+                    {"multi_match": {
+                        "query": search_value,
+                        "fields": ["variable_name", "variable.internal_label"],
+                        "type": "best_fields",
+                        "operator": "and",
+                        "boost": 10
+                    }}
                 )
-                queries.append(
-                    {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
-                )
+                for term in terms:
+                    queries.append(
+                        {"multi_match": {
+                            "query": term,
+                            "fields": ["variable_name", "variable.internal_label"],
+                            "type": "best_fields",
+                            "operator": "or",
+                            "boost": 1
+                        }}
+                    )
             elif search_location == 'internal_label':
                 queries.append(
                     {"match_phrase_prefix": {"variable.internal_label": {"query": search_value, "boost": 10}}}
@@ -628,6 +653,11 @@ class SearchResultsDataView(ListView):
                 queries.append(
                     {"match": {"variable.internal_label": {"query": search_value, "operator": "and", "boost": 5}}}
                 )
+                for term in terms:
+                    queries.append(
+                        {"match": {"variable.internal_label": {"query": term, "operator": "or", "boost": 1}}}
+                    )
+
 
         if queries:
             search = search.query(
