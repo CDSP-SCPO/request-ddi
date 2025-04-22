@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: elasticsearch
-  namespace: request
 spec:
   replicas: 1
   selector:
@@ -26,10 +25,9 @@ spec:
             - name: ES_JAVA_OPTS
               value: '-Xms512m -Xmx512m'
           volumeMounts:
-            - name: config-volume
-              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
-              subPath: elasticsearch.yml
+            - name: elasticsearch-data
+              mountPath: /var/lib/elasticsearch  # Le chemin où Elasticsearch stocke ses données
       volumes:
-        - name: config-volume
-          configMap:
-            name: elasticsearch-config
+        - name: elasticsearch-data
+          persistentVolumeClaim:
+            claimName: elasticsearch-pvc  # Le PVC que nous avons créé précédemment
