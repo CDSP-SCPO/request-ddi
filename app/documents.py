@@ -26,34 +26,49 @@ class BindingSurveyDocument(Document):
         })
     })
     variable = fields.ObjectField(properties={
-        'question_text': fields.TextField(analyzer='custom_analyzer'),
-        'internal_label': fields.TextField(),
+        'question_text': fields.TextField(analyzer='combined_analyzer'),
+        'internal_label': fields.TextField(analyzer='combined_analyzer'),
         'categories': fields.NestedField(properties={
             'code': fields.TextField(),
-            'category_label': fields.TextField(analyzer='custom_analyzer'),
+            'category_label': fields.TextField(analyzer='combined_analyzer'),
         }),
     })
 
     class Index:
         name = 'binding_survey_variables'
         settings = {
-            'number_of_shards': 1,
-            'number_of_replicas': 0,
-            'analysis': {
-                'filter': {
-                    'asciifolding_filter': {
-                        'type': 'asciifolding',
-                        'preserve_original': False
-                    }
-                },
-                'analyzer': {
-                    'custom_analyzer': {
-                        'type': 'custom',
-                        'tokenizer': 'standard',
-                        'filter': [
-                            'lowercase',
-                            'asciifolding_filter'
-                        ]
+            'index': {
+                'number_of_shards': 1,
+                'number_of_replicas': 0,
+                'analysis': {
+                    'char_filter': {
+                        'elided_articles': {
+                            'type': 'pattern_replace',
+                            'pattern': r"(?i)\b(l|d|j|qu|n|c|m|s|t)'",
+                            'replacement': ""
+                        }
+                    },
+                    'filter': {
+                        'asciifolding_filter': {
+                            'type': 'asciifolding',
+                            'preserve_original': False
+                        },
+                        'french_stop': {
+                            'type': 'stop',
+                            'stopwords': '_french_'
+                        }
+                    },
+                    'analyzer': {
+                        'combined_analyzer': {
+                            'type': 'custom',
+                            'tokenizer': 'standard',
+                            'char_filter': ['elided_articles'],
+                            'filter': [
+                                'lowercase',
+                                'asciifolding_filter',
+                                'french_stop'
+                            ]
+                        }
                     }
                 }
             }
@@ -67,13 +82,40 @@ class BindingSurveyDocument(Document):
             'universe',
         ]
 
-    def update(self, instance, **kwargs):
-        """Met à jour un document dans l'index Elasticsearch."""
-        self._get_connection().index(
-            index=self._index._name,
-            id=instance.pk,
-            body=self.serialize(instance)
-        )
+
+    def update(self, instances, **kwargs):
+        """Met à jour des documents dans l'index Elasticsearch."""
+        if isinstance(instances, list):
+            # Cas où on passe une liste d'instances
+            actions = [
+                {
+                    '_op_type': 'index',
+                    '_index': self._index._name,
+                    '_id': instance.pk,
+                    '_source': self.serialize(instance)
+                }
+                for instance in instances
+            ]
+        elif isinstance(instances, BindingSurveyRepresentedVariable):
+            # Cas où on passe une seule instance
+            instances = [instances]
+            actions = [{
+                '_op_type': 'index',
+                '_index': self._index._name,
+                '_id': instance.pk,
+                '_source': self.serialize(instance)
+            } for instance in instances]
+        else:
+            # Cas où on passe un générateur
+            instances = list(instances)  # Convertir le générateur en liste
+            actions = [{
+                '_op_type': 'index',
+                '_index': self._index._name,
+                '_id': instance.pk,
+                '_source': self.serialize(instance)
+            } for instance in instances]
+
+        bulk(self._get_connection(), actions, refresh=True)
 
     def delete(self, instance):
         """Supprime un document de l'index Elasticsearch."""
