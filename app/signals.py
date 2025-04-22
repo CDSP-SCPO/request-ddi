@@ -22,11 +22,9 @@ def delete_related_data_on_survey_delete(sender, instance, **kwargs):
     unlinked_represented_variables.delete()
     unlinked_conceptual_variables = ConceptualVariable.objects.filter(representedvariable__isnull=True)
     unlinked_conceptual_variables.delete()
-    print("unlinked_conceptual_variables", unlinked_conceptual_variables)
 
     # Lister les catégories qui ne sont liées à aucune variable représentée
     categories_without_variables = Category.objects.filter(variables__isnull=True)
-    print("categories_without_variables", categories_without_variables)
     categories_without_variables.delete()
 
 @receiver(post_save, sender=BindingSurveyRepresentedVariable)
@@ -58,3 +56,9 @@ def delete_represented_variable_if_unused(represented_variable):
     if not RepresentedVariable.objects.filter(conceptual_var=conceptual_var).exists():
         print(f"Deleting conceptual variable: {conceptual_var.internal_label}")
         conceptual_var.delete()
+
+# Désindéxation lors de la suppression
+@receiver(post_delete, sender=RepresentedVariable)
+def delete_represented_variable_index(sender, instance, **kwargs):
+    BindingSurveyDocument().delete(instance)
+
