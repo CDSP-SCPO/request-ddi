@@ -299,6 +299,9 @@ class XMLUploadView(UserPassesTestMixin, BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
+    def test_func(self):
+        return self.request.user.is_superuser
+
     def add_form_to_context(self, context):
         context['xml_form'] = XMLUploadForm()
 
