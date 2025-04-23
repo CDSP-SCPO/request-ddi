@@ -33,6 +33,25 @@ else:
 # Elasticsearch host
 ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST', 'localhost:9200')
 
+# URL de base d'Elasticsearch, sans identifiants
+ES_PUBLIC_URL = os.getenv("ES_HOST_PUBLIC", "http://elasticsearch:9200")
+
+# Identifiants pour un utilisateur avec droits complets
+ES_ADMIN_USER = os.getenv("ES_ADMIN_USER")
+ES_ADMIN_PASS = os.getenv("ES_ADMIN_PASS")
+
+# Client anonyme : lecture seule, pas d'auth
+ES_PUBLIC_CLIENT = {
+    "hosts": [ES_PUBLIC_URL],
+}
+
+# Client admin : avec authentification
+ES_ADMIN_CLIENT = {
+    "hosts": [ES_PUBLIC_URL],
+    "http_auth": (ES_ADMIN_USER, ES_ADMIN_PASS),
+}
+
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
