@@ -44,8 +44,6 @@ from .utils.csvimportexport import BindingSurveyResource
 from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
-from django.contrib.auth.mixins import UserPassesTestMixin
-
 
 
 def admin_required(user):
@@ -295,7 +293,7 @@ class CSVUploadView(BaseUploadView):
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
-class XMLUploadView(UserPassesTestMixin, BaseUploadView):
+class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
