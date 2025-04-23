@@ -65,6 +65,16 @@ spec:
                 secretKeyRef:
                   name: elasticsearch-secret
                   key: ELASTICSEARCH_HOST
+            - name: ES_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-secret
+                  key: ES_ADMIN_USER
+            - name: ES_ADMIN_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-secret
+                  key: ES_ADMIN_PASS
           ports:
             - containerPort: 8000
           imagePullPolicy: Always
