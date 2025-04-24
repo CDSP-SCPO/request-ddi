@@ -12,6 +12,13 @@ spec:
       labels:
         component: elasticsearch
     spec:
+      initContainers:
+        - name: fix-vm-max-map-count
+          image: busybox
+          securityContext:
+            privileged: true
+          command: ["sysctl", "-w", "vm.max_map_count=262144"]
+
       containers:
         - name: elasticsearch
           image: elasticsearch:7.17.10
@@ -23,17 +30,41 @@ spec:
             - name: bootstrap.memory_lock
               value: 'true'
             - name: ES_JAVA_OPTS
-              value: '-Xms512m -Xmx512m'
+              value: '-Xms1g -Xmx1g'
+          ports:
+            - containerPort: 9200
           volumeMounts:
             - name: elasticsearch-data
-              mountPath: /var/lib/elasticsearch  # Le chemin où Elasticsearch stocke ses données
+              mountPath: /var/lib/elasticsearch
             - name: elasticsearch-config
-              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml  # Remplacer le fichier de config par celui du ConfigMap
-              subPath: elasticsearch.yml  # Cela permet de monter un fichier spécifique du ConfigMap
+              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+              subPath: elasticsearch.yml
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9200
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9200
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 3
+
       volumes:
         - name: elasticsearch-data
           persistentVolumeClaim:
-            claimName: elasticsearch-pvc  # Le PVC que nous avons créé précédemment
+            claimName: elasticsearch-pvc
         - name: elasticsearch-config
           configMap:
-            name: elasticsearch-config  # Le ConfigMap contenant ton fichier de config
+            name: elasticsearch-config
