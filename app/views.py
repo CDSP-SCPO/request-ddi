@@ -295,6 +295,10 @@ class CSVUploadView(BaseUploadView):
 
 from datetime import datetime
 
+from datetime import datetime
+import logging
+
+# Configurer les logs pour les impressions
 class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
@@ -392,27 +396,42 @@ class XMLUploadView(BaseUploadView):
                 start_time = datetime.now()  # Début du traitement du DOI
 
                 # Créer ou récupérer l'enquête (Survey)
+                survey_start_time = datetime.now()  # Temps de création/récupération Survey
                 survey = Survey.objects.get(external_ref=doi)
-                print(f"Enquête trouvée: {survey}")
+                survey_end_time = datetime.now()
+                print(f"Enquête trouvée pour {doi} en {survey_end_time - survey_start_time}")
 
                 for question_data in questions:
                     variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
 
                     # Créer ou récupérer la variable représentée (RepresentedVariable)
+                    represented_variable_start_time = datetime.now()
                     represented_variable, created_variable = self.get_or_create_represented_variable(
                         variable_name, question_text, category_label, variable_label
                     )
+                    represented_variable_end_time = datetime.now()
+                    print(f"Création ou récupération de la variable représentée {variable_name} en {represented_variable_end_time - represented_variable_start_time}")
+
                     if created_variable:
                         num_new_variables += 1
 
                     # Créer ou récupérer la liaison (BindingSurveyRepresentedVariable)
+                    binding_start_time = datetime.now()
                     binding, created_binding = self.get_or_create_binding(
                         survey, represented_variable, variable_name, universe, notes
                     )
+                    binding_end_time = datetime.now()
+                    print(f"Création ou récupération du binding pour {variable_name} en {binding_end_time - binding_start_time}")
+
                     if created_binding:
                         num_new_bindings += 1
-                    # Envoyer le signal après la création ou la mise à jour de chaque binding
+
+                    # Impression avant l'envoi du signal
+                    signal_start_time = datetime.now()
+                    print(f"Envoi du signal pour le binding {binding} à {signal_start_time}")
                     data_imported.send(sender=self.__class__, instance=binding)
+                    signal_end_time = datetime.now()
+                    print(f"Signal envoyé pour le binding {binding} en {signal_end_time - signal_start_time}")
 
                     num_records += 1
 
@@ -439,6 +458,7 @@ class XMLUploadView(BaseUploadView):
             raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
+
 
 
 class ExportQuestionsView(View):
