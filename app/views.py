@@ -293,12 +293,7 @@ class CSVUploadView(BaseUploadView):
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
-from datetime import datetime
-
-from datetime import datetime
 import logging
-
-# Configurer les logs pour les impressions
 class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
@@ -334,7 +329,6 @@ class XMLUploadView(BaseUploadView):
         start_time = datetime.now()  # Début du parsing
         try:
             print(f"Début du parsing du fichier {file.name} à {start_time}")
-
             file.seek(0)
             content = file.read().decode('utf-8')
             soup = BeautifulSoup(content, "xml")
@@ -366,7 +360,6 @@ class XMLUploadView(BaseUploadView):
                     line.find("universe").text.strip() if line.find("universe") else "",
                     line.find("notes").text.strip() if line.find("notes") else "",
                 ])
-
             end_time = datetime.now()  # Fin du parsing
             print(f"Fichier {file.name} parsé en {end_time - start_time}")
             return data
@@ -394,7 +387,6 @@ class XMLUploadView(BaseUploadView):
             try:
                 print(f"Traitement du DOI: {doi}")
                 start_time = datetime.now()  # Début du traitement du DOI
-
                 # Créer ou récupérer l'enquête (Survey)
                 survey_start_time = datetime.now()  # Temps de création/récupération Survey
                 survey = Survey.objects.get(external_ref=doi)
@@ -411,7 +403,6 @@ class XMLUploadView(BaseUploadView):
                     )
                     represented_variable_end_time = datetime.now()
                     print(f"Création ou récupération de la variable représentée {variable_name} en {represented_variable_end_time - represented_variable_start_time}")
-
                     if created_variable:
                         num_new_variables += 1
 
@@ -422,10 +413,8 @@ class XMLUploadView(BaseUploadView):
                     )
                     binding_end_time = datetime.now()
                     print(f"Création ou récupération du binding pour {variable_name} en {binding_end_time - binding_start_time}")
-
                     if created_binding:
                         num_new_bindings += 1
-
                     # Impression avant l'envoi du signal
                     signal_start_time = datetime.now()
                     print(f"Envoi du signal pour le binding {binding} à {signal_start_time}")
@@ -458,7 +447,6 @@ class XMLUploadView(BaseUploadView):
             raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
-
 
 
 class ExportQuestionsView(View):
@@ -1122,10 +1110,15 @@ class CSVUploadViewCollection(FormView):
             # Conversion de survey_start_date en objet date (année uniquement)
             if survey_start_date:
                 try:
-                    survey_start_date = datetime.strptime(survey_start_date, '%Y-%m-%d').date()
+                    # Tente de convertir la date au format "YYYY"
+                    survey_start_date = datetime.strptime(survey_start_date, '%Y').date()
                 except ValueError:
-                    raise ValueError(
-                        f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}")
+                    try:
+                        # Si ça échoue, tente de convertir la date au format "YYYY-MM-DD"
+                        survey_start_date = datetime.strptime(survey_start_date, '%Y-%m-%d').date()
+                    except ValueError:
+                        raise ValueError(
+                            f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}")
             else:
                 survey_start_date = None
 

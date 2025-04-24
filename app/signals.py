@@ -8,6 +8,7 @@ from .models import (
     BindingSurveyRepresentedVariable, Category, ConceptualVariable,
     RepresentedVariable, Survey,
 )
+from elasticsearch import NotFoundError
 
 # Définir un signal personnalisé
 data_imported = Signal()
@@ -57,8 +58,13 @@ def delete_represented_variable_if_unused(represented_variable):
         print(f"Deleting conceptual variable: {conceptual_var.internal_label}")
         conceptual_var.delete()
 
+# Désindéxation lors de la suppression
 @receiver(post_delete, sender=RepresentedVariable)
 def delete_represented_variable_index(sender, instance, **kwargs):
-    print(f"[Signal] Suppression de l'index pour la variable représentée ID={instance.id}")
-    BindingSurveyDocument().delete(instance)
+    try:
+        print(f"[Signal] Suppression de l'index pour la variable représentée ID={instance.id}")
+        BindingSurveyDocument().delete(instance)
+    except NotFoundError:
+        # Le document n'était pas présent dans l'index, donc rien à faire
+        pass
 
