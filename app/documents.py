@@ -88,34 +88,21 @@ class BindingSurveyDocument(Document):
     def update(self, instances, **kwargs):
         """Met à jour des documents dans l'index Elasticsearch."""
         start_time = time.time()  # Début de la mesure du temps
-        print(f"Démarrage de l'update avec {len(instances)} instances...")
 
-        if isinstance(instances, list):
-            actions = [
-                {
-                    '_op_type': 'index',
-                    '_index': self._index._name,
-                    '_id': instance.pk,
-                    '_source': self.serialize(instance)
-                }
-                for instance in instances
-            ]
-        elif isinstance(instances, BindingSurveyRepresentedVariable):
+        # Uniformiser : transformer en liste si c'est un seul objet
+        if isinstance(instances, BindingSurveyRepresentedVariable):
             instances = [instances]
-            actions = [{
-                '_op_type': 'index',
-                '_index': self._index._name,
-                '_id': instance.pk,
-                '_source': self.serialize(instance)
-            } for instance in instances]
-        else:
+        elif not isinstance(instances, list):
             instances = list(instances)
-            actions = [{
-                '_op_type': 'index',
-                '_index': self._index._name,
-                '_id': instance.pk,
-                '_source': self.serialize(instance)
-            } for instance in instances]
+
+        print(f"Démarrage de l'update avec {len(instances)} instance(s)...")
+
+        actions = [{
+            '_op_type': 'index',
+            '_index': self._index._name,
+            '_id': instance.pk,
+            '_source': self.serialize(instance)
+        } for instance in instances]
 
         bulk_start_time = time.time()
         bulk(self._get_connection(), actions, refresh=True)

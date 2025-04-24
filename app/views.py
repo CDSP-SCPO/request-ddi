@@ -28,6 +28,8 @@ from django.views.generic.edit import FormView
 import requests
 from bs4 import BeautifulSoup
 from elasticsearch_dsl import A, Q, Search
+from datetime import datetime
+
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
@@ -298,8 +300,6 @@ class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
-    def test_func(self):
-        return self.request.user.is_superuser
 
     def add_form_to_context(self, context):
         context['xml_form'] = XMLUploadForm()
@@ -329,6 +329,7 @@ class XMLUploadView(BaseUploadView):
         start_time = datetime.now()  # Début du parsing
         try:
             print(f"Début du parsing du fichier {file.name} à {start_time}")
+
             file.seek(0)
             content = file.read().decode('utf-8')
             soup = BeautifulSoup(content, "xml")
@@ -360,6 +361,7 @@ class XMLUploadView(BaseUploadView):
                     line.find("universe").text.strip() if line.find("universe") else "",
                     line.find("notes").text.strip() if line.find("notes") else "",
                 ])
+
             end_time = datetime.now()  # Fin du parsing
             print(f"Fichier {file.name} parsé en {end_time - start_time}")
             return data
@@ -387,6 +389,7 @@ class XMLUploadView(BaseUploadView):
             try:
                 print(f"Traitement du DOI: {doi}")
                 start_time = datetime.now()  # Début du traitement du DOI
+
                 # Créer ou récupérer l'enquête (Survey)
                 survey_start_time = datetime.now()  # Temps de création/récupération Survey
                 survey = Survey.objects.get(external_ref=doi)
@@ -403,6 +406,7 @@ class XMLUploadView(BaseUploadView):
                     )
                     represented_variable_end_time = datetime.now()
                     print(f"Création ou récupération de la variable représentée {variable_name} en {represented_variable_end_time - represented_variable_start_time}")
+
                     if created_variable:
                         num_new_variables += 1
 
@@ -413,8 +417,10 @@ class XMLUploadView(BaseUploadView):
                     )
                     binding_end_time = datetime.now()
                     print(f"Création ou récupération du binding pour {variable_name} en {binding_end_time - binding_start_time}")
+
                     if created_binding:
                         num_new_bindings += 1
+
                     # Impression avant l'envoi du signal
                     signal_start_time = datetime.now()
                     print(f"Envoi du signal pour le binding {binding} à {signal_start_time}")
@@ -447,6 +453,7 @@ class XMLUploadView(BaseUploadView):
             raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
+
 
 
 class ExportQuestionsView(View):
@@ -1082,7 +1089,7 @@ class CSVUploadViewCollection(FormView):
     @transaction.atomic
     def process_data(self, survey_datas):
         for line_number, row in enumerate(survey_datas, start=1):
-            distributor_name = row['diffuseur']
+            distributor_name = row['distributor']
             distributor, created = Distributor.objects.get_or_create(name=distributor_name)
 
             collection_name = row['collection']
@@ -1104,7 +1111,6 @@ class CSVUploadViewCollection(FormView):
             survey_geographic_unit = row['geographic_unit']
             survey_unit_of_analysis = row['unit_of_analysis']
             survey_contact = row['contact']
-            survey_citation = row['citation']
             survey_date_last_version = row['date_last_version']
 
             # Conversion de survey_start_date en objet date (année uniquement)
@@ -1145,7 +1151,6 @@ class CSVUploadViewCollection(FormView):
                 geographic_unit=survey_geographic_unit,
                 unit_of_analysis=survey_unit_of_analysis,
                 contact=survey_contact,
-                citation=survey_citation,
                 date_last_version=survey_date_last_version,
             )
 
