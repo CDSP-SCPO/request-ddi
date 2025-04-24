@@ -28,6 +28,8 @@ from django.views.generic.edit import FormView
 import requests
 from bs4 import BeautifulSoup
 from elasticsearch_dsl import A, Q, Search
+from datetime import datetime
+
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
@@ -293,18 +295,11 @@ class CSVUploadView(BaseUploadView):
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
-from datetime import datetime
-
-from datetime import datetime
-import logging
-
 # Configurer les logs pour les impressions
 class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
-    def test_func(self):
-        return self.request.user.is_superuser
 
     def add_form_to_context(self, context):
         context['xml_form'] = XMLUploadForm()
@@ -1094,7 +1089,7 @@ class CSVUploadViewCollection(FormView):
     @transaction.atomic
     def process_data(self, survey_datas):
         for line_number, row in enumerate(survey_datas, start=1):
-            distributor_name = row['diffuseur']
+            distributor_name = row['distributor']
             distributor, created = Distributor.objects.get_or_create(name=distributor_name)
 
             collection_name = row['collection']
@@ -1116,7 +1111,6 @@ class CSVUploadViewCollection(FormView):
             survey_geographic_unit = row['geographic_unit']
             survey_unit_of_analysis = row['unit_of_analysis']
             survey_contact = row['contact']
-            survey_citation = row['citation']
             survey_date_last_version = row['date_last_version']
 
             # Conversion de survey_start_date en objet date (année uniquement)
@@ -1152,7 +1146,6 @@ class CSVUploadViewCollection(FormView):
                 geographic_unit=survey_geographic_unit,
                 unit_of_analysis=survey_unit_of_analysis,
                 contact=survey_contact,
-                citation=survey_citation,
                 date_last_version=survey_date_last_version,
             )
 
