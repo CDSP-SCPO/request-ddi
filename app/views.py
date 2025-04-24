@@ -295,7 +295,7 @@ class CSVUploadView(BaseUploadView):
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
-# Configurer les logs pour les impressions
+import logging
 class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
@@ -1116,10 +1116,15 @@ class CSVUploadViewCollection(FormView):
             # Conversion de survey_start_date en objet date (année uniquement)
             if survey_start_date:
                 try:
-                    survey_start_date = datetime.strptime(survey_start_date, '%Y-%m-%d').date()
+                    # Tente de convertir la date au format "YYYY"
+                    survey_start_date = datetime.strptime(survey_start_date, '%Y').date()
                 except ValueError:
-                    raise ValueError(
-                        f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}")
+                    try:
+                        # Si ça échoue, tente de convertir la date au format "YYYY-MM-DD"
+                        survey_start_date = datetime.strptime(survey_start_date, '%Y-%m-%d').date()
+                    except ValueError:
+                        raise ValueError(
+                            f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}")
             else:
                 survey_start_date = None
 
