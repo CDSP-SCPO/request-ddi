@@ -293,6 +293,8 @@ class CSVUploadView(BaseUploadView):
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
+from datetime import datetime
+
 class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
@@ -325,7 +327,10 @@ class XMLUploadView(BaseUploadView):
 
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
+        start_time = datetime.now()  # Début du parsing
         try:
+            print(f"Début du parsing du fichier {file.name} à {start_time}")
+
             file.seek(0)
             content = file.read().decode('utf-8')
             soup = BeautifulSoup(content, "xml")
@@ -358,6 +363,8 @@ class XMLUploadView(BaseUploadView):
                     line.find("notes").text.strip() if line.find("notes") else "",
                 ])
 
+            end_time = datetime.now()  # Fin du parsing
+            print(f"Fichier {file.name} parsé en {end_time - start_time}")
             return data
 
         except Exception as e:
@@ -382,6 +389,8 @@ class XMLUploadView(BaseUploadView):
         for doi, questions in data_by_doi.items():
             try:
                 print(f"Traitement du DOI: {doi}")
+                start_time = datetime.now()  # Début du traitement du DOI
+
                 # Créer ou récupérer l'enquête (Survey)
                 survey = Survey.objects.get(external_ref=doi)
                 print(f"Enquête trouvée: {survey}")
@@ -406,6 +415,9 @@ class XMLUploadView(BaseUploadView):
                     data_imported.send(sender=self.__class__, instance=binding)
 
                     num_records += 1
+
+                end_time = datetime.now()  # Fin du traitement du DOI
+                print(f"Traitement du DOI {doi} terminé en {end_time - start_time}")
 
             except Survey.DoesNotExist:
                 error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
