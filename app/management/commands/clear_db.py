@@ -1,4 +1,4 @@
-# -- DJANGO
+import time
 from django.core.management.base import BaseCommand
 
 # -- BASEDEQUESTIONS
@@ -13,35 +13,31 @@ class Command(BaseCommand):
     help = 'Supprime toutes les données de la base de données dans un ordre spécifique'
 
     def handle(self, *args, **kwargs):
+        start_time = time.time()  # Début de la mesure du temps global
+        print("Démarrage de la suppression des données...")
+
         # Supprimer les données dans l'ordre correct pour éviter les problèmes de dépendances
-        BindingConcept.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted BindingConcept'))
+        models_to_delete = [
+            (BindingConcept, 'BindingConcept'),
+            (BindingSurveyRepresentedVariable, 'BindingSurveyRepresentedVariable'),
+            (Category, 'Category'),
+            (Concept, 'Concept'),
+            (RepresentedVariable, 'RepresentedVariable'),
+            (ConceptualVariable, 'ConceptualVariable'),
+            (Survey, 'Survey'),
+            (Subcollection, 'Subcollection'),
+            (Collection, 'Collection'),
+            (Distributor, 'Distributor')
+        ]
 
-        BindingSurveyRepresentedVariable.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted BindingSurveyRepresentedVariable'))
+        for model, name in models_to_delete:
+            model_start_time = time.time()  # Début de la mesure du temps pour chaque modèle
+            model.objects.all().delete()
+            model_end_time = time.time()  # Fin de la mesure du temps pour chaque modèle
 
-        Category.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted Category'))
+            print(f"{name} supprimé avec succès en {model_end_time - model_start_time:.4f} secondes.")
+            self.stdout.write(self.style.SUCCESS(f'Deleted {name}'))
 
-        Concept.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted Concept'))
-
-        RepresentedVariable.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted RepresentedVariable'))
-
-        ConceptualVariable.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted ConceptualVariable'))
-
-        Survey.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted Survey'))
-
-        Subcollection.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted Subcollection'))
-
-        Collection.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted Collection'))
-
-        Distributor.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Deleted Distributor'))
-
+        end_time = time.time()  # Fin de la mesure du temps global
+        print(f"Toutes les données ont été supprimées avec succès en {end_time - start_time:.4f} secondes.")
         self.stdout.write(self.style.SUCCESS('All data cleared successfully!'))
