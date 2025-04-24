@@ -1,3 +1,6 @@
+import time
+from elasticsearch.exceptions import NotFoundError
+
 # -- DJANGO
 from django.utils import timezone
 
@@ -82,11 +85,12 @@ class BindingSurveyDocument(Document):
             'universe',
         ]
 
-
     def update(self, instances, **kwargs):
         """Met à jour des documents dans l'index Elasticsearch."""
+        start_time = time.time()  # Début de la mesure du temps
+        print(f"Démarrage de l'update avec {len(instances)} instances...")
+
         if isinstance(instances, list):
-            # Cas où on passe une liste d'instances
             actions = [
                 {
                     '_op_type': 'index',
@@ -97,7 +101,6 @@ class BindingSurveyDocument(Document):
                 for instance in instances
             ]
         elif isinstance(instances, BindingSurveyRepresentedVariable):
-            # Cas où on passe une seule instance
             instances = [instances]
             actions = [{
                 '_op_type': 'index',
@@ -106,8 +109,7 @@ class BindingSurveyDocument(Document):
                 '_source': self.serialize(instance)
             } for instance in instances]
         else:
-            # Cas où on passe un générateur
-            instances = list(instances)  # Convertir le générateur en liste
+            instances = list(instances)
             actions = [{
                 '_op_type': 'index',
                 '_index': self._index._name,
@@ -115,14 +117,43 @@ class BindingSurveyDocument(Document):
                 '_source': self.serialize(instance)
             } for instance in instances]
 
+        bulk_start_time = time.time()
         bulk(self._get_connection(), actions, refresh=True)
+        bulk_end_time = time.time()
+
+        print(f"Opération de bulk terminée en {bulk_end_time - bulk_start_time:.4f} secondes.")
+        end_time = time.time()
+        print(f"Temps total pour l'update: {end_time - start_time:.4f} secondes.")
 
     def delete(self, instance):
-        """Supprime un document de l'index Elasticsearch."""
-        self._get_connection().delete(
-            index=self._index._name,
-            id=instance.pk
-        )
+        """Supprime un document de l'index Elasticsearch avec suivi du temps."""
+        start_time = time.time()  # Début de la mesure du temps
+        print(f"Démarrage de la suppression du document avec l'ID {instance.pk}...")
+
+        try:
+            # Vérifier si le document existe dans Elasticsearch avant de tenter de le supprimer
+            check_start_time = time.time()
+            self._get_connection().get(index=self._index._name, id=instance.pk)
+            check_end_time = time.time()
+            print(
+                f"Vérification de l'existence du document ID {instance.pk} : {check_end_time - check_start_time:.4f} secondes.")
+
+            delete_start_time = time.time()  # Temps de début pour la suppression
+            self._get_connection().delete(index=self._index._name, id=instance.pk)
+            delete_end_time = time.time()  # Temps de fin pour la suppression
+
+            print(
+                f"Suppression du document ID {instance.pk} réussie : {delete_end_time - delete_start_time:.4f} secondes.")
+
+        except NotFoundError:
+            print(f"Le document avec l'ID {instance.pk} n'a pas été trouvé dans l'index.")
+
+        except Exception as ex:
+            print(f"Erreur lors de la suppression du document avec l'ID {instance.pk}: {ex}")
+
+        end_time = time.time()
+        print(
+            f"Temps total de l'opération de suppression pour l'ID {instance.pk}: {end_time - start_time:.4f} secondes.")
 
     def serialize(self, instance):
         """Prépare les données du document pour Elasticsearch."""
@@ -157,9 +188,11 @@ class BindingSurveyDocument(Document):
 
     def update_index(self):
         """Met à jour l'index Elasticsearch avec les documents non indexés."""
+        start_time = time.time()
+        print("Démarrage de l'update de l'index pour les documents non indexés...")
+
         try:
             qs = self.get_queryset().filter(is_indexed=False)  # Obtenir les documents non indexés
-
             actions = [
                 {
                     '_op_type': 'index',
@@ -169,10 +202,17 @@ class BindingSurveyDocument(Document):
                 }
                 for instance in qs
             ]
+
+            bulk_start_time = time.time()
             bulk(self._get_connection(), actions, refresh=True)
-            print("Indexation terminée avec succès.")
+            bulk_end_time = time.time()
+            print(f"Indexation terminée avec succès en {bulk_end_time - bulk_start_time:.4f} secondes.")
 
             # Mettre à jour le champ is_indexed pour les documents indexés
             qs.update(is_indexed=True)
+
         except Exception as ex:
             print(f"An unexpected error occurred: {ex}")
+
+        end_time = time.time()
+        print(f"Temps total de l'update de l'index: {end_time - start_time:.4f} secondes.")
