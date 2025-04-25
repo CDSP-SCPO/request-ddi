@@ -28,28 +28,21 @@ from django.views.generic.edit import FormView
 import requests
 from bs4 import BeautifulSoup
 from elasticsearch_dsl import A, Q, Search
-from datetime import datetime
-
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
 from .forms import (
-    CollectionForm, CSVUploadForm, CSVUploadFormCollection,
-    CustomAuthenticationForm, XMLUploadForm,
+    CSVUploadForm, CSVUploadFormCollection, CustomAuthenticationForm,
+    XMLUploadForm,
 )
 from .models import (
     BindingSurveyRepresentedVariable, Category, Collection, ConceptualVariable,
     Distributor, RepresentedVariable, Subcollection, Survey,
 )
 from .signals import data_imported
-from .utils.csvimportexport import BindingSurveyResource
 from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
-
-
-def admin_required(user):
-    return user.is_authenticated and user.is_staff
 
 
 class BaseUploadView(FormView):
@@ -203,11 +196,12 @@ class BaseUploadView(FormView):
         return categories
 
     def create_new_represented_variable(self, conceptual_var, name_question_normalized, category_label,
-                                        variable_label):
+                                        variable_label, is_unique: bool = False):
         new_represented_var = RepresentedVariable.objects.create(
             conceptual_var=conceptual_var,
             question_text=name_question_normalized,
-            internal_label=variable_label
+            internal_label=variable_label,
+            is_unique=is_unique,
         )
         new_categories = self.create_new_categories(category_label)
         new_represented_var.categories.set(new_categories)
@@ -220,18 +214,24 @@ class BaseUploadView(FormView):
 
         cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
 
-        if name_question_for_comparison in cleaned_questions:
-            var_represented = RepresentedVariable.objects.filter(
-                question_text=cleaned_questions[name_question_for_comparison].question_text
-            )
-            for var in var_represented:
-                if self.check_category(category_label, var.categories):
-                    return var, False
-            return self.create_new_represented_variable(var_represented[0].conceptual_var,
-                                                        name_question_for_database, category_label,
-                                                        variable_label), True
+        if name_question_for_comparison :
+            if name_question_for_comparison in cleaned_questions:
+                var_represented = RepresentedVariable.objects.filter(
+                    question_text=cleaned_questions[name_question_for_comparison].question_text
+                )
+                for var in var_represented:
+                    if self.check_category(category_label, var.categories):
+                        return var, False
+                return self.create_new_represented_variable(var_represented[0].conceptual_var,
+                                                            name_question_for_database, category_label,
+                                                            variable_label), True
+            else:
+                conceptual_var = ConceptualVariable.objects.create()
+                return self.create_new_represented_variable(conceptual_var, name_question_for_database,
+                                                            category_label,
+                                                            variable_label), True
         else:
-            conceptual_var = ConceptualVariable.objects.create()
+            conceptual_var = ConceptualVariable.objects.create(is_unique=True)
             return self.create_new_represented_variable(conceptual_var, name_question_for_database,
                                                         category_label,
                                                         variable_label), True
@@ -295,7 +295,7 @@ class CSVUploadView(BaseUploadView):
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
-import logging
+
 class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
@@ -323,6 +323,7 @@ class XMLUploadView(BaseUploadView):
                 except Exception as e:
                     self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
         return results
+
 
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
@@ -390,43 +391,26 @@ class XMLUploadView(BaseUploadView):
                 print(f"Traitement du DOI: {doi}")
                 start_time = datetime.now()  # Début du traitement du DOI
 
-                # Créer ou récupérer l'enquête (Survey)
-                survey_start_time = datetime.now()  # Temps de création/récupération Survey
                 survey = Survey.objects.get(external_ref=doi)
-                survey_end_time = datetime.now()
-                print(f"Enquête trouvée pour {doi} en {survey_end_time - survey_start_time}")
 
                 for question_data in questions:
                     variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
 
-                    # Créer ou récupérer la variable représentée (RepresentedVariable)
-                    represented_variable_start_time = datetime.now()
                     represented_variable, created_variable = self.get_or_create_represented_variable(
                         variable_name, question_text, category_label, variable_label
                     )
-                    represented_variable_end_time = datetime.now()
-                    print(f"Création ou récupération de la variable représentée {variable_name} en {represented_variable_end_time - represented_variable_start_time}")
 
                     if created_variable:
                         num_new_variables += 1
 
-                    # Créer ou récupérer la liaison (BindingSurveyRepresentedVariable)
-                    binding_start_time = datetime.now()
                     binding, created_binding = self.get_or_create_binding(
                         survey, represented_variable, variable_name, universe, notes
                     )
-                    binding_end_time = datetime.now()
-                    print(f"Création ou récupération du binding pour {variable_name} en {binding_end_time - binding_start_time}")
 
                     if created_binding:
                         num_new_bindings += 1
 
-                    # Impression avant l'envoi du signal
-                    signal_start_time = datetime.now()
-                    print(f"Envoi du signal pour le binding {binding} à {signal_start_time}")
                     data_imported.send(sender=self.__class__, instance=binding)
-                    signal_end_time = datetime.now()
-                    print(f"Signal envoyé pour le binding {binding} en {signal_end_time - signal_start_time}")
 
                     num_records += 1
 
@@ -455,18 +439,6 @@ class XMLUploadView(BaseUploadView):
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
 
-
-class ExportQuestionsView(View):
-    def get(self, request, *args, **kwargs):
-        resource = BindingSurveyResource()
-        dataset = resource.export()
-
-        # Créer une réponse HTTP avec le bon type de contenu pour CSV
-        response = HttpResponse(dataset.csv, content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
-        return response
-
-
 class RepresentedVariableSearchView(ListView):
     model = RepresentedVariable
     template_name = 'homepage.html'  # Nom du template
@@ -478,75 +450,6 @@ class RepresentedVariableSearchView(ListView):
         context['success_message'] = self.request.GET.get('success_message', None)
         context['upload_stats'] = self.request.GET.get('upload_stats', None)
         return context
-
-
-def search_results(request):
-    selected_surveys = request.GET.getlist('survey')
-    selected_sub_collection = request.GET.getlist('subcollection')
-    selected_collection = request.GET.getlist('collection')
-    search_locations = request.GET.getlist('search_location')
-
-    # Initialiser search_location avec toutes les options si elle est vide
-    if not search_locations:
-        search_locations = ['questions', 'categories', 'variable_name', 'internal_label']
-
-    request.session['selected_surveys'] = selected_surveys
-    request.session['selected_sub_collection'] = selected_sub_collection
-    request.session['selected_collection'] = selected_collection
-    request.session['search_location'] = search_locations
-
-    collections = Collection.objects.all().order_by("name")
-    subcollections = Subcollection.objects.all().order_by("name")
-    surveys = Survey.objects.all().order_by("name")
-
-    context = {
-        'collections': collections,
-        'subcollections': subcollections,
-        'surveys': surveys,
-        'search_location': search_locations,
-        'selected_surveys': selected_surveys,
-        'selected_sub_collection': selected_sub_collection,
-        'selected_collection': selected_collection,
-    }
-    return render(request, 'search_results.html', context)
-
-
-def get_subcollections_by_collections(request):
-    collection_ids = request.GET.get('collections_ids', '').split(',')
-    collection_ids = [id for id in collection_ids if id]
-
-    if not collection_ids:
-        subcollections = Subcollection.objects.all().order_by('name')
-        surveys = Survey.objects.all().order_by('name')
-    else:
-        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids).order_by('name')
-        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
-
-    data = {
-        'subcollections': [{'id': sc.id, 'name': sc.name} for sc in subcollections],
-        'surveys': [{'id': s.id, 'name': s.name} for s in surveys],
-    }
-
-    return JsonResponse(data)
-
-
-def get_surveys_by_subcollections(request):
-    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
-    subcollection_ids = [id for id in subcollection_ids if id]
-
-    if not subcollection_ids:
-        collection_ids = request.GET.get('collections_ids', '').split(',')
-        collection_ids = [id for id in collection_ids if id]
-
-        if collection_ids:
-            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
-        else:
-            surveys = Survey.objects.all().order_by('name')
-    else:
-        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids).order_by('name')
-
-    data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
-    return JsonResponse(data)
 
 
 class SearchResultsDataView(ListView):
@@ -577,7 +480,6 @@ class SearchResultsDataView(ListView):
         collections_filter = [int(collection_id) for collection_id in collections_filter if collection_id.isdigit()]
 
         search = BindingSurveyDocument.search()
-        search = search.filter('term', is_question_text_empty=False)
 
         if search_value:
             search = self.apply_search_filters(search, search_value, search_locations)
@@ -752,7 +654,7 @@ class SearchResultsDataView(ListView):
     def post(self, request, *args, **kwargs):
         response = self.get_queryset()
 
-        total_records = BindingSurveyDocument.search().filter('term', is_question_text_empty=False).count()
+        total_records = BindingSurveyDocument.search().count()
         filtered_records = response.hits.total.value
         data = self.format_search_results(response, request.POST.getlist('search_location[]', ['questions', 'categories', 'variable_name', 'internal_label']))
 
@@ -762,283 +664,6 @@ class SearchResultsDataView(ListView):
             "draw": int(request.POST.get('draw', 1)),
             "data": data
         })
-
-
-def remove_html_tags(text):
-    """Supprime toutes les balises HTML d'une chaîne de caractères."""
-    return re.sub(r'<[^>]+>', '', text)
-
-class ExportQuestionsCSVView(View):
-    def get(self, request, *args, **kwargs):
-        selected_collections = request.GET.getlist('collections')
-        selected_surveys = request.GET.getlist('surveys')
-        # Créer la réponse CSV
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
-
-        # Définir les colonnes du CSV
-        writer = csv.writer(response)
-        writer.writerow(
-            ['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes'])
-
-        # Récupérer toutes les questions et les informations associées
-        questions = BindingSurveyRepresentedVariable.objects.all()
-
-        if selected_collections:
-            questions = questions.filter(survey__subcollection__collection__id__in=selected_collections)
-        if selected_surveys:
-            questions = questions.filter(survey__id__in=selected_surveys)
-
-        for question in questions.distinct():
-            # Récupérer les liaisons entre les surveys et les variables représentées
-            represented_var = question.variable
-
-            if question:
-                survey = question.survey  # Récupérer le survey associé à cette variable représentée
-                variable_name = question.variable_name
-                universe = question.universe
-                notes = question.notes
-            else:
-                survey = None
-                variable_name = ''
-                universe = ''
-                notes = ''
-
-            # Récupérer les catégories associées
-            categories = " | ".join([f"{cat.code},{cat.category_label}" for cat in represented_var.categories.all()])
-
-            writer.writerow([
-                survey.external_ref if survey else '',  # DOI
-                survey.name if survey else '',  # Title
-                variable_name,  # Variable Name
-                represented_var.internal_label or '',  # Variable Label
-                represented_var.question_text or '',  # Question Text
-                categories,  # Category Label
-                universe,  # Univers
-                notes  # Notes
-            ])
-
-        return response
-
-
-def export_page(request):
-    collections = Collection.objects.all()
-    surveys = Survey.objects.all()
-    context = locals()
-    return render(request, 'export_csv.html', context)
-
-
-class QuestionDetailView(View):
-    def get(self, request, id, *args, **kwargs):
-        question = get_object_or_404(BindingSurveyRepresentedVariable, id=id)
-        question_represented_var = question.variable
-        question_conceptual_var = question_represented_var.conceptual_var
-        question_survey = question.survey
-        categories = sorted(question.variable.categories.all(),
-                            key=lambda x: int(x.code) if x.code.isdigit() else x.code)
-        middle_index = len(categories) // 2
-        similar_representative_questions = BindingSurveyRepresentedVariable.objects.filter(
-            variable=question.variable
-        ).exclude(id=question.id)
-
-        similar_conceptual_questions = BindingSurveyRepresentedVariable.objects.filter(
-            variable__conceptual_var=question.variable.conceptual_var
-        ).exclude(id=question.id).exclude(id__in=similar_representative_questions.values_list('id', flat=True))
-
-        context = locals()
-        return render(request, 'question_detail.html', context)
-
-
-def similar_representative_variable_questions(request, question_id):
-    question = get_object_or_404(BindingSurveyRepresentedVariable, id=question_id)
-
-    rep_variable = question.variable
-    questions_from_rep_variable = BindingSurveyRepresentedVariable.objects.filter(variable=rep_variable).exclude(
-        id=question_id)
-
-    data = []
-    for similar_question in questions_from_rep_variable:
-        data.append({
-            "id": similar_question.id,
-            "variable_name": similar_question.variable_name,
-            "question_text": similar_question.variable.question_text,
-            "internal_label": similar_question.variable.internal_label or "N/A",
-            "survey": similar_question.survey.name
-        })
-
-    return JsonResponse({
-        "recordsTotal": len(questions_from_rep_variable),
-        "recordsFiltered": len(questions_from_rep_variable),
-        "data": data
-    })
-
-
-def similar_conceptual_variable_questions(request, question_id):
-    question = get_object_or_404(BindingSurveyRepresentedVariable, id=question_id)
-    rep_variable = question.variable
-
-    conceptual_variable = rep_variable.conceptual_var
-
-    questions_from_conceptual_variable = BindingSurveyRepresentedVariable.objects.filter(
-        variable__conceptual_var=conceptual_variable).exclude(id=question_id)
-
-    data = []
-    for similar_question in questions_from_conceptual_variable:
-        data.append({
-            "id": similar_question.id,
-            "variable_name": similar_question.variable_name,
-            "question_text": similar_question.variable.question_text,
-            "internal_label": similar_question.variable.internal_label or "N/A",
-            "survey": similar_question.survey.name
-        })
-
-    return JsonResponse({
-        "recordsTotal": len(questions_from_conceptual_variable),
-        "recordsFiltered": len(questions_from_conceptual_variable),
-        "data": data
-    })
-
-
-class CustomLoginView(LoginView):
-    template_name = 'login.html'
-    authentication_form = CustomAuthenticationForm
-    redirect_authenticated_user = True
-
-
-def check_media_root(request):
-    # Vérifier si le répertoire MEDIA_ROOT existe
-    if not os.path.exists(settings.MEDIA_ROOT):
-        return JsonResponse({"error": "MEDIA_ROOT directory does not exist."})
-
-    # Parcourir les fichiers et dossiers dans MEDIA_ROOT
-    media_files_info = []
-    for root, dirs, files in os.walk(settings.MEDIA_ROOT):
-        for name in files:
-            file_path = os.path.join(root, name)
-            relative_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
-
-            # Tenter de construire l'URL de l'image et vérifier si l'URL est accessible
-            file_url = os.path.join(settings.MEDIA_URL, relative_path).replace("\\", "/")
-            file_exists = check_file_access(file_url)
-
-            # Obtenir les informations sur le fichier
-            file_info = {
-                "name": name,
-                "relative_path": relative_path,
-                "size": os.path.getsize(file_path),  # Taille en octets
-                "last_modified": datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat(),
-                "url": file_url,
-                "accessible": file_exists,
-            }
-            media_files_info.append(file_info)
-
-    return JsonResponse({
-        "MEDIA_ROOT": str(settings.MEDIA_ROOT),
-        "MEDIA_URL": settings.MEDIA_URL,
-        "file_count": len(media_files_info),
-        "files": media_files_info,
-    })
-
-
-def check_file_access(file_url):
-    """
-    Fonction qui essaie de faire une requête HTTP GET pour vérifier si l'URL du fichier est accessible.
-    Retourne True si le fichier est accessible, sinon False.
-    """
-
-    # Construire l'URL complète (en prenant en compte la configuration du domaine et du path)
-    # Ici, on assume que l'URL du fichier est accessible via un domaine public
-    full_url = f"http://{settings.ALLOWED_HOSTS[0]}{file_url}"
-
-    try:
-        response = requests.get(full_url)
-        # Si le code de réponse est 200, cela signifie que le fichier est accessible
-        return response.status_code == 200
-    except requests.exceptions.RequestException:
-        # Si une exception se produit, on considère que le fichier n'est pas accessible
-        return False
-
-
-@csrf_exempt
-def check_duplicates(request):
-    if request.method == 'POST':
-        # Récupérer soit le fichier CSV, soit le fichier XML
-        file = request.FILES.get('csv_file') or request.FILES.get('xml_file')
-
-        if not file:
-            return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
-        decoded_file = file.read().decode('utf-8', errors='replace').splitlines()
-
-        # Vérifier si c'est un fichier XML
-        if file.name.endswith('.xml'):
-            soup = BeautifulSoup("\n".join(decoded_file), 'xml')
-            existing_variables = []
-            variable_survey_id = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo",
-                                                                                                           attrs={
-                                                                                                               "agency": "DataCite"}) else soup.find(
-                "IDNo").text.strip()
-            for var in soup.find_all('var'):
-                variable_name = var.get('name', '').strip()
-                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name,
-                                                                                    survey__external_ref=variable_survey_id)
-                if existing_bindings.exists():
-                    existing_variables.append(variable_name)
-
-        # Vérifier si c'est un fichier CSV
-        elif file.name.endswith('.csv'):
-            reader = csv.DictReader(decoded_file)
-            existing_variables = []
-            for row in reader:
-                variable_name = row['variable_name']
-                variable_survey_id = row['doi']
-                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name,
-                                                                                    survey__external_ref=variable_survey_id)
-                if existing_bindings.exists():
-                    existing_variables.append(variable_name)
-
-        else:
-            return JsonResponse({'error': 'Format de fichier non supporté'}, status=400)
-        if existing_variables:
-            return JsonResponse({'status': 'exists', 'existing_variables': existing_variables})
-        else:
-            return JsonResponse({'status': 'no_duplicates'})
-
-    return JsonResponse({'error': 'Requête invalide'}, status=400)
-
-
-class CollectionSurveysView(View):
-    def get(self, request, collection_id):
-        collection = get_object_or_404(Collection, id=collection_id)
-        subcollections = Subcollection.objects.filter(collection=collection).order_by('name')
-        return render(request, 'collection_subcollections.html',
-                      {'collection': collection, 'subcollections': subcollections})
-
-
-def get_surveys_by_collections(request):
-    collections_ids = request.GET.get('collections_ids')
-    if collections_ids:
-        collections_ids = [int(id) for id in collections_ids.split(',')]
-        surveys = Survey.objects.filter(subcollection__collection__id__in=collections_ids).order_by('name')
-    else:
-        surveys = Survey.objects.all().order_by('name')
-
-    surveys_data = [{'id': survey.id, 'name': survey.name} for survey in surveys]
-    return JsonResponse({'surveys': surveys_data})
-
-
-def create_distributor(request):
-    if request.method == "POST":
-        name = request.POST.get('name')
-        if name:
-            Distributor.objects.get_or_create(name=name)
-            return JsonResponse({"success": True, "message": "Diffuseur ajouté avec succès."})
-        return JsonResponse({"success": False, "message": "Le nom du diffeuseur est requis."})
-    return JsonResponse({"success": False, "message": "Requête invalide."})
-
-
-def get_distributor(request):
-    distributors = Distributor.objects.all().values("id", "name")
-    return JsonResponse({"distributors": list(distributors)})
 
 
 class CSVUploadViewCollection(FormView):
@@ -1155,13 +780,357 @@ class CSVUploadViewCollection(FormView):
             )
 
 
+class ExportQuestionsCSVView(View):
+    def get(self, request, *args, **kwargs):
+        selected_collections = request.GET.getlist('collections')
+        selected_surveys = request.GET.getlist('surveys')
+        # Créer la réponse CSV
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
 
-class SubcollectionSurveysView(View):
-    def get(self, request, subcollection_id):
-        subcollection = get_object_or_404(Subcollection, id=subcollection_id)
-        surveys = Survey.objects.filter(subcollection=subcollection).order_by('name')
-        return render(request, 'list_surveys.html', {
-            'subcollection': subcollection,
-            'surveys': surveys
+        # Définir les colonnes du CSV
+        writer = csv.writer(response)
+        writer.writerow(
+            ['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes'])
+
+        # Récupérer toutes les questions et les informations associées
+        questions = BindingSurveyRepresentedVariable.objects.all()
+
+        if selected_collections:
+            questions = questions.filter(survey__subcollection__collection__id__in=selected_collections)
+        if selected_surveys:
+            questions = questions.filter(survey__id__in=selected_surveys)
+
+        for question in questions.distinct():
+            # Récupérer les liaisons entre les surveys et les variables représentées
+            represented_var = question.variable
+
+            if question:
+                survey = question.survey  # Récupérer le survey associé à cette variable représentée
+                variable_name = question.variable_name
+                universe = question.universe
+                notes = question.notes
+            else:
+                survey = None
+                variable_name = ''
+                universe = ''
+                notes = ''
+
+            # Récupérer les catégories associées
+            categories = " | ".join([f"{cat.code},{cat.category_label}" for cat in represented_var.categories.all()])
+
+            writer.writerow([
+                survey.external_ref if survey else '',  # DOI
+                survey.name if survey else '',  # Title
+                variable_name,  # Variable Name
+                represented_var.internal_label or '',  # Variable Label
+                represented_var.question_text or '',  # Question Text
+                categories,  # Category Label
+                universe,  # Univers
+                notes  # Notes
+            ])
+
+        return response
+
+
+class QuestionDetailView(View):
+    def get(self, request, id, *args, **kwargs):
+        question = get_object_or_404(BindingSurveyRepresentedVariable, id=id)
+        question_represented_var = question.variable
+        question_conceptual_var = question_represented_var.conceptual_var
+        question_survey = question.survey
+
+        # Tri des catégories
+        categories = sorted(
+            question.variable.categories.all(),
+            key=lambda x: (int(x.code) if x.code.isdigit() else float('inf'), x.code)
+        )
+
+        similar_representative_questions = BindingSurveyRepresentedVariable.objects.filter(
+            variable=question.variable,
+            variable__is_unique=False
+        ).exclude(id=question.id)
+
+        similar_conceptual_questions = BindingSurveyRepresentedVariable.objects.filter(
+            variable__conceptual_var=question.variable.conceptual_var,
+            variable__conceptual_var__is_unique=False
+        ).exclude(
+            id=question.id
+        ).exclude(
+            id__in=similar_representative_questions.values_list('id', flat=True)
+        )
+
+        context = locals()
+        return render(request, 'question_detail.html', context)
+
+
+class CustomLoginView(LoginView):
+    template_name = 'login.html'
+    authentication_form = CustomAuthenticationForm
+    redirect_authenticated_user = True
+
+
+
+def search_results(request):
+    selected_surveys = request.GET.getlist('survey')
+    selected_sub_collection = request.GET.getlist('subcollection')
+    selected_collection = request.GET.getlist('collection')
+    search_locations = request.GET.getlist('search_location')
+
+    # Initialiser search_location avec toutes les options si elle est vide
+    if not search_locations:
+        search_locations = ['questions', 'categories', 'variable_name', 'internal_label']
+
+    request.session['selected_surveys'] = selected_surveys
+    request.session['selected_sub_collection'] = selected_sub_collection
+    request.session['selected_collection'] = selected_collection
+    request.session['search_location'] = search_locations
+
+    collections = Collection.objects.all().order_by("name")
+    subcollections = Subcollection.objects.all().order_by("name")
+    surveys = Survey.objects.all().order_by("name")
+
+    context = {
+        'collections': collections,
+        'subcollections': subcollections,
+        'surveys': surveys,
+        'search_location': search_locations,
+        'selected_surveys': selected_surveys,
+        'selected_sub_collection': selected_sub_collection,
+        'selected_collection': selected_collection,
+    }
+    return render(request, 'search_results.html', context)
+
+
+def similar_representative_variable_questions(request, question_id):
+    question = get_object_or_404(BindingSurveyRepresentedVariable, id=question_id)
+
+    rep_variable = question.variable
+    questions_from_rep_variable = BindingSurveyRepresentedVariable.objects.filter(variable=rep_variable).exclude(
+        id=question_id)
+
+    data = []
+    for similar_question in questions_from_rep_variable:
+        data.append({
+            "id": similar_question.id,
+            "variable_name": similar_question.variable_name,
+            "question_text": similar_question.variable.question_text,
+            "internal_label": similar_question.variable.internal_label or "N/A",
+            "survey": similar_question.survey.name
         })
 
+    return JsonResponse({
+        "recordsTotal": len(questions_from_rep_variable),
+        "recordsFiltered": len(questions_from_rep_variable),
+        "data": data
+    })
+
+
+def similar_conceptual_variable_questions(request, question_id):
+    question = get_object_or_404(BindingSurveyRepresentedVariable, id=question_id)
+    rep_variable = question.variable
+
+    conceptual_variable = rep_variable.conceptual_var
+
+    questions_from_conceptual_variable = BindingSurveyRepresentedVariable.objects.filter(
+        variable__conceptual_var=conceptual_variable).exclude(id=question_id)
+
+    data = []
+    for similar_question in questions_from_conceptual_variable:
+        data.append({
+            "id": similar_question.id,
+            "variable_name": similar_question.variable_name,
+            "question_text": similar_question.variable.question_text,
+            "internal_label": similar_question.variable.internal_label or "N/A",
+            "survey": similar_question.survey.name
+        })
+
+    return JsonResponse({
+        "recordsTotal": len(questions_from_conceptual_variable),
+        "recordsFiltered": len(questions_from_conceptual_variable),
+        "data": data
+    })
+
+
+def remove_html_tags(text):
+    """Supprime toutes les balises HTML d'une chaîne de caractères."""
+    return re.sub(r'<[^>]+>', '', text)
+
+
+def export_page(request):
+    collections = Collection.objects.all()
+    surveys = Survey.objects.all()
+    context = locals()
+    return render(request, 'export_csv.html', context)
+
+
+def admin_required(user):
+    return user.is_authenticated and user.is_staff
+
+
+def check_media_root(request):
+    # Vérifier si le répertoire MEDIA_ROOT existe
+    if not os.path.exists(settings.MEDIA_ROOT):
+        return JsonResponse({"error": "MEDIA_ROOT directory does not exist."})
+
+    # Parcourir les fichiers et dossiers dans MEDIA_ROOT
+    media_files_info = []
+    for root, dirs, files in os.walk(settings.MEDIA_ROOT):
+        for name in files:
+            file_path = os.path.join(root, name)
+            relative_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
+
+            # Tenter de construire l'URL de l'image et vérifier si l'URL est accessible
+            file_url = os.path.join(settings.MEDIA_URL, relative_path).replace("\\", "/")
+            file_exists = check_file_access(file_url)
+
+            # Obtenir les informations sur le fichier
+            file_info = {
+                "name": name,
+                "relative_path": relative_path,
+                "size": os.path.getsize(file_path),  # Taille en octets
+                "last_modified": datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat(),
+                "url": file_url,
+                "accessible": file_exists,
+            }
+            media_files_info.append(file_info)
+
+    return JsonResponse({
+        "MEDIA_ROOT": str(settings.MEDIA_ROOT),
+        "MEDIA_URL": settings.MEDIA_URL,
+        "file_count": len(media_files_info),
+        "files": media_files_info,
+    })
+
+
+def check_file_access(file_url):
+    """
+    Fonction qui essaie de faire une requête HTTP GET pour vérifier si l'URL du fichier est accessible.
+    Retourne True si le fichier est accessible, sinon False.
+    """
+
+    # Construire l'URL complète (en prenant en compte la configuration du domaine et du path)
+    # Ici, on assume que l'URL du fichier est accessible via un domaine public
+    full_url = f"http://{settings.ALLOWED_HOSTS[0]}{file_url}"
+
+    try:
+        response = requests.get(full_url)
+        # Si le code de réponse est 200, cela signifie que le fichier est accessible
+        return response.status_code == 200
+    except requests.exceptions.RequestException:
+        # Si une exception se produit, on considère que le fichier n'est pas accessible
+        return False
+
+
+@csrf_exempt
+def check_duplicates(request):
+    if request.method == 'POST':
+        # Récupérer soit le fichier CSV, soit le fichier XML
+        file = request.FILES.get('csv_file') or request.FILES.get('xml_file')
+
+        if not file:
+            return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+        decoded_file = file.read().decode('utf-8', errors='replace').splitlines()
+
+        # Vérifier si c'est un fichier XML
+        if file.name.endswith('.xml'):
+            soup = BeautifulSoup("\n".join(decoded_file), 'xml')
+            existing_variables = []
+            variable_survey_id = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo",
+                                                                                                           attrs={
+                                                                                                               "agency": "DataCite"}) else soup.find(
+                "IDNo").text.strip()
+            for var in soup.find_all('var'):
+                variable_name = var.get('name', '').strip()
+                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name,
+                                                                                    survey__external_ref=variable_survey_id)
+                if existing_bindings.exists():
+                    existing_variables.append(variable_name)
+
+        # Vérifier si c'est un fichier CSV
+        elif file.name.endswith('.csv'):
+            reader = csv.DictReader(decoded_file)
+            existing_variables = []
+            for row in reader:
+                variable_name = row['variable_name']
+                variable_survey_id = row['doi']
+                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name,
+                                                                                    survey__external_ref=variable_survey_id)
+                if existing_bindings.exists():
+                    existing_variables.append(variable_name)
+
+        else:
+            return JsonResponse({'error': 'Format de fichier non supporté'}, status=400)
+        if existing_variables:
+            return JsonResponse({'status': 'exists', 'existing_variables': existing_variables})
+        else:
+            return JsonResponse({'status': 'no_duplicates'})
+
+    return JsonResponse({'error': 'Requête invalide'}, status=400)
+
+
+def get_surveys_by_collections(request):
+    collections_ids = request.GET.get('collections_ids')
+    if collections_ids:
+        collections_ids = [int(id) for id in collections_ids.split(',')]
+        surveys = Survey.objects.filter(subcollection__collection__id__in=collections_ids).order_by('name')
+    else:
+        surveys = Survey.objects.all().order_by('name')
+
+    surveys_data = [{'id': survey.id, 'name': survey.name} for survey in surveys]
+    return JsonResponse({'surveys': surveys_data})
+
+
+def create_distributor(request):
+    if request.method == "POST":
+        name = request.POST.get('name')
+        if name:
+            Distributor.objects.get_or_create(name=name)
+            return JsonResponse({"success": True, "message": "Diffuseur ajouté avec succès."})
+        return JsonResponse({"success": False, "message": "Le nom du diffeuseur est requis."})
+    return JsonResponse({"success": False, "message": "Requête invalide."})
+
+
+def get_distributor(request):
+    distributors = Distributor.objects.all().values("id", "name")
+    return JsonResponse({"distributors": list(distributors)})
+
+
+
+
+def get_subcollections_by_collections(request):
+    collection_ids = request.GET.get('collections_ids', '').split(',')
+    collection_ids = [id for id in collection_ids if id]
+
+    if not collection_ids:
+        subcollections = Subcollection.objects.all().order_by('name')
+        surveys = Survey.objects.all().order_by('name')
+    else:
+        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids).order_by('name')
+        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
+
+    data = {
+        'subcollections': [{'id': sc.id, 'name': sc.name} for sc in subcollections],
+        'surveys': [{'id': s.id, 'name': s.name} for s in surveys],
+    }
+
+    return JsonResponse(data)
+
+
+def get_surveys_by_subcollections(request):
+    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
+    subcollection_ids = [id for id in subcollection_ids if id]
+
+    if not subcollection_ids:
+        collection_ids = request.GET.get('collections_ids', '').split(',')
+        collection_ids = [id for id in collection_ids if id]
+
+        if collection_ids:
+            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
+        else:
+            surveys = Survey.objects.all().order_by('name')
+    else:
+        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids).order_by('name')
+
+    data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
+    return JsonResponse(data)
