@@ -45,6 +45,8 @@ from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
 
+from .utils.sort import alphanum_key
+
 
 def admin_required(user):
     return user.is_authenticated and user.is_staff
@@ -492,6 +494,17 @@ def search_results(request):
     subcollections = Subcollection.objects.all().order_by("name")
     surveys = Survey.objects.all().order_by("name")
 
+    years = Survey.objects.values_list('start_date', flat=True).distinct()
+    years = [year.year for year in years if year is not None]
+    years.sort()
+
+    decades = {}
+    for year in years:
+        decade = (year // 10) * 10
+        if decade not in decades:
+            decades[decade] = []
+        decades[decade].append(year)
+
     context = {
         'collections': collections,
         'subcollections': subcollections,
@@ -500,6 +513,8 @@ def search_results(request):
         'selected_surveys': selected_surveys,
         'selected_sub_collection': selected_sub_collection,
         'selected_collection': selected_collection,
+        'show_search_bar': True,
+        'decades': decades,
     }
     return render(request, 'search_results.html', context)
 
@@ -514,6 +529,11 @@ def get_subcollections_by_collections(request):
     else:
         subcollections = Subcollection.objects.filter(collection_id__in=collection_ids).order_by('name')
         surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
+
+    surveys = list(surveys)
+    subcollections = list(subcollections)
+    subcollections.sort(key=lambda sc: alphanum_key(sc.name))
+    surveys.sort(key=lambda s: alphanum_key(s.name))
 
     data = {
         'subcollections': [{'id': sc.id, 'name': sc.name} for sc in subcollections],
@@ -537,6 +557,8 @@ def get_surveys_by_subcollections(request):
             surveys = Survey.objects.all().order_by('name')
     else:
         surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids).order_by('name')
+    surveys = list(surveys)
+    surveys.sort(key=lambda s: alphanum_key(s.name))
 
     data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
     return JsonResponse(data)
@@ -563,13 +585,15 @@ class SearchResultsDataView(ListView):
         collections_filter = self.request.POST.getlist('collections[]', None)
         start_date = self.request.POST.get('startDate')
         end_date = self.request.POST.get('endDate')
+        years = self.request.POST.getlist('years[]', [])
 
         survey_filter = [int(survey_id) for survey_id in survey_filter if survey_id.isdigit()]
-        subcollection_filter = [int(subcollection_id) for subcollection_id in subcollection_filter if
-                                subcollection_id.isdigit()]
+        subcollection_filter = [int(subcollection_id) for subcollection_id in subcollection_filter if subcollection_id.isdigit()]
         collections_filter = [int(collection_id) for collection_id in collections_filter if collection_id.isdigit()]
+        years = [int(year) for year in years if year.isdigit()]
 
         search = BindingSurveyDocument.search()
+
         search = search.filter('term', is_question_text_empty=False)
 
         if search_value:
@@ -589,6 +613,9 @@ class SearchResultsDataView(ListView):
         elif collections_filter:
             search = search.filter('terms', **{"survey.subcollection.collection_id": collections_filter})
 
+        if years:
+            search = search.filter('terms', **{"survey.start_date.year": years})
+
         if start_date and end_date:
             start_date = datetime.strptime(start_date, '%d/%m/%Y')
             end_date = datetime.strptime(end_date, '%d/%m/%Y')
@@ -602,11 +629,9 @@ class SearchResultsDataView(ListView):
             search = search.query('bool', should=[date_range_query, no_start_date_query], minimum_should_match=1)
 
         start = int(self.request.POST.get('start', 0))
-        length = int(self.request.POST.get('length', self.paginate_by))
-        if length == -1:
-            length = search.count()
+        limit = int(self.request.POST.get('limit', self.paginate_by))
 
-        return search[start:start + length].execute()
+        return search[start:start + limit].execute()
 
     def apply_search_filters(self, search, search_value, search_locations):
         queries = []
@@ -660,13 +685,7 @@ class SearchResultsDataView(ListView):
                 )
                 for term in terms:
                     queries.append(
-                        {"multi_match": {
-                            "query": term,
-                            "fields": ["variable_name", "variable.internal_label"],
-                            "type": "best_fields",
-                            "operator": "or",
-                            "boost": 1
-                        }}
+                    {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
                     )
             elif search_location == 'internal_label':
                 queries.append(
@@ -715,10 +734,12 @@ class SearchResultsDataView(ListView):
             for cat in sorted_categories:
                 if category_matched and cat.category_label == remove_html_tags(category_matched):
                     all_clean_categories.append(
-                        f"<mark style='background-color: yellow;'>{cat.code} : {cat.category_label}</mark>"
+                         f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{cat.code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{cat.category_label}</mark></td></tr>"
                     )
                 else:
-                    all_clean_categories.append(f"{cat.code} : {cat.category_label}")
+                    all_clean_categories.append(
+                        f"<tr><td class='code-cell'>{cat.code}</td><td class='text-cell'>{cat.category_label}</td></tr>"
+                    )
 
             variable_name = result.variable_name
             if 'variable_name' in search_locations and hasattr(result.meta,
@@ -736,7 +757,7 @@ class SearchResultsDataView(ListView):
                 "question_text": highlighted_question,
                 "survey_name": getattr(result.survey, 'name', "N/A"),
                 "notes": getattr(result, 'notes', "N/A"),
-                "categories": all_clean_categories,
+                "categories": "<table class='styled-table'>" + "".join(all_clean_categories) + "</table>",
                 "internal_label": internal_label,
                 "is_category_search": is_category_search,
             })
@@ -763,8 +784,7 @@ def remove_html_tags(text):
 
 class ExportQuestionsCSVView(View):
     def get(self, request, *args, **kwargs):
-        selected_collections = request.GET.getlist('collections')
-        selected_surveys = request.GET.getlist('surveys')
+        selected_ids = request.GET.getlist('ids')
         # Créer la réponse CSV
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
@@ -777,10 +797,8 @@ class ExportQuestionsCSVView(View):
         # Récupérer toutes les questions et les informations associées
         questions = BindingSurveyRepresentedVariable.objects.all()
 
-        if selected_collections:
-            questions = questions.filter(survey__subcollection__collection__id__in=selected_collections)
-        if selected_surveys:
-            questions = questions.filter(survey__id__in=selected_surveys)
+        if selected_ids:
+            questions = questions.filter(id__in=selected_ids)
 
         for question in questions.distinct():
             # Récupérer les liaisons entre les surveys et les variables représentées
@@ -1160,3 +1178,32 @@ class SubcollectionSurveysView(View):
             'surveys': surveys
         })
 
+
+def get_decades(request):
+    # Récupérer les années uniques des enquêtes
+    years = Survey.objects.values_list('start_date', flat=True).distinct()
+    years = [year.year for year in years if year is not None]
+    years.sort()
+
+    # Regrouper les années par décennies
+    decades = {}
+    for year in years:
+        decade = (year // 10) * 10
+        if decade not in decades:
+            decades[decade] = []
+        decades[decade].append(year)
+    # Préparer les données à renvoyer
+    data = {'decades': decades}
+    return JsonResponse(data)
+
+def get_years_by_decade(request):
+    decade = int(request.GET.get('decade', 0))
+    start_year = decade
+    end_year = decade + 9
+
+    years = Survey.objects.filter(start_date__year__range=(start_year, end_year)).values_list('start_date', flat=True).distinct()
+    years = [year.year for year in years if year is not None]
+    years.sort()
+
+    data = {'years': years}
+    return JsonResponse(data)

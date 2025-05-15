@@ -6,6 +6,13 @@ body {
     background-color: #ffffff; /* Couleur beige douce */
 }
 
+.homepage-title{
+    font-family: 'Redaction10', sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    color: #536254;
+}
+
 /* Header */
 header {
     background-color: #00466b;
@@ -27,6 +34,7 @@ nav {
     padding: 10px;
 }
 
+
 nav a {
     color: white;
     text-decoration: none;
@@ -47,7 +55,6 @@ section.hero {
     color: #333;
     padding: 100px 20px;
     text-align: center;
-    border-bottom: 1px solid;
     margin : 0 auto;
 }
 

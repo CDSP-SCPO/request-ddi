@@ -14,6 +14,8 @@ from .views import (
     get_surveys_by_collections, get_surveys_by_subcollections, search_results,
     similar_conceptual_variable_questions,
     similar_representative_variable_questions,
+    get_years_by_decade,
+    get_decades
 )
 
 app_name = 'app'
@@ -47,6 +49,10 @@ urlpatterns = [
 
     path('api/get-subcollections-by-collections/', get_subcollections_by_collections, name='get_subcollections_by_collections'),
     path('api/get-surveys-by-subcollections/', get_surveys_by_subcollections, name='get_surveys_by_subcollections'),
+
+    path('get-decades/', get_decades, name='get_decades'),
+    path('get-years-by-decade/', get_years_by_decade, name='get_years_by_decade'),
+
 
 ]
 
