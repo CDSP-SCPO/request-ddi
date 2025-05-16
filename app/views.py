@@ -32,24 +32,19 @@ from elasticsearch_dsl import A, Q, Search
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
 from .forms import (
-    CollectionForm, CSVUploadForm, CSVUploadFormCollection,
-    CustomAuthenticationForm, XMLUploadForm,
+    CSVUploadForm, CSVUploadFormCollection, CustomAuthenticationForm,
+    XMLUploadForm,
 )
 from .models import (
     BindingSurveyRepresentedVariable, Category, Collection, ConceptualVariable,
     Distributor, RepresentedVariable, Subcollection, Survey,
 )
 from .signals import data_imported
-from .utils.csvimportexport import BindingSurveyResource
 from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
 
 from .utils.sort import alphanum_key
-
-
-def admin_required(user):
-    return user.is_authenticated and user.is_staff
 
 
 class BaseUploadView(FormView):
@@ -203,11 +198,12 @@ class BaseUploadView(FormView):
         return categories
 
     def create_new_represented_variable(self, conceptual_var, name_question_normalized, category_label,
-                                        variable_label):
+                                        variable_label, is_unique: bool = False):
         new_represented_var = RepresentedVariable.objects.create(
             conceptual_var=conceptual_var,
             question_text=name_question_normalized,
-            internal_label=variable_label
+            internal_label=variable_label,
+            is_unique=is_unique,
         )
         new_categories = self.create_new_categories(category_label)
         new_represented_var.categories.set(new_categories)
@@ -220,18 +216,24 @@ class BaseUploadView(FormView):
 
         cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
 
-        if name_question_for_comparison in cleaned_questions:
-            var_represented = RepresentedVariable.objects.filter(
-                question_text=cleaned_questions[name_question_for_comparison].question_text
-            )
-            for var in var_represented:
-                if self.check_category(category_label, var.categories):
-                    return var, False
-            return self.create_new_represented_variable(var_represented[0].conceptual_var,
-                                                        name_question_for_database, category_label,
-                                                        variable_label), True
+        if name_question_for_comparison :
+            if name_question_for_comparison in cleaned_questions:
+                var_represented = RepresentedVariable.objects.filter(
+                    question_text=cleaned_questions[name_question_for_comparison].question_text
+                )
+                for var in var_represented:
+                    if self.check_category(category_label, var.categories):
+                        return var, False
+                return self.create_new_represented_variable(var_represented[0].conceptual_var,
+                                                            name_question_for_database, category_label,
+                                                            variable_label), True
+            else:
+                conceptual_var = ConceptualVariable.objects.create()
+                return self.create_new_represented_variable(conceptual_var, name_question_for_database,
+                                                            category_label,
+                                                            variable_label), True
         else:
-            conceptual_var = ConceptualVariable.objects.create()
+            conceptual_var = ConceptualVariable.objects.create(is_unique=True)
             return self.create_new_represented_variable(conceptual_var, name_question_for_database,
                                                         category_label,
                                                         variable_label), True
@@ -295,13 +297,11 @@ class CSVUploadView(BaseUploadView):
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
-import logging
+
 class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
-    def test_func(self):
-        return self.request.user.is_superuser
 
     def add_form_to_context(self, context):
         context['xml_form'] = XMLUploadForm()
@@ -326,11 +326,13 @@ class XMLUploadView(BaseUploadView):
                     self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
         return results
 
+
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
         start_time = datetime.now()  # Début du parsing
         try:
             print(f"Début du parsing du fichier {file.name} à {start_time}")
+
             file.seek(0)
             content = file.read().decode('utf-8')
             soup = BeautifulSoup(content, "xml")
@@ -362,6 +364,7 @@ class XMLUploadView(BaseUploadView):
                     line.find("universe").text.strip() if line.find("universe") else "",
                     line.find("notes").text.strip() if line.find("notes") else "",
                 ])
+
             end_time = datetime.now()  # Fin du parsing
             print(f"Fichier {file.name} parsé en {end_time - start_time}")
             return data
@@ -389,40 +392,27 @@ class XMLUploadView(BaseUploadView):
             try:
                 print(f"Traitement du DOI: {doi}")
                 start_time = datetime.now()  # Début du traitement du DOI
-                # Créer ou récupérer l'enquête (Survey)
-                survey_start_time = datetime.now()  # Temps de création/récupération Survey
+
                 survey = Survey.objects.get(external_ref=doi)
-                survey_end_time = datetime.now()
-                print(f"Enquête trouvée pour {doi} en {survey_end_time - survey_start_time}")
 
                 for question_data in questions:
                     variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
 
-                    # Créer ou récupérer la variable représentée (RepresentedVariable)
-                    represented_variable_start_time = datetime.now()
                     represented_variable, created_variable = self.get_or_create_represented_variable(
                         variable_name, question_text, category_label, variable_label
                     )
-                    represented_variable_end_time = datetime.now()
-                    print(f"Création ou récupération de la variable représentée {variable_name} en {represented_variable_end_time - represented_variable_start_time}")
+
                     if created_variable:
                         num_new_variables += 1
 
-                    # Créer ou récupérer la liaison (BindingSurveyRepresentedVariable)
-                    binding_start_time = datetime.now()
                     binding, created_binding = self.get_or_create_binding(
                         survey, represented_variable, variable_name, universe, notes
                     )
-                    binding_end_time = datetime.now()
-                    print(f"Création ou récupération du binding pour {variable_name} en {binding_end_time - binding_start_time}")
+
                     if created_binding:
                         num_new_bindings += 1
-                    # Impression avant l'envoi du signal
-                    signal_start_time = datetime.now()
-                    print(f"Envoi du signal pour le binding {binding} à {signal_start_time}")
+
                     data_imported.send(sender=self.__class__, instance=binding)
-                    signal_end_time = datetime.now()
-                    print(f"Signal envoyé pour le binding {binding} en {signal_end_time - signal_start_time}")
 
                     num_records += 1
 
@@ -451,17 +441,6 @@ class XMLUploadView(BaseUploadView):
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
 
-class ExportQuestionsView(View):
-    def get(self, request, *args, **kwargs):
-        resource = BindingSurveyResource()
-        dataset = resource.export()
-
-        # Créer une réponse HTTP avec le bon type de contenu pour CSV
-        response = HttpResponse(dataset.csv, content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
-        return response
-
-
 class RepresentedVariableSearchView(ListView):
     model = RepresentedVariable
     template_name = 'homepage.html'  # Nom du template
@@ -473,95 +452,6 @@ class RepresentedVariableSearchView(ListView):
         context['success_message'] = self.request.GET.get('success_message', None)
         context['upload_stats'] = self.request.GET.get('upload_stats', None)
         return context
-
-
-def search_results(request):
-    selected_surveys = request.GET.getlist('survey')
-    selected_sub_collection = request.GET.getlist('subcollection')
-    selected_collection = request.GET.getlist('collection')
-    search_locations = request.GET.getlist('search_location')
-
-    # Initialiser search_location avec toutes les options si elle est vide
-    if not search_locations:
-        search_locations = ['questions', 'categories', 'variable_name', 'internal_label']
-
-    request.session['selected_surveys'] = selected_surveys
-    request.session['selected_sub_collection'] = selected_sub_collection
-    request.session['selected_collection'] = selected_collection
-    request.session['search_location'] = search_locations
-
-    collections = Collection.objects.all().order_by("name")
-    subcollections = Subcollection.objects.all().order_by("name")
-    surveys = Survey.objects.all().order_by("name")
-
-    years = Survey.objects.values_list('start_date', flat=True).distinct()
-    years = [year.year for year in years if year is not None]
-    years.sort()
-
-    decades = {}
-    for year in years:
-        decade = (year // 10) * 10
-        if decade not in decades:
-            decades[decade] = []
-        decades[decade].append(year)
-
-    context = {
-        'collections': collections,
-        'subcollections': subcollections,
-        'surveys': surveys,
-        'search_location': search_locations,
-        'selected_surveys': selected_surveys,
-        'selected_sub_collection': selected_sub_collection,
-        'selected_collection': selected_collection,
-        'show_search_bar': True,
-        'decades': decades,
-    }
-    return render(request, 'search_results.html', context)
-
-
-def get_subcollections_by_collections(request):
-    collection_ids = request.GET.get('collections_ids', '').split(',')
-    collection_ids = [id for id in collection_ids if id]
-
-    if not collection_ids:
-        subcollections = Subcollection.objects.all().order_by('name')
-        surveys = Survey.objects.all().order_by('name')
-    else:
-        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids).order_by('name')
-        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
-
-    surveys = list(surveys)
-    subcollections = list(subcollections)
-    subcollections.sort(key=lambda sc: alphanum_key(sc.name))
-    surveys.sort(key=lambda s: alphanum_key(s.name))
-
-    data = {
-        'subcollections': [{'id': sc.id, 'name': sc.name} for sc in subcollections],
-        'surveys': [{'id': s.id, 'name': s.name} for s in surveys],
-    }
-
-    return JsonResponse(data)
-
-
-def get_surveys_by_subcollections(request):
-    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
-    subcollection_ids = [id for id in subcollection_ids if id]
-
-    if not subcollection_ids:
-        collection_ids = request.GET.get('collections_ids', '').split(',')
-        collection_ids = [id for id in collection_ids if id]
-
-        if collection_ids:
-            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
-        else:
-            surveys = Survey.objects.all().order_by('name')
-    else:
-        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids).order_by('name')
-    surveys = list(surveys)
-    surveys.sort(key=lambda s: alphanum_key(s.name))
-
-    data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
-    return JsonResponse(data)
 
 
 class SearchResultsDataView(ListView):
@@ -593,8 +483,6 @@ class SearchResultsDataView(ListView):
         years = [int(year) for year in years if year.isdigit()]
 
         search = BindingSurveyDocument.search()
-
-        search = search.filter('term', is_question_text_empty=False)
 
         if search_value:
             search = self.apply_search_filters(search, search_value, search_locations)
@@ -766,7 +654,7 @@ class SearchResultsDataView(ListView):
     def post(self, request, *args, **kwargs):
         response = self.get_queryset()
 
-        total_records = BindingSurveyDocument.search().filter('term', is_question_text_empty=False).count()
+        total_records = BindingSurveyDocument.search().count()
         filtered_records = response.hits.total.value
         data = self.format_search_results(response, request.POST.getlist('search_location[]', ['questions', 'categories', 'variable_name', 'internal_label']))
 
@@ -778,9 +666,119 @@ class SearchResultsDataView(ListView):
         })
 
 
-def remove_html_tags(text):
-    """Supprime toutes les balises HTML d'une chaîne de caractères."""
-    return re.sub(r'<[^>]+>', '', text)
+class CSVUploadViewCollection(FormView):
+    template_name = 'upload_csv_collection.html'
+    form_class = CSVUploadFormCollection
+
+    def form_valid(self, form):
+        try:
+            data = self.get_data(form)
+            delimiter = form.cleaned_data['delimiter']
+            survey_datas = list(self.convert_data(data, delimiter))
+            self.process_data(survey_datas)
+            return JsonResponse({'status': 'success', 'message': 'Le fichier CSV a été importé avec succès.'})
+        except forms.ValidationError as ve:
+            print(ve.messages)
+            return JsonResponse({'status': 'error', 'message': ve.messages})
+        except IntegrityError as ie:
+            doi = self.extract_doi_from_error(str(ie))
+            if 'unique constraint' in str(ie):
+                return JsonResponse({'status': 'error',
+                                     'message': f"Une enquête avec le DOI {doi} existe déjà dans la base de données."})
+        except ValueError as ve:
+            return JsonResponse({'status': 'error', 'message': str(ve)})
+        except Exception as e:
+            return JsonResponse(
+                {'status': 'error', 'message': f"Erreur lors de l'importation du fichier CSV : {str(e)}"})
+
+    def form_invalid(self, form):
+        errors = form.errors.as_json()
+        return JsonResponse({'status': 'error', 'message': 'Le formulaire est invalide.', 'errors': errors})
+
+    def get_data(self, form):
+        # Utilisez les données décodées du formulaire
+        return form.cleaned_data['decoded_csv']
+
+    def convert_data(self, content, delimiter):
+        # Utilisez le délimiteur détecté dans le formulaire
+        reader = csv.DictReader(content, delimiter=delimiter)
+        return reader
+
+    def extract_doi_from_error(self, error_message):
+        # Extraire le DOI du message d'erreur
+        # -- STDLIB
+        import re
+        match = re.search(r'\(external_ref\)=\((.*?)\)', error_message)
+        return match.group(1) if match else 'inconnu'
+
+    @transaction.atomic
+    def process_data(self, survey_datas):
+        for line_number, row in enumerate(survey_datas, start=1):
+            distributor_name = row['distributor']
+            distributor, created = Distributor.objects.get_or_create(name=distributor_name)
+
+            collection_name = row['collection']
+            collection, created = Collection.objects.get_or_create(name=collection_name, distributor=distributor)
+
+            subcollection_name = row['sous-collection']
+            subcollection, created = Subcollection.objects.get_or_create(name=subcollection_name, collection=collection)
+
+            survey_doi = row['doi']
+            if not survey_doi.startswith("doi:"):
+                raise ValueError(f"Le DOI à la ligne {line_number} n'est pas dans le bon format : {survey_doi}")
+
+            survey_name = row['title']
+            survey_language = row['xml_lang']
+            survey_author = row['author']
+            survey_producer = row['producer']
+            survey_start_date = row['start_date']
+            survey_geographic_coverage = row['geographic_coverage']
+            survey_geographic_unit = row['geographic_unit']
+            survey_unit_of_analysis = row['unit_of_analysis']
+            survey_contact = row['contact']
+            survey_date_last_version = row['date_last_version']
+
+            # Conversion de survey_start_date en objet date (année uniquement)
+            if survey_start_date:
+                try:
+                    # Tente de convertir la date au format "YYYY"
+                    survey_start_date = datetime.strptime(survey_start_date, '%Y').date()
+                except ValueError:
+                    try:
+                        # Si ça échoue, tente de convertir la date au format "YYYY-MM-DD"
+                        survey_start_date = datetime.strptime(survey_start_date, '%Y-%m-%d').date()
+                    except ValueError:
+                        raise ValueError(
+                            f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}")
+            else:
+                survey_start_date = None
+
+            # Vérification et formatage de survey_date_last_version
+            if survey_date_last_version:
+                if len(survey_date_last_version) == 7:  # Format YYYY-MM
+                    survey_date_last_version += '-01'
+                try:
+                    survey_date_last_version = datetime.strptime(survey_date_last_version, '%Y-%m-%d').date()
+                except ValueError:
+                    raise ValueError(
+                        f"La date de la dernière version à la ligne {line_number} n'est pas valide : {survey_date_last_version}")
+            else:
+                survey_date_last_version = None
+            Survey.objects.get_or_create(
+                external_ref=survey_doi,
+                name=survey_name,
+                subcollection=subcollection,
+                language=survey_language,
+                author=survey_author,
+                producer=survey_producer,
+                start_date=survey_start_date,
+                geographic_coverage=survey_geographic_coverage,
+                geographic_unit=survey_geographic_unit,
+                unit_of_analysis=survey_unit_of_analysis,
+                contact=survey_contact,
+                date_last_version=survey_date_last_version,
+            )
+
 
 class ExportQuestionsCSVView(View):
     def get(self, request, *args, **kwargs):
@@ -832,32 +830,86 @@ class ExportQuestionsCSVView(View):
         return response
 
 
-def export_page(request):
-    collections = Collection.objects.all()
-    surveys = Survey.objects.all()
-    context = locals()
-    return render(request, 'export_csv.html', context)
-
-
 class QuestionDetailView(View):
     def get(self, request, id, *args, **kwargs):
         question = get_object_or_404(BindingSurveyRepresentedVariable, id=id)
         question_represented_var = question.variable
         question_conceptual_var = question_represented_var.conceptual_var
         question_survey = question.survey
-        categories = sorted(question.variable.categories.all(),
-                            key=lambda x: int(x.code) if x.code.isdigit() else x.code)
-        middle_index = len(categories) // 2
+
+        # Tri des catégories
+        categories = sorted(
+            question.variable.categories.all(),
+            key=lambda x: (int(x.code) if x.code.isdigit() else float('inf'), x.code)
+        )
+
         similar_representative_questions = BindingSurveyRepresentedVariable.objects.filter(
-            variable=question.variable
+            variable=question.variable,
+            variable__is_unique=False
         ).exclude(id=question.id)
 
         similar_conceptual_questions = BindingSurveyRepresentedVariable.objects.filter(
-            variable__conceptual_var=question.variable.conceptual_var
-        ).exclude(id=question.id).exclude(id__in=similar_representative_questions.values_list('id', flat=True))
+            variable__conceptual_var=question.variable.conceptual_var,
+            variable__conceptual_var__is_unique=False
+        ).exclude(
+            id=question.id
+        ).exclude(
+            id__in=similar_representative_questions.values_list('id', flat=True)
+        )
 
         context = locals()
         return render(request, 'question_detail.html', context)
+
+
+class CustomLoginView(LoginView):
+    template_name = 'login.html'
+    authentication_form = CustomAuthenticationForm
+    redirect_authenticated_user = True
+
+
+
+def search_results(request):
+    selected_surveys = request.GET.getlist('survey')
+    selected_sub_collection = request.GET.getlist('subcollection')
+    selected_collection = request.GET.getlist('collection')
+    search_locations = request.GET.getlist('search_location')
+
+    # Initialiser search_location avec toutes les options si elle est vide
+    if not search_locations:
+        search_locations = ['questions', 'categories', 'variable_name', 'internal_label']
+
+    request.session['selected_surveys'] = selected_surveys
+    request.session['selected_sub_collection'] = selected_sub_collection
+    request.session['selected_collection'] = selected_collection
+    request.session['search_location'] = search_locations
+
+    collections = Collection.objects.all().order_by("name")
+    subcollections = Subcollection.objects.all().order_by("name")
+    surveys = Survey.objects.all().order_by("name")
+
+    years = Survey.objects.values_list('start_date', flat=True).distinct()
+    years = [year.year for year in years if year is not None]
+    years.sort()
+
+    decades = {}
+    for year in years:
+        decade = (year // 10) * 10
+        if decade not in decades:
+            decades[decade] = []
+        decades[decade].append(year)
+
+    context = {
+        'collections': collections,
+        'subcollections': subcollections,
+        'surveys': surveys,
+        'search_location': search_locations,
+        'selected_surveys': selected_surveys,
+        'selected_sub_collection': selected_sub_collection,
+        'selected_collection': selected_collection,
+        'show_search_bar': True,
+        'decades': decades,
+    }
+    return render(request, 'search_results.html', context)
 
 
 def similar_representative_variable_questions(request, question_id):
@@ -910,10 +962,20 @@ def similar_conceptual_variable_questions(request, question_id):
     })
 
 
-class CustomLoginView(LoginView):
-    template_name = 'login.html'
-    authentication_form = CustomAuthenticationForm
-    redirect_authenticated_user = True
+def remove_html_tags(text):
+    """Supprime toutes les balises HTML d'une chaîne de caractères."""
+    return re.sub(r'<[^>]+>', '', text)
+
+
+def export_page(request):
+    collections = Collection.objects.all()
+    surveys = Survey.objects.all()
+    context = locals()
+    return render(request, 'export_csv.html', context)
+
+
+def admin_required(user):
+    return user.is_authenticated and user.is_staff
 
 
 def check_media_root(request):
@@ -1017,14 +1079,6 @@ def check_duplicates(request):
     return JsonResponse({'error': 'Requête invalide'}, status=400)
 
 
-class CollectionSurveysView(View):
-    def get(self, request, collection_id):
-        collection = get_object_or_404(Collection, id=collection_id)
-        subcollections = Subcollection.objects.filter(collection=collection).order_by('name')
-        return render(request, 'collection_subcollections.html',
-                      {'collection': collection, 'subcollections': subcollections})
-
-
 def get_surveys_by_collections(request):
     collections_ids = request.GET.get('collections_ids')
     if collections_ids:
@@ -1052,158 +1106,49 @@ def get_distributor(request):
     return JsonResponse({"distributors": list(distributors)})
 
 
-class CSVUploadViewCollection(FormView):
-    template_name = 'upload_csv_collection.html'
-    form_class = CSVUploadFormCollection
-
-    def form_valid(self, form):
-        try:
-            data = self.get_data(form)
-            delimiter = form.cleaned_data['delimiter']
-            survey_datas = list(self.convert_data(data, delimiter))
-            self.process_data(survey_datas)
-            return JsonResponse({'status': 'success', 'message': 'Le fichier CSV a été importé avec succès.'})
-        except forms.ValidationError as ve:
-            print(ve.messages)
-            return JsonResponse({'status': 'error', 'message': ve.messages})
-        except IntegrityError as ie:
-            doi = self.extract_doi_from_error(str(ie))
-            if 'unique constraint' in str(ie):
-                return JsonResponse({'status': 'error',
-                                     'message': f"Une enquête avec le DOI {doi} existe déjà dans la base de données."})
-        except ValueError as ve:
-            return JsonResponse({'status': 'error', 'message': str(ve)})
-        except Exception as e:
-            return JsonResponse(
-                {'status': 'error', 'message': f"Erreur lors de l'importation du fichier CSV : {str(e)}"})
-
-    def form_invalid(self, form):
-        errors = form.errors.as_json()
-        return JsonResponse({'status': 'error', 'message': 'Le formulaire est invalide.', 'errors': errors})
-
-    def get_data(self, form):
-        # Utilisez les données décodées du formulaire
-        return form.cleaned_data['decoded_csv']
-
-    def convert_data(self, content, delimiter):
-        # Utilisez le délimiteur détecté dans le formulaire
-        reader = csv.DictReader(content, delimiter=delimiter)
-        return reader
-
-    def extract_doi_from_error(self, error_message):
-        # Extraire le DOI du message d'erreur
-        # -- STDLIB
-        import re
-        match = re.search(r'\(external_ref\)=\((.*?)\)', error_message)
-        return match.group(1) if match else 'inconnu'
-
-    @transaction.atomic
-    def process_data(self, survey_datas):
-        for line_number, row in enumerate(survey_datas, start=1):
-            distributor_name = row['diffuseur']
-            distributor, created = Distributor.objects.get_or_create(name=distributor_name)
-
-            collection_name = row['collection']
-            collection, created = Collection.objects.get_or_create(name=collection_name, distributor=distributor)
-
-            subcollection_name = row['sous-collection']
-            subcollection, created = Subcollection.objects.get_or_create(name=subcollection_name, collection=collection)
-
-            survey_doi = row['doi']
-            if not survey_doi.startswith("doi:"):
-                raise ValueError(f"Le DOI à la ligne {line_number} n'est pas dans le bon format : {survey_doi}")
-
-            survey_name = row['title']
-            survey_language = row['xml_lang']
-            survey_author = row['author']
-            survey_producer = row['producer']
-            survey_start_date = row['start_date']
-            survey_geographic_coverage = row['geographic_coverage']
-            survey_geographic_unit = row['geographic_unit']
-            survey_unit_of_analysis = row['unit_of_analysis']
-            survey_contact = row['contact']
-            survey_citation = row['citation']
-            survey_date_last_version = row['date_last_version']
-
-            # Conversion de survey_start_date en objet date (année uniquement)
-            if survey_start_date:
-                try:
-                    # Tente de convertir la date au format "YYYY"
-                    survey_start_date = datetime.strptime(survey_start_date, '%Y').date()
-                except ValueError:
-                    try:
-                        # Si ça échoue, tente de convertir la date au format "YYYY-MM-DD"
-                        survey_start_date = datetime.strptime(survey_start_date, '%Y-%m-%d').date()
-                    except ValueError:
-                        raise ValueError(
-                            f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}")
-            else:
-                survey_start_date = None
-
-            # Vérification et formatage de survey_date_last_version
-            if survey_date_last_version:
-                if len(survey_date_last_version) == 7:  # Format YYYY-MM
-                    survey_date_last_version += '-01'
-                try:
-                    survey_date_last_version = datetime.strptime(survey_date_last_version, '%Y-%m-%d').date()
-                except ValueError:
-                    raise ValueError(
-                        f"La date de la dernière version à la ligne {line_number} n'est pas valide : {survey_date_last_version}")
-            else:
-                survey_date_last_version = None
-            Survey.objects.get_or_create(
-                external_ref=survey_doi,
-                name=survey_name,
-                subcollection=subcollection,
-                language=survey_language,
-                author=survey_author,
-                producer=survey_producer,
-                start_date=survey_start_date,
-                geographic_coverage=survey_geographic_coverage,
-                geographic_unit=survey_geographic_unit,
-                unit_of_analysis=survey_unit_of_analysis,
-                contact=survey_contact,
-                citation=survey_citation,
-                date_last_version=survey_date_last_version,
-            )
 
 
+def get_subcollections_by_collections(request):
+    collection_ids = request.GET.get('collections_ids', '').split(',')
+    collection_ids = [id for id in collection_ids if id]
 
-class SubcollectionSurveysView(View):
-    def get(self, request, subcollection_id):
-        subcollection = get_object_or_404(Subcollection, id=subcollection_id)
-        surveys = Survey.objects.filter(subcollection=subcollection).order_by('name')
-        return render(request, 'list_surveys.html', {
-            'subcollection': subcollection,
-            'surveys': surveys
-        })
+    if not collection_ids:
+        subcollections = Subcollection.objects.all().order_by('name')
+        surveys = Survey.objects.all().order_by('name')
+    else:
+        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids).order_by('name')
+        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
 
+    surveys = list(surveys)
+    subcollections = list(subcollections)
+    subcollections.sort(key=lambda sc: alphanum_key(sc.name))
+    surveys.sort(key=lambda s: alphanum_key(s.name))
 
-def get_decades(request):
-    # Récupérer les années uniques des enquêtes
-    years = Survey.objects.values_list('start_date', flat=True).distinct()
-    years = [year.year for year in years if year is not None]
-    years.sort()
+    data = {
+        'subcollections': [{'id': sc.id, 'name': sc.name} for sc in subcollections],
+        'surveys': [{'id': s.id, 'name': s.name} for s in surveys],
+    }
 
-    # Regrouper les années par décennies
-    decades = {}
-    for year in years:
-        decade = (year // 10) * 10
-        if decade not in decades:
-            decades[decade] = []
-        decades[decade].append(year)
-    # Préparer les données à renvoyer
-    data = {'decades': decades}
     return JsonResponse(data)
 
-def get_years_by_decade(request):
-    decade = int(request.GET.get('decade', 0))
-    start_year = decade
-    end_year = decade + 9
 
-    years = Survey.objects.filter(start_date__year__range=(start_year, end_year)).values_list('start_date', flat=True).distinct()
-    years = [year.year for year in years if year is not None]
-    years.sort()
+def get_surveys_by_subcollections(request):
+    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
+    subcollection_ids = [id for id in subcollection_ids if id]
 
-    data = {'years': years}
+    if not subcollection_ids:
+        collection_ids = request.GET.get('collections_ids', '').split(',')
+        collection_ids = [id for id in collection_ids if id]
+
+        if collection_ids:
+            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
+        else:
+            surveys = Survey.objects.all().order_by('name')
+    else:
+        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids).order_by('name')
+
+    surveys = list(surveys)
+    surveys.sort(key=lambda s: alphanum_key(s.name))
+
+    data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
     return JsonResponse(data)

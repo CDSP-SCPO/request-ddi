@@ -20,7 +20,7 @@
     </div>
     <div class="details-variable-container">
         <div class="">
-            <h5 class="card-title">{{ question_represented_var.question_text }}</h5>
+            <h5 class="card-title">{{ question_represented_var.question_text|default:"N/A" }}</h5>
             <h6 class="card-subtitle mb-2 text-muted">
                 <span class="detail-label">Enquête:</span> {{ question_survey.name }}
                 {% if question_survey.dist_date %}

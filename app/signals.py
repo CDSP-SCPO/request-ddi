@@ -2,13 +2,15 @@
 from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import Signal, receiver
 
+# -- THIRDPARTY
+from elasticsearch import NotFoundError
+
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
 from .models import (
     BindingSurveyRepresentedVariable, Category, ConceptualVariable,
     RepresentedVariable, Survey,
 )
-from elasticsearch import NotFoundError
 
 # Définir un signal personnalisé
 data_imported = Signal()
@@ -43,7 +45,6 @@ def handle_data_imported(sender, instance, **kwargs):
 def delete_represented_variable_if_unused(represented_variable):
     categories = represented_variable.categories.all()
 
-    # Supprimer la variable représentée
     represented_variable.delete()
 
     # Supprimer les catégories si elles ne sont plus utilisées
@@ -62,7 +63,6 @@ def delete_represented_variable_if_unused(represented_variable):
 @receiver(post_delete, sender=RepresentedVariable)
 def delete_represented_variable_index(sender, instance, **kwargs):
     try:
-        print(f"[Signal] Suppression de l'index pour la variable représentée ID={instance.id}")
         BindingSurveyDocument().delete(instance)
     except NotFoundError:
         # Le document n'était pas présent dans l'index, donc rien à faire
