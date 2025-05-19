@@ -465,11 +465,12 @@ class SearchResultsDataView(ListView):
             self.request.session['search_location'] = ['questions', 'categories', 'variable_name', 'internal_label']
         return super().dispatch(*args, **kwargs)
 
-    def get_queryset(self):
+    def build_filtered_search(self):
         search_value = self.request.POST.get('q', '').strip().lower()
         search_value = unescape(search_value)
 
-        search_locations = self.request.POST.getlist('search_location[]', ['questions', 'categories', 'variable_name', 'internal_label'])
+        search_locations = self.request.POST.getlist('search_location[]',
+                                                     ['questions', 'categories', 'variable_name', 'internal_label'])
         survey_filter = self.request.POST.getlist('survey[]', None)
         subcollection_filter = self.request.POST.getlist('sub_collections[]', None)
         collections_filter = self.request.POST.getlist('collections[]', None)
@@ -478,7 +479,8 @@ class SearchResultsDataView(ListView):
         years = self.request.POST.getlist('years[]', [])
 
         survey_filter = [int(survey_id) for survey_id in survey_filter if survey_id.isdigit()]
-        subcollection_filter = [int(subcollection_id) for subcollection_id in subcollection_filter if subcollection_id.isdigit()]
+        subcollection_filter = [int(subcollection_id) for subcollection_id in subcollection_filter if
+                                subcollection_id.isdigit()]
         collections_filter = [int(collection_id) for collection_id in collections_filter if collection_id.isdigit()]
         years = [int(year) for year in years if year.isdigit()]
 
@@ -516,9 +518,12 @@ class SearchResultsDataView(ListView):
             no_start_date_query = Q('term', has_start_date=False)
             search = search.query('bool', should=[date_range_query, no_start_date_query], minimum_should_match=1)
 
+        return search
+
+    def get_queryset(self):
+        search = self.build_filtered_search()
         start = int(self.request.POST.get('start', 0))
         limit = int(self.request.POST.get('limit', self.paginate_by))
-
         return search[start:start + limit].execute()
 
     def apply_search_filters(self, search, search_value, search_locations):
@@ -654,7 +659,7 @@ class SearchResultsDataView(ListView):
     def post(self, request, *args, **kwargs):
         response = self.get_queryset()
 
-        total_records = BindingSurveyDocument.search().count()
+        total_records = self.build_filtered_search().count()
         filtered_records = response.hits.total.value
         data = self.format_search_results(response, request.POST.getlist('search_location[]', ['questions', 'categories', 'variable_name', 'internal_label']))
 
@@ -1180,3 +1185,4 @@ def get_years_by_decade(request):
     years.sort()
 
     data = {'years': years}
+    return JsonResponse(data)
