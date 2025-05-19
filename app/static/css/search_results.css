@@ -1,146 +1,417 @@
 
-header {
-    background-color: #00466b;
-    color: white;
-    padding: 20px 0;
-    text-align: center;
-}
-header h1 {
-    margin: 0;
-}
-nav {
+  
+  .filters {
+    flex: 0 1 30%;
+    max-width: 400px;
+    min-width: 220px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+    box-sizing: border-box;
     display: flex;
-    justify-content: center;
-    background-color: #888888;
-    padding: 10px;
-}
-nav a {
-    color: white;
-    text-decoration: none;
-    margin: 0 15px;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .reset-btn {
+    margin-top: auto;
+    background: none;
+    border: none;
+    color: #4caf50;
+    cursor: pointer;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .content {
+    flex: 1 1 70%;
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+    min-width: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .actions button {
+    margin-left: 8px;
+    background: none;
+    border: none;
+    color: #333;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .height_topbar{
+      
+    height: var(--topbar-height);
+    
+  }
+
+  .accordion-item-custom{
+    min-height: 56px;
+    align-items: flex-start;
+    display: flex;
+    flex-direction:column;
+    justify-content: flex-start;
+  }
+
+  .padding-filters-container{
+
+    padding-right: 16px;
+    padding-left: 16px;
+    
+  }
+
+  .export-link {
+    min-width:80px;
+    display:flex;
+    gap:10px;
+    padding:16px;
 }
-nav a:hover {
-    text-decoration: underline;
+.export-container{
+    width: 100%;
+    display: flex;
+    flex-direction:row;
+    gap:10px;
+    align-items: center;
+    justify-content: space-between;
 }
-section.hero {
-    background-color: #888888;
-    color: white;
-    padding: 100px 20px;
-    text-align: center;
+
+.custom-topbar{
+    padding-right: 16px;
+    padding-left: 16px;
 }
-section.hero h2 {
+
+
+.custom-card-dt{
+    padding-top:16px;
+    padding-right: 32px;
+    padding-bottom: 24px;
+    padding-left: 32px;
+    
+    border-bottom: 1px solid #D3DFD5;
+
+}
+
+.title-checkbox{
+    display:flex;   
+    flex-direction:row;
+    gap: 16px;
+}
+
+.custom-metadatas
+{
+    padding: 0 32px 0 32px
+}
+
+.inner-container-metadatas{
+    gap: 5px;
+}
+
+.custom-card-first-part{
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.custom-card-second-part{
+    padding-left: 32px;
+}
+
+.custom-content-card{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.container-buttons-card{
+    display:flex;
+    gap:16px;
+}
+
+.button-card{
+    border: 1px solid #D3DFD5;
+    min-width: 80px;
+    border-radius: 16px;
+    gap: 10px;
+    border-width: 1px;
+    display:inline-flex;
+    padding:12px;
+    align-items: center;
+
+}
+
+.button-access-data{
+    background-color: #E3FFE8;
+
+}
+
+.icon-modalites{
+    width: 20px;
+    height: 20px;
+}
+.icon-access-data{
+    width: 30px;
+    height: 15px;
+}
+
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;  /* Important pour que les bordures partagées s'effondrent */
+    font-size: 0.9em;
+}
+
+.styled-table tr:not(:last-child) {
+    border-bottom: 1px solid #ddd;  /* Applique une bordure sous toutes les lignes sauf la dernière */
+}
+
+.styled-table td {
+    padding: 8px;
+    text-align: left;
+}
+
+.code-cell {
+    font-weight: bold;
+    width: 50px;
+    border-right: 1px solid #ddd;  /* Bar verticale entre les deux cellules */
+    text-align: center;  /* Centré pour les index */
+}
+
+.text-cell {
+    padding-left: 10px;
+    /* Pas de bordure sur le texte lui-même */
+}
+
+.accordion-button{
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.accordion-header{
+    width:100%
+}
+
+.table-container {
+    /* flex-grow: 1; */
+    flex-direction: column;
+    overflow-y: auto;
+    display: flex;
+    height: calc(100% - var(--topbar-height) - var(--selected-filters-container-height));
+}
+
+#load-more {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+.selected-filters-container {
+    max-height: 196px; /* Hauteur maximale fixe pour la div des labels */
+    overflow-y: auto;
+    padding: 24px 16px;
+    gap: 8px;
+    border-bottom: 1px solid #D3DFD5;
+    flex-wrap: wrap;
+    display: flex;
+    align-items: flex-start;
+}
+
+.selected-filter-card {
+    display:inline-flex;
+    gap:10px;
+    width: auto;
+    background-color: #F8F1F2;
+    border-radius: 8px;
+    gap: 8px;
+    padding: 8px;
+
+
+}
+
+.remove-filter {
+    font-size: 12px;
+    cursor: pointer;
+    margin: auto;
+}
+
+.decade-item{
+    justify-content: space-between;
+}
+
+.decade-item, .year-item {
+    width:100%
+
+}
+
+.decade-caret, .fa-caret-left {
+    cursor: pointer;
+}
+
+.back-button {
     margin-bottom: 10px;
-}
-.search-bar {
-    margin-top: 20px;
-}
-.search-bar input[type="text"] {
-    padding: 10px;
-    width: 300px;
-    border-radius: 5px;
-}
-.search-bar button {
-    padding: 10px;
-    border-radius: 50px;
     cursor: pointer;
-}
-section.features {
-    padding: 50px 20px;
     display: flex;
-    justify-content: space-around;
-    background-color: white;
-}
-.feature {
-    text-align: center;
-    max-width: 300px;
-}
-.feature img {
-    max-width: 100%;
-}
-footer {
-    background-color: #00466b;
-    color: white;
-    text-align: center;
-    padding: 20px 0;
-    margin-top: 30px;
+    align-items: center;
 }
 
-.studies {
-padding: 50px 20px;
-background-color: #f9f9f9;
+.back-button i {
+    margin-right: 5px;
 }
 
-.study-cards {
-display: flex;
-flex-wrap: wrap;
-gap: 20px;
-justify-content: center;
+#survey-table {
+    flex: 1; /* Permet à la table de prendre tout l'espace disponible */
+    overflow-y: auto; /* Active le défilement vertical pour la table */
 }
-
-.study-card {
-background-color: white;
-border-radius: 10px;
-box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-max-width: 300px;
-padding: 20px;
-text-align: center;
-transition: transform 0.3s;
-}
-
-.study-card:hover {
-transform: scale(1.05);
-}
-
-.study-card img {
-max-width: 100%;
-border-radius: 10px;
-}
-
-.study-card h3 {
-margin: 15px 0 10px;
-}
-
-.study-card p {
-color: #666;
-font-size: 0.9em;
-}
-
-.study-card button {
-background-color: #888888;
-color: white;
-padding: 10px 20px;
-border: none;
-border-radius: 5px;
-cursor: pointer;
-}
-
-.study-card button:hover {
-background-color: #888888;
+#load-more {
+    margin-top: auto; /* Positionne le bouton en bas */
 }
 
 
-.btn-outline-secondary {
-    color: white !important;  /* Mettre le texte en blanc */
-    border-color: white !important;  /* Bordure blanche pour harmoniser */
-}
 
-.dropdown-toggle.btn {
-    background-color: #888888 !important;  /* Couleur de fond gris (ou autre si besoin) */
-    color: white !important;  /* Texte blanc */
-}
-
-
-.form-select button{
-    padding: 12px 20px;
-    border-radius: 50px;
+.checkbox-custom {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #807E7E;
+    border-radius: 2px;
+    appearance: none;
+    outline: none;
     cursor: pointer;
-    transition: background-color 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    color: black !important;
+    margin-right: 8px;
+    vertical-align: middle;
+    background-color: transparent;
+    margin: auto 8px;
+    flex-shrink: 0;
 }
 
-.custom-name-card{
-    color:#6c757d;
-    font-weight: bold;
+.checkbox-custom:hover {
+    background-color: #F2FAF2;
+    border: 2px solid #536254;
+}
+
+/* Check blanc quand sélectionné */
+.checkbox-custom:checked {
+    background-color: #2E6831;
+    border-color: #2E6831;
+}
+
+.checkbox-custom:checked::after {
+    content: "";
+    position: absolute;
+    top: 58%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    transform: translate(-50%, -50%);
+    background-image: url("/static/svg/icons/checkbox_checked.svg");
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+.div-all-checkboxes{
+    gap: 3px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-check-custom{
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+}
+
+.form-check-label {
+    margin-left: 8px;
+    cursor: pointer;
+    line-height: 16px;
+    white-space: wrap;
+    
+}
+
+
+
+#filtersAccordion {
+    height:calc(100% - var(--topbar-height) - var(--resetbar-height));
+    overflow-y: auto;
+}
+
+
+.chevron-icon {
+    margin-right: 8px;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+}
+
+.accordion-collapse{
+    width: 100%;
+}
+
+.accordion-body{
+    width:100%;
+}
+#years-filter{
+    width:100%;
+}
+
+.reset-filters-container{
+    border-top: 1px solid #D3DFD5;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    height: var(--resetbar-height);
+    display: flex;
+    justify-content: flex-start;
+}
+
+.container-reset-button{
+    margin: auto 0;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+}
+
+.reset-icon{
+    width: 20px;
+    height: 20px;
+}
+
+.reset-button{
+    min-width: 80px;
+    border-radius: 8px;
+    gap: 10px;
+    display: inline-flex; 
+    align-items: center;
+    padding: 16px;
+}
+
+.custom-name-card:hover{
+    color : #1F1F1F;
+    text-decoration: underline;
+    text-decoration-color: #1F1F1F;
+}
+
+.container-buttons-export{
+    gap:16px;
+}
+
+
+.filter-count {
+    display: none;
+    background-color: #E3FFE8;
+    color: #4F4F4F;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    font-size: 12px;
+    margin-left: 10px;
 }

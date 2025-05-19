@@ -2,82 +2,169 @@
 {% load static %}
 
 {% block content %}
-    <div class="container mt-4">
-
-        <h1 class="mb-4">Résultats de la recherche</h1>
-        <form method="GET" action="{% url 'app:search_results' %}" class="search-bar form-inline mb-4">
-            <div class="input-group mr-2">
-                <input type="text" name="q" class="form-control" placeholder="Rechercher une question..."
-                       value="{{ request.GET.q }}" id="autocomplete-input">
-                <div class="input-group-append">
-                    <button class="input-group-text" type="submit">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </button>
+    <div class="inner-container-custom d-flex">
+        <div class="search-results-container w-70 border-right-custom">
+            <div class="height_topbar d-flex justify-content-between align-items-center custom-topbar border-bottom-custom">
+                <div class="export-container custom-body d-flex justify-content-between align-items-center">
+                    <span id="results-count">0 résultats</span>
+                    <div class="d-flex align-items-center container-buttons-export">
+                        <div id="export-selected" class="export-link" type="button">
+                            <img src="{% static 'svg/icons/export.svg' %}">
+                            <span>Exporter la sélection</span>
+                        </div>
+                        <div id="export-all" class="export-link" type="button">
+                            <img src="{% static 'svg/icons/export.svg' %}">
+                            <span>Tout exporter</span>
+                        </div>
+                    
+                    </div>
                 </div>
             </div>
-            <div class="input-group mr-2">
-                <select name="collection" id="collections-filter" class="selectpicker form-control" multiple
-                        title="Collections">
-                    {% for collection in collections %}
-                        <option value="{{ collection.id }}"
-                                {% if collection.id|stringformat:"s" in request.session.selected_collection %}selected{% endif %}>
-                            {{ collection.name }}
-                        </option>
-                    {% endfor %}
-                </select>
+            <div id="selected-filters-container" class="selected-filters-container overflow-auto">
+                <!-- Les cartes de filtres vont être dynamiquement insérées ici -->
             </div>
-            <div class="input-group mr-2">
-                <select name="subcollection" id="subcollections-filter" class="selectpicker form-control" multiple
-                        title="Sous-Collections">
-                    {% for subcollection in subcollections %}
-                        <option value="{{ subcollection.id }}"
-                                {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}selected{% endif %}>
-                            {{ subcollection.name }}
-                        </option>
-                    {% endfor %}
-                </select>
+            <div class="table-container">
+                <table id="survey-table" class="" style="width:100%">
+                    <thead class="table-dark" style="display:none">
+                    <tr>
+                        <th>Enquête</th>
+                    </tr>
+                    </thead>
+                </table>
+                <div type="button" id="load-more" class="load-more-button">Charger plus</div>
             </div>
-            <div class="input-group mr-2">
-                <select name="survey" id="survey-filter" class="selectpicker form-control" multiple title="Études">
-                    {% for survey in surveys %}
-                        <option value="{{ survey.id }}"
-                                {% if survey.id|stringformat:"s" in request.session.selected_surveys %}selected{% endif %}>
-                            {{ survey.name }}
-                        </option>
-                    {% endfor %}
-                </select>
+        </div>
+        <div class="filters-container w-30">
+            <div class="height_topbar border-bottom-custom padding-filters-container">
+                <div class="custom-body color-grey-1">
+                    Filtrer par
+                </div>
             </div>
-            <div class="input-group mr-2">
-                <select name="search_location" id="search-location" class="selectpicker form-control" multiple
-                        title="Rechercher dans">
-                    <option value="questions"
-                            {% if 'questions' in request.session.search_location %}selected{% endif %}>Questions
-                    </option>
-                    <option value="categories"
-                            {% if 'categories' in request.session.search_location %}selected{% endif %}>Modalités
-                    </option>
-                    <option value="variable_name"
-                            {% if 'variable_name' in request.session.search_location %}selected{% endif %}>Nom de la
-                        variable
-                    </option>
-                    <option value="internal_label"
-                            {% if 'internal_label' in request.session.search_location %}selected{% endif %}>Libellé de
-                        la variable
-                    </option>
-                </select>
+            <div class="accordion" id="filtersAccordion">
+                <div class="accordion-item accordion-item-custom padding-filters-container">
+                    <div class="accordion-header" id="headingOne">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                            <span>Types de métadonnées</span>
+                            <span class="filter-count"></span>
+                            <i class="fas fa-caret-down"></i>
+                        </div>
+                    </div>
+                    <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" >
+                        <div class="accordion-body">
+                            <div id="search-location" class="div-all-checkboxes">
+                                <div class="form-check-custom">
+                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="questions" id="search-location-questions">
+                                    <label class="form-check-label" for="search-location-questions">Questions</label>
+                                </div>
+                                <div class="form-check-custom">
+                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="categories" id="search-location-categories">
+                                    <label class="form-check-label" for="search-location-categories">Modalités</label>
+                                </div>
+                                <div class="form-check-custom">
+                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="variable_name" id="search-location-variable_name">
+                                    <label class="form-check-label" for="search-location-variable_name">Nom de la variable</label>
+                                </div>
+                                <div class="form-check-custom">
+                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="internal_label" id="search-location-internal_label">
+                                    <label class="form-check-label" for="search-location-internal_label">Libellé de la variable</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item accordion-item-custom padding-filters-container">
+                    <div class="accordion-header" id="headingTwo">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                            <span>Collections</span>
+                            <span class="filter-count"></span>
+                            <i class="fas fa-caret-down"></i>
+                        </div>
+                    </div>
+                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" >
+                        <div class="accordion-body">
+                            <div id="collections-filter" class="div-all-checkboxes">
+                                {% for collection in collections %}
+                                    <div class="form-check-custom">
+                                        <input class="form-check-input collection-checkbox checkbox-custom" type="checkbox" value="{{ collection.id }}" id="collection-{{ collection.id }}" {% if collection.id|stringformat:"s" in request.session.selected_collection %}checked{% endif %}>
+                                        <label class="form-check-label" for="collection-{{ collection.id }}">
+                                            {{ collection.name }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item accordion-item-custom padding-filters-container">
+                    <div class="accordion-header" id="headingThree">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                            <span>Sous-Collections</span>
+                            <span class="filter-count"></span>
+                            <i class="fas fa-caret-down"></i>
+                        </div>
+                    </div>
+                    <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree">
+                        <div class="accordion-body">
+                            <div id="subcollections-filter" class="div-all-checkboxes">
+                                {% for subcollection in subcollections %}
+                                    <div class="form-check-custom">
+                                        <input class="form-check-input subcollection-checkbox checkbox-custom" type="checkbox" value="{{ subcollection.id }}" id="subcollection-{{ subcollection.id }}" {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}checked{% endif %}>
+                                        <label class="form-check-label" for="subcollection-{{ subcollection.id }}">
+                                            {{ subcollection.name }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item accordion-item-custom padding-filters-container">
+                    <div class="accordion-header" id="headingFour">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                            <span>Enquêtes</span>
+                            <span class="filter-count"></span>
+                            <i class="fas fa-caret-down"></i>
+                        </div>
+                    </div>
+                    <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" >
+                        <div class="accordion-body">
+                            <div id="survey-filter" class="div-all-checkboxes">
+                                {% for survey in surveys %}
+                                    <div class="form-check-custom">
+                                        <input class="form-check-input survey-checkbox checkbox-custom" type="checkbox" value="{{ survey.id }}" id="survey-{{ survey.id }}" {% if survey.id|stringformat:"s" in request.session.selected_surveys %}checked{% endif %}>
+                                        <label class="form-check-label" for="survey-{{ survey.id }}">
+                                            {{ survey.name }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item accordion-item-custom padding-filters-container">
+                    <div class="accordion-header" id="headingFive">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                            <span>Années</span>
+                            <i class="fas fa-caret-down"></i>
+                        </div>
+                    </div>
+                    <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive">
+                        <div class="accordion-body" class="div-all-checkboxes">
+                            <div id="years-filter">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="input-group mr-2">
-                <input type="text" id="date-range-picker" class="form-control"
-                       placeholder="Sélectionner une plage de dates" readonly>
+            <div class="reset-filters-container padding-filters-container">
+                <div class="container-reset-button">
+                    <div type="button" id="reset-filters" class="reset-button">
+                        <img src="{% static 'svg/icons/reset.svg' %}" class="reset-icon" alt="reset-icon">
+                        <span>Réinitialiser</span>
+                    </div>
+                </div>
             </div>
-        </form>
-        <table id="survey-table" class="table table-striped table-bordered display" style="width:100%">
-            <thead class="table-dark" style="display:none">
-            <tr>
-                <th>Enquête</th>
-            </tr>
-            </thead>
-        </table>
+        </div>
     </div>
 {% endblock %}
 
@@ -85,6 +172,18 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
     <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
     <style>
+
+        .inner-container-custom{
+            --topbar-height : 64px;
+            --resetbar-height : 64px;
+        }
+        .search-results-container {
+            width: 70%;
+            overflow: hidden;
+        }
+        .filters-container {
+            width: 30%;
+        }
         .badge-category {
             position: absolute;
             top: 10px;
@@ -98,7 +197,6 @@
             z-index: 1; /* S'assurer que le badge est au-dessus du texte */
             width: 15rem;
         }
-
         .category-dropdown {
             display: none;
             position: absolute;
@@ -110,24 +208,17 @@
             width: 15rem;
             padding: 10px;
             border-radius: 3px;
-
-            /* Limiter la hauteur du dropdown à la hauteur de la carte */
             max-height: calc(100% - 40px); /* Limite à la hauteur de la carte parent, en laissant 40px de marge */
             overflow-y: auto; /* Scroll si nécessaire */
         }
-
         .category-item {
             padding: 5px;
             font-size: 0.75em; /* Réduit la taille du texte dans les catégories */
         }
-
-        /* Surlignement de la catégorie correspondante */
         .highlight-category {
             background-color: yellow;
             font-weight: bold;
         }
-
-        /* Style pour le dropdown */
         .category-dropdown a {
             display: block;
             padding: 5px;
@@ -135,19 +226,14 @@
             color: black;
             font-size: 0.75em; /* Réduit la taille du texte dans les liens */
         }
-
         .category-dropdown a:hover {
             background-color: #f1f1f1;
         }
-
-        /* Le conteneur de la carte doit être positionné */
         .card {
             position: relative; /* Important pour confiner le dropdown à la carte */
             margin-bottom: 20px;
-
             overflow: hidden; /* Empêche le dépassement du contenu */
         }
-
         .bootstrap-select .btn {
             max-width: 200px; /* Limite la largeur maximale du bouton */
             max-height: 40px; /* Limite la hauteur maximale du bouton */
@@ -155,157 +241,143 @@
             text-overflow: ellipsis; /* Affiche "..." si le texte est trop long */
             white-space: nowrap; /* Empêche le texte de passer à la ligne */
         }
-
     </style>
-
 {% endblock %}
 
 {% block extra_js %}
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
-
         $(document).ready(function () {
+            var selectedIds = new Set();
+            var selectedFilters = {}; // Object to store selected filters
 
-            const collectionsFilter = document.getElementById('collections-filter');
-            const subcollectionsFilter = document.getElementById('subcollections-filter');
-            const surveysFilter = document.getElementById('survey-filter');
+            function updateFiltersDisplay() {
+                const filterContainer = $('#selected-filters-container');
+                filterContainer.empty(); // Clear existing filters
 
+                let hasFilters = false;
 
-            const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
-            const selectedSubCollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
-            const selectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
-
-            fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
-                .then(response => response.json())
-                .then(data => {
-                    subcollectionsFilter.innerHTML = '';
-                    data.subcollections.forEach(subcollection => {
-                        const option = document.createElement('option');
-                        option.value = subcollection.id;
-                        option.text = subcollection.name;
-                        if (selectedSubCollections.includes(option.value)) {
-                            option.selected = true;
-                        }
-                        subcollectionsFilter.appendChild(option);
-                    });
-                    $('.selectpicker').selectpicker('refresh');
+                $.each(selectedFilters, function (key, filters) {
+                    if (filters.length > 0) {
+                        hasFilters = true;
+                        filters.forEach(function(filter) {
+                            var card = $('<div class="selected-filter-card"> <span>' + filter.label + '</span> <span class="remove-filter">✖</span></div>');
+                            card.find('.remove-filter').click(function () {
+                                var index = filters.findIndex(f => f.value === filter.value);
+                                if (index !== -1) {
+                                    filters.splice(index, 1); // Remove filter from specific category
+                                    updateFiltersDisplay();
+                                    $('#survey-table').DataTable().ajax.reload(); // Reload based on new filters
+                                }
+                            });
+                            filterContainer.append(card);
+                        });
+                    }
                 });
 
+                if (hasFilters) {
+                    filterContainer.show(); // Show the container if there are filters selected
+                } else {
+                    filterContainer.hide(); // Hide the container if no filters are selected
+                }
+            }
 
-            fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubCollections.join(',')}&collections_ids=${selectedCollections.join(',')}`)
-                .then(response => response.json())
-                .then(data => {
-                    surveysFilter.innerHTML = '';
-                    data.surveys.forEach(survey => {
-                        const option = document.createElement('option');
-                        option.value = survey.id;
-                        option.text = survey.name;
-                        if (selectedSurveys.includes(option.value)) {
-                            option.selected = true;
-                        }
-                        surveysFilter.appendChild(option);
-                    });
-                    $('.selectpicker').selectpicker('refresh');
+            updateFiltersDisplay()
+
+            function handleFilterChange(filterType, filterValue, filterLabel) {
+                if (!selectedFilters[filterType]) {
+                    selectedFilters[filterType] = [];
+                }
+
+                // Check if the filter is already selected and remove if necessary
+                var existingFilterIndex = selectedFilters[filterType].findIndex(f => f.value === filterValue);
+                if (existingFilterIndex !== -1) {
+                    selectedFilters[filterType].splice(existingFilterIndex, 1); // De-select the filter
+                } else {
+                    selectedFilters[filterType].push({value: filterValue, label: filterLabel}); // Add filter
+                }
+
+                updateFiltersDisplay();
+                $('#survey-table').DataTable().ajax.reload(); // Reload based on new filters
+            }
+
+            
+
+            function attachDynamicCheckboxEvents() {
+                $('.subcollection-checkbox, .survey-checkbox').off('change').on('change', function () {
+                    var checkbox = $(this);
+                    var filterType = checkbox.attr('class').split(' ')[1].split('-')[0];
+                    var filterValue = checkbox.val();
+                    var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
+
+                    handleFilterChange(filterType, filterValue, filterLabel);
+                    updateFilterCounts();
                 });
+                $('.survey-checkbox').off('change').on('change', function () {
+                    var checkbox = $(this);
+                    var filterType = checkbox.attr('class').split(' ')[1].split('-')[0];
+                    var filterValue = checkbox.val();
+                    var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
 
-            collectionsFilter.addEventListener('change', function () {
-                const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
+                    handleFilterChange(filterType, filterValue, filterLabel);
+                    updateFilterCounts(); // Ensure counts are updated
+                });
+            }
 
-                const previouslySelectedSubCollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
-                const previouslySelectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
+            $('.collection-checkbox, .search-location-checkbox').on('change', function () {
+                var checkbox = $(this);
+                var filterType = checkbox.attr('class').split(' ')[1].split('-')[0];
+                var filterValue = checkbox.val();
+                var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
 
+                handleFilterChange(filterType, filterValue, filterLabel);
+                updateFilterCounts();
+
+                if (filterType === 'collection') {
+                    const selectedCollections = $('.collection-checkbox:checked').map(function() {
+                        return this.value;
+                    }).get();
+
+                    updateSubcollections(selectedCollections);
+                }
+            });
+
+            function updateSubcollections(selectedCollections) {
                 fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
                     .then(response => response.json())
                     .then(data => {
-                        subcollectionsFilter.innerHTML = '';
+                        const subcollectionsFilter = $('#subcollections-filter');
+                        subcollectionsFilter.empty();
                         data.subcollections.forEach(subcollection => {
-                            const option = document.createElement('option');
-                            option.value = subcollection.id;
-                            option.text = subcollection.name;
-                            if (previouslySelectedSubCollections.includes(option.value)) {
-                                option.selected = true;
-                            }
-                            subcollectionsFilter.appendChild(option);
+                            const checkbox = $('<input type="checkbox" class="form-check-input subcollection-checkbox checkbox-custom" value="' + subcollection.id + '" id="subcollection-' + subcollection.id + '">');
+                            const label = $('<label class="form-check-label" for="subcollection-' + subcollection.id + '">' + subcollection.name + '</label>');
+                            const div = $('<div class="form-check-custom"></div>');
+                            div.append(checkbox).append(label);
+                            subcollectionsFilter.append(div);
                         });
-                        surveysFilter.innerHTML = '';
-                        data.surveys.forEach(survey => {
-                            const option = document.createElement('option');
-                            option.value = survey.id;
-                            option.text = survey.name;
-                            if (previouslySelectedSurveys.includes(option.value)) {
-                                option.selected = true;
-                            }
-                            surveysFilter.appendChild(option);
-                        });
-                        $('.selectpicker').selectpicker('refresh');
+
+                        attachDynamicCheckboxEvents();
+                        updateFilterCounts();
                     });
-
-                // Reset surveys when collections change
-                surveysFilter.innerHTML = '';
-                $('.selectpicker').selectpicker('refresh');
-                $('#survey-table').DataTable().ajax.reload();
-            });
-
-            subcollectionsFilter.addEventListener('change', function () {
-                const selectedSubcollections = Array.from(subcollectionsFilter.selectedOptions).map(option => option.value);
-                const selectedCollections = Array.from(collectionsFilter.selectedOptions).map(option => option.value);
-
-                const previouslySelectedSurveys = Array.from(surveysFilter.selectedOptions).map(option => option.value);
-
-                fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubcollections.join(',')}&collections_ids=${selectedCollections.join(',')}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        surveysFilter.innerHTML = '';
-                        data.surveys.forEach(survey => {
-                            const option = document.createElement('option');
-                            option.value = survey.id;
-                            option.text = survey.name;
-                            if (previouslySelectedSurveys.includes(option.value)) {
-                                option.selected = true;
-                            }
-                            surveysFilter.appendChild(option);
-                        });
-                        $('.selectpicker').selectpicker('refresh');
-                    });
-
-                $('#survey-table').DataTable().ajax.reload();
-            });
-
-
-            $(document).on('click', '.badge-category', function () {
-                var dropdown = $(this).siblings('.category-dropdown');
-                $('.category-dropdown').not(dropdown).hide();
-                dropdown.toggle();
-            });
-
-            $(document).click(function (event) {
-                if (!$(event.target).closest('.badge-category, .category-dropdown').length) {
-                    $('.category-dropdown').hide();
-                }
-            });
-            $(document).on('click', '.badge-category', function () {
-                var matchedCategory = $(this).text().trim();
-                var dropdown = $(this).siblings('.category-dropdown');
-                dropdown.find('.category-item').each(function () {
-                    if ($(this).text().trim() === matchedCategory) {
-                        $(this).addClass('highlight-category');
-                    } else {
-                        $(this).removeClass('highlight-category');
-                    }
-                });
-            });
+            }
 
             function getSurveyFilter() {
-                return $('#survey-filter').val() || [];
+                return $('.survey-checkbox:checked').map(function() {
+                    return this.value;
+                }).get();
             }
 
             function getCollectionFilter() {
-                return $('#collections-filter').val() || [];
+                return $('.collection-checkbox:checked').map(function() {
+                    return this.value;
+                }).get();
             }
 
             function getSubCollectionFilter() {
-                return $('#subcollections-filter').val() || [];
+                return $('.subcollection-checkbox:checked').map(function() {
+                    return this.value;
+                }).get();
             }
 
             function getDateRange() {
@@ -324,35 +396,27 @@
             }
 
             function getSearchLocation() {
-                return $('#search-location').val() || 'questions';
+                return $('.search-location-checkbox:checked').map(function() {
+                    return this.value;
+                }).get();
             }
 
-            $('.selectpicker').selectpicker({
-                noneSelectedText: 'Sélectionner une ou plusieurs options',
-                showTick: true,
-                liveSearch: true,
-                actionsBox: true,
-                selectedTextFormat: 'count > 1',
-                countSelectedText: function (numSelected, numTotal) {
-                    return (numSelected === 1) ? "{0} sélectionnée" : "{0} sélectionnées";
-                },
-            });
-            $('.selectpicker').selectpicker('refresh');
-
-
-            $('#survey-table').DataTable({
-                "ordering": false,
-                "dom": '<"top"i>rt<"bottom"lp><"clear">',
-                'order': [[0, 'desc']],
-                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tous"]],
+            var currentLimit = 10;
+            var table = $('#survey-table').DataTable({
                 "processing": true,
                 "serverSide": true,
-                "pagingType": "full_numbers",
+                "paging": false,
+                "dom": 'rt',
+                "info": false,
+                "ordering": false,
+                
                 "ajax": {
                     "url": "{% url 'app:search_results_data' %}",
                     "type": "POST",
                     "async": true,
                     "data": function (d) {
+                        d.start = d.start || 0;
+                        d.limit = currentLimit;
                         d.q = "{{ request.GET.q }}";
                         d.survey = getSurveyFilter();
                         d.collections = getCollectionFilter();
@@ -363,25 +427,15 @@
                             d.startDate = dateRange.startDate;
                             d.endDate = dateRange.endDate;
                         }
-
                     },
                     "headers": {'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()},
+                    "dataSrc": function(json) {
+                        totalRecords = json.recordsTotal;
+                        $('#results-count').text(totalRecords + ' résultats');
+                        return json.data;
+                    },
                     "error": function (jqXHR, textStatus, errorThrown) {
                         console.error('DataTables AJAX Error:', textStatus, errorThrown);
-                        console.log('Une erreur est survenue lors du chargement des données : ' + textStatus + '\n' +
-                            'Status: ' + jqXHR.status + '\n' +
-                            'Response Text: ' + jqXHR.responseText + '\n' +
-                            'Survey Filter: ' + getSurveyFilter() + '\n' +
-                            'Collection Filter: ' + getCollectionFilter() + '\n' +
-                            'Sub-Collection Filter: ' + getSubCollectionFilter() + '\n' +
-                            'Search Location: ' + getSearchLocation());
-                        alert('Une erreur est survenue lors du chargement des données : ' + textStatus + '\n' +
-                            'Status: ' + jqXHR.status + '\n' +
-                            'Response Text: ' + jqXHR.responseText + '\n' +
-                            'Survey Filter: ' + getSurveyFilter() + '\n' +
-                            'Collection Filter: ' + getCollectionFilter() + '\n' +
-                            'Sub-Collection Filter: ' + getSubCollectionFilter() + '\n' +
-                            'Search Location: ' + getSearchLocation());
                     }
                 },
                 "columns": [
@@ -389,81 +443,270 @@
                         "data": "id",
                         "render": function (data, type, row) {
                             var url = '/question/' + row.id + '/';
-                            var categoriesDisplay = row.categories.map(function (category) {
-                                return `${category}`;
-                            }).join("<br>");
+                            var categoriesDisplay = row.categories;
                             return `
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <a class="custom-name-card" href="` + url + `">` + (row.question_text || row.internal_label) + `</a>
-                            </h5>
-                            <h6 class="card-subtitle mb-2 text-muted">Enquête : ` + row.survey_name + `</h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Nom de la variable : ` + row.variable_name + `</h6>
-                            <h6 class="card-subtitle mb-2 text-muted">Libellé de la variable : ` + row.internal_label + `</h6>
-                            <button class="btn btn-secondary" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')">Modalités</button>
-                            <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: block;' : 'display: none;') + `">
-                                ` + categoriesDisplay + `
-                            </div>
-                        </div>
-                    </div>`;
+                                <div class="custom-card-dt">
+                                    <div class="custom-content-card">
+                                        <div class="custom-card-first-part">
+                                            <div class="title-checkbox">
+                                                <input type="checkbox" class="form-check-input checkbox-custom" value="${row.id}">
+                                                <div class="custom-title-2 custom-title-2-bold">
+                                                    <a class="custom-name-card color-black-1" type="button" href="${url}">${row.question_text || row.internal_label}</a>
+                                                </div>
+                                            </div>
+                                            <div class="custom-metadatas">
+                                                <div class="flex-grow-1 d-flex flex-column inner-container-metadatas">
+                                                    <div class="card-subtitle text-muted">Enquête : ${row.survey_name}</div>
+                                                    <div class="card-subtitle text-muted">Nom de la variable : ${row.variable_name}</div>
+                                                    <div class="card-subtitle text-muted">Libellé de la variable : ${row.internal_label}</div>
+                                                </div>
+                                            </div>
+                                            <div class="custom-card-second-part">
+                                                <div class="container-buttons-card">
+                                                    <span type="button" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')" class="button-card">
+                                                        <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
+                                                        <span>Modalités</span>
+                                                        <i class="fas fa-caret-down"></i>
+                                                    </span>
+
+                                                    <span type="button" onclick="accessData('` + row.id + `')" class="button-card button-access-data">
+                                                        <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
+                                                        <span>Accéder aux données</span>
+                                                    </span>
+                                                </div>
+
+
+                                                <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: none;' : 'display: block;') + `">
+                                                    ` + categoriesDisplay + `
+                                                </div>
+                                            </div>
+
+                                    </div>
+                                </div>`;
                         }
                     },
                 ],
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
-                    "processing": "",
-                    "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
-                    "paginate": {
-                        "first": "Première",
-                        "last": "Dernière",
-                        "next": "Suivante",
-                        "previous": "Précédente"
-                    }
+                    "emptyTable": "Aucun élément à afficher."
                 }
             });
 
-            $('#survey-filter').on('change', function () {
-                $('#survey-table').DataTable().ajax.reload();
+            $('#load-more').on('click', function () {
+                currentLimit += 10;
+                table.ajax.reload(null, false);
             });
 
-            $('#search-location').on('change', function () {
-                $('#survey-table').DataTable().ajax.reload();
+            $('#survey-table tbody').on('change', 'input[type="checkbox"]', function () {
+                if (this.checked) {
+                    selectedIds.add(this.value);
+                } else {
+                    selectedIds.delete(this.value);
+                }
+
+                var allChecked = $('#survey-table tbody input[type="checkbox"]').length === $('#survey-table tbody input[type="checkbox"]:checked').length;
+                $('#select-all').prop('checked', allChecked);
+                $('#select-all').prop('indeterminate', !allChecked && $('#survey-table tbody input[type="checkbox"]:checked').length > 0);
             });
 
-            $('#date-range-picker').daterangepicker({
-                locale: {
-                    format: 'DD/MM/YYYY'
-                },
-                opens: 'left',
-                autoUpdateInput: false,
-                showDropdowns: true,
-                linkedCalendars: false,
-            }).on('apply.daterangepicker', function (ev, picker) {
-                $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
-                $('#survey-table').DataTable().ajax.reload();
-            }).on('cancel.daterangepicker', function (ev, picker) {
-                $(this).val('');
-                $('#survey-table').DataTable().ajax.reload();
+            $('#export-all').on('click', function () {
+                window.location.href = '/export/questions/';
             });
+
+            $('#export-selected').on('click', function () {
+                if (selectedIds.size === 0) {
+                    alert('Veuillez sélectionner au moins une question à exporter.');
+                    return;
+                }
+                var selectedArray = Array.from(selectedIds);
+                var queryString = selectedArray.map(id => `ids=${id}`).join('&');
+                window.location.href = `/export/questions/?${queryString}`;
+            });
+
+
+            // Charger les décennies
+            // Charger les décennies avec checkbox
+            function loadDecades() {
+                $.ajax({
+                    url: '/get-decades/',
+                    type: 'GET',
+                    success: function (data) {
+                        const decadesFilter = $('#years-filter');
+                        decadesFilter.empty();
+                        // Ajouter les décennies
+                        for (const [decade, years] of Object.entries(data.decades)) {
+                            var chevronIconPath = '{% static "svg/icons/chevron_right.svg" %}';
+                            const decadeDiv = $('<div class="form-check-custom decade-item"></div>');
+                            const checkboxAndLabelDiv = $('<div class="checkbox-and-label"></div>');
+                            
+                            const decadeCheckbox = $('<input type="checkbox" class="form-check-input decade-checkbox checkbox-custom" value="' + decade + '" id="decade-' + decade + '">');
+                            const decadeLabel = $('<label class="form-check-label" for="decade-' + decade + '">Années ' + decade + '</label>');
+
+                            checkboxAndLabelDiv.append(decadeCheckbox).append(decadeLabel);
+
+                            const chevronIcon = $('<img src="' + chevronIconPath + '" class="chevron-icon decade-chevron" alt="chevron">');
+
+                            decadeDiv.append(checkboxAndLabelDiv).append(chevronIcon);
+
+                            decadesFilter.append(decadeDiv);
+
+                            // Gestion des événements pour les décennies
+                            decadeCheckbox.on('change', function() {
+                                const isChecked = $(this).is(':checked');
+                                if (isChecked) {
+                                    // Sélectionner toutes les années de la décennie
+                                    years.forEach(year => {
+                                        selectedYears.add(year);
+                                    });
+                                } else {
+                                    // Désélectionner toutes les années de la décennie
+                                    years.forEach(year => {
+                                        selectedYears.delete(year);
+                                    });
+                                }
+                                updateFilters();
+                            });
+                            $('.decade-chevron').on('click', function() {
+                                loadYears(decade);
+                            });
+                        }
+                    }
+                });
+            }
+
+            // Charger les années d'une décennie
+            function loadYears(decade) {
+                $.ajax({
+                    url: '/get-years-by-decade/',
+                    type: 'GET',
+                    data: { decade: decade },
+                    success: function (data) {
+                        const decadesFilter = $('#years-filter');
+                        decadesFilter.empty();
+                        var chevronIconPathReturn = '{% static "svg/icons/chevron_left.svg" %}';
+                        // Ajouter un bouton de retour
+                        const chevronIcon = $('<img src="' + chevronIconPathReturn + '" class="chevron-icon decade-chevron" alt="chevron">');
+                        const backButton = $('<img src="' + chevronIconPathReturn + '" class="back-button"></div>');
+                        backButton.on('click', function() {
+                            loadDecades();
+                        });
+                        decadesFilter.append(backButton);
+                        // Ajouter les années
+                        for (const year of data.years) {
+                            const yearDiv = $('<div class="form-check year-item"></div>');
+                            
+                            const yearCheckbox = $('<input type="checkbox" class="form-check-input year-checkbox checkbox-custom" value="' + year + '" id="year-' + year + '">');
+                            const yearLabel = $('<label class="form-check-label" for="year-' + year + '">' + year + '</label>');
+                            yearDiv.append(yearCheckbox).append(yearLabel);
+                            decadesFilter.append(yearDiv);
+
+                            // Gestion des événements pour les années
+                            yearCheckbox.on('change', function() {
+                                const year = $(this).val();
+                                if ($(this).is(':checked')) {
+                                    selectedYears.add(year);
+                                } else {
+                                    selectedYears.delete(year);
+                                }
+                                updateFilters();
+                            });
+                        }
+                    }
+                });
+            }
+
+            // Ensemble pour stocker les années sélectionnées
+            const selectedYears = new Set();
+
+            // Fonction pour mettre à jour les filtres
+            function updateFilters() {
+                const yearsArray = Array.from(selectedYears);
+                $('#survey-table').DataTable().ajax.reload();
+            }
+
+
+            // Charger les décennies au chargement de la page
+            loadDecades();
+
+
+            $('#reset-filters').on('click', function() {
+                selectedFilters = {}; // Reset the filters object
+                selectedIds.clear(); // Clear selected IDs
+
+                // Uncheck all checkboxes
+                $('.form-check-input').prop('checked', false);
+                
+                updateFiltersDisplay(); // Update filter cards displayed
+                $('#survey-table').DataTable().ajax.reload(); // Reload table data
+            });
+
+
+            function updateFilterCounts() {
+                $('.accordion-item').each(function () {
+                    var accordionItem = $(this);
+                    var checkboxes = accordionItem.find('.form-check-input:checked');
+                    var count = checkboxes.length;
+                    var filterCountElement = accordionItem.find('.filter-count'); 
+
+                    if (count > 0) {
+                        filterCountElement.text(count).show();
+                    } else {
+                        filterCountElement.hide();
+                    }
+                });
+            }
+            updateFilterCounts();
+
+            $('.form-check-input').on('change', function () {
+                updateFilterCounts();
+            });
+
+            
         });
-
-
-        function deleteSurvey(id) {
-            // Code pour supprimer l'enquête
-            alert('Supprimer l\'enquête ' + id);
-        }
 
         function toggleCategories(categoryId) {
             var categoriesDiv = document.getElementById(categoryId);
             if (categoriesDiv.style.display === "none") {
-                categoriesDiv.style.display = "block"; // Affiche la liste
+                categoriesDiv.style.display = "block";
             } else {
-                categoriesDiv.style.display = "none"; // Cache la liste
+                categoriesDiv.style.display = "none";
             }
         }
-        $('.selectpicker').selectpicker('refresh');
 
+        function getSelectedFiltersContainerHeight() {
+            var container = $('#selected-filters-container');
+            if (container.is(':visible')) {
+                return container.outerHeight(true);
+            } else {
+                return 0;
+            }
+        }
+
+        function updateTableContainerHeight() {
+            var selectedFiltersContainerHeight = getSelectedFiltersContainerHeight();
+            document.documentElement.style.setProperty('--selected-filters-container-height', selectedFiltersContainerHeight + 'px');
+        }
+
+        $(document).ready(function() {
+            updateTableContainerHeight();
+
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === "style") {
+                        updateTableContainerHeight();
+                    }
+                });
+            });
+            var targetNode = document.getElementById('selected-filters-container');
+            var config = { attributes: true, attributeFilter: ['style'] };
+
+            // Démarrer l'observation
+            observer.observe(targetNode, config);
+        });
+
+        $(window).resize(function() {
+            updateTableContainerHeight();
+        });
 
     </script>
 {% endblock %}

@@ -1,9 +1,120 @@
+@font-face {
+    font-family: 'Redaction10';
+    src: url('../fonts/redaction/Redaction_10-Regular.woff2') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+html, body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+header{
+    height: 10%; 
+    max-height: 80px; 
+}
+
+.bg-color-principal{
+    background-color : #F9FFFA
+}
+
+.bg-color-container{
+    background-color : white;
+}
+
+.custom-large-title{
+    font-family: 'Redaction10', sans-serif;
+    letter-spacing:0.2px;
+    line-height: 40px;
+    font-weight: 400;
+    font-size:32px;
+
+}
+
+.custom-title-1{
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 600;
+    letter-spacing:0.5px;
+    font-size: 24px;
+    line-height: 24px;
+}
+
+.custom-title-2{
+    letter-spacing:0.1px;
+    line-height: 32px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    font-size: 20px;
+}
+.custom-title-2-bold{
+    font-weight: 600;
+}
+
+.custom-headline{
+    letter-spacing:0.5px;
+    line-height: 24px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 500;
+    font-size: 16px;
+}
+
+.custom-body{
+    letter-spacing:0.1px;
+    line-height: 32px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.custom-body-bold{
+    font-weight: 500;
+}
+
+.color-grey-1{
+    color: #4F4F4F;
+}
+
+.color-black-1{
+    color: #1F1F1F;
+
+}
+
+.border-bottom-custom{
+    border-bottom: 1px solid #D3DFD5
+}
+
+.border-right-custom{
+    border-right: 1px solid #D3DFD5
+}
+
+
+
+
 .custom-color-red{
     background-color: #e6142d;
 }
 
-.bg-header-custom{
-    background-color:#f4f4f4;
+
+.modality-button-base{
+    min-width: 80px;
+    border-radius: 16px;
+    gap: 10px;
+    border: 1px solid #D3DFD5
+}
+
+.load-more-button{
+
+    min-width: 80px;
+    border-radius: 16px;
+    gap: 10px;
+    border-width: 1px;
+    border: 1px solid #D3DFD5;
+    background-color: #FFFFFF;
+
 }
 
 .container-custom-font{
@@ -16,10 +127,20 @@
     color: #231F20;
 }
 
-.container-custom{
-    flex-grow: 1;
+.global-container-custom{
     overflow-y: auto;
-    padding-bottom: 1rem;
+    height: 84%;
+    padding-top: 24px;
+    padding-right: 40px;
+    padding-left: 40px;
+}
+
+.inner-container-custom{
+    border : 1px solid #D3DFD5;
+    border-radius : 8px;
+    background-color : #ffffff;
+    flex-grow: 1;
+    height: 100%;
 
 }
 
@@ -27,10 +148,13 @@
     width: 100%;
     text-align: center;
     padding: 1rem 0;
+    height: 6%;
+    background-color: #F9FFFA;
 }
 
 .body-custom{
-    min-height: 100vh;
+    height: 100%;
+    margin: 0;
     display: flex;
     flex-direction: column;
 }
@@ -77,13 +201,10 @@
     box-shadow: none !important;
 }
 
-body {
-    font-family: Arial, sans-serif;
-}
-
 .info-icon {
     font-size: 0.7em;
     color: grey;
     cursor: pointer;
     margin-left: 5px;
 }
+

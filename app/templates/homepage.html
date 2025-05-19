@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %} 
 
 
 {% block content %}
@@ -16,8 +17,7 @@
 
         <section class="hero">
             <div class="container-custom-font">
-                <h2>Bienvenue sur la Base de questions</h2>
-                <p>Explorez les métadonnées des enquêtes par questionnaires en sciences humaines et sociales</p>
+                <p class="custom-large-title">{% trans "Découvrez, comparez et réutilisez des questions d'enquêtes en sciences humaines et sociales" %}</p>
             </div>
             <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
                 <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}"
