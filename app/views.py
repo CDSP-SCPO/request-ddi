@@ -1152,3 +1152,31 @@ def get_surveys_by_subcollections(request):
 
     data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
     return JsonResponse(data)
+
+def get_decades(request):
+    # Récupérer les années uniques des enquêtes
+    years = Survey.objects.values_list('start_date', flat=True).distinct()
+    years = [year.year for year in years if year is not None]
+    years.sort()
+
+    # Regrouper les années par décennies
+    decades = {}
+    for year in years:
+        decade = (year // 10) * 10
+        if decade not in decades:
+            decades[decade] = []
+        decades[decade].append(year)
+    # Préparer les données à renvoyer
+    data = {'decades': decades}
+    return JsonResponse(data)
+
+def get_years_by_decade(request):
+    decade = int(request.GET.get('decade', 0))
+    start_year = decade
+    end_year = decade + 9
+
+    years = Survey.objects.filter(start_date__year__range=(start_year, end_year)).values_list('start_date', flat=True).distinct()
+    years = [year.year for year in years if year is not None]
+    years.sort()
+
+    data = {'years': years}
