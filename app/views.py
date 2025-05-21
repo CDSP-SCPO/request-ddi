@@ -138,12 +138,13 @@ class BaseUploadView(FormView):
     def get_or_create_survey(self):
         pass
 
+    @transaction.atomic
     def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
         try:
             binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
                 variable_name=variable_name,
                 survey=survey,
-                variable = represented_variable,
+                variable=represented_variable,
                 defaults={
                     'survey': survey,
                     'variable': represented_variable,
@@ -187,6 +188,7 @@ class BaseUploadView(FormView):
             categories.append((code.strip(), label.strip()))
         return categories
 
+    @transaction.atomic
     def create_new_categories(self, category_string):
         categories = []
         if category_string:
@@ -197,6 +199,7 @@ class BaseUploadView(FormView):
                 categories.append(category)
         return categories
 
+    @transaction.atomic
     def create_new_represented_variable(self, conceptual_var, name_question_normalized, category_label,
                                         variable_label, is_unique: bool = False):
         new_represented_var = RepresentedVariable.objects.create(
@@ -209,6 +212,7 @@ class BaseUploadView(FormView):
         new_represented_var.categories.set(new_categories)
         return new_represented_var
 
+    @transaction.atomic
     def get_or_create_represented_variable(self, variable_name, question_text, category_label, variable_label):
         """Gérer la création ou la mise à jour d'une variable représentée."""
         name_question_for_database = normalize_string_for_database(question_text)
@@ -216,7 +220,7 @@ class BaseUploadView(FormView):
 
         cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
 
-        if name_question_for_comparison :
+        if name_question_for_comparison:
             if name_question_for_comparison in cleaned_questions:
                 var_represented = RepresentedVariable.objects.filter(
                     question_text=cleaned_questions[name_question_for_comparison].question_text
@@ -302,7 +306,6 @@ class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
-
     def add_form_to_context(self, context):
         context['xml_form'] = XMLUploadForm()
 
@@ -325,7 +328,6 @@ class XMLUploadView(BaseUploadView):
                 except Exception as e:
                     self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
         return results
-
 
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
@@ -578,7 +580,7 @@ class SearchResultsDataView(ListView):
                 )
                 for term in terms:
                     queries.append(
-                    {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
+                        {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
                     )
             elif search_location == 'internal_label':
                 queries.append(
@@ -591,7 +593,6 @@ class SearchResultsDataView(ListView):
                     queries.append(
                         {"match": {"variable.internal_label": {"query": term, "operator": "or", "boost": 1}}}
                     )
-
 
         if queries:
             search = search.query(
@@ -627,7 +628,7 @@ class SearchResultsDataView(ListView):
             for cat in sorted_categories:
                 if category_matched and cat.category_label == remove_html_tags(category_matched):
                     all_clean_categories.append(
-                         f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{cat.code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{cat.category_label}</mark></td></tr>"
+                        f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{cat.code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{cat.category_label}</mark></td></tr>"
                     )
                 else:
                     all_clean_categories.append(
@@ -661,7 +662,9 @@ class SearchResultsDataView(ListView):
 
         total_records = self.build_filtered_search().count()
         filtered_records = response.hits.total.value
-        data = self.format_search_results(response, request.POST.getlist('search_location[]', ['questions', 'categories', 'variable_name', 'internal_label']))
+        data = self.format_search_results(response, request.POST.getlist('search_location[]',
+                                                                         ['questions', 'categories', 'variable_name',
+                                                                          'internal_label']))
 
         return JsonResponse({
             "recordsTotal": total_records,
@@ -870,7 +873,6 @@ class CustomLoginView(LoginView):
     template_name = 'login.html'
     authentication_form = CustomAuthenticationForm
     redirect_authenticated_user = True
-
 
 
 def search_results(request):
@@ -1111,8 +1113,6 @@ def get_distributor(request):
     return JsonResponse({"distributors": list(distributors)})
 
 
-
-
 def get_subcollections_by_collections(request):
     collection_ids = request.GET.get('collections_ids', '').split(',')
     collection_ids = [id for id in collection_ids if id]
@@ -1158,6 +1158,7 @@ def get_surveys_by_subcollections(request):
     data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
     return JsonResponse(data)
 
+
 def get_decades(request):
     # Récupérer les années uniques des enquêtes
     years = Survey.objects.values_list('start_date', flat=True).distinct()
@@ -1175,12 +1176,14 @@ def get_decades(request):
     data = {'decades': decades}
     return JsonResponse(data)
 
+
 def get_years_by_decade(request):
     decade = int(request.GET.get('decade', 0))
     start_year = decade
     end_year = decade + 9
 
-    years = Survey.objects.filter(start_date__year__range=(start_year, end_year)).values_list('start_date', flat=True).distinct()
+    years = Survey.objects.filter(start_date__year__range=(start_year, end_year)).values_list('start_date',
+                                                                                              flat=True).distinct()
     years = [year.year for year in years if year is not None]
     years.sort()
 
