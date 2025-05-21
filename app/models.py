@@ -21,6 +21,7 @@ class Collection(models.Model):
     def __str__(self):
         return f"{self.name}"
 
+
 class Subcollection(models.Model):
     name = models.CharField()
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE, null=True, blank=True)
@@ -28,6 +29,7 @@ class Subcollection(models.Model):
 
     def __str__(self):
         return f"{self.name}"
+
 
 class Survey(models.Model):
     subcollection = models.ForeignKey(Subcollection, on_delete=models.CASCADE, null=True)
@@ -48,6 +50,7 @@ class Survey(models.Model):
     def __str__(self):
         return f"Survey: {self.name} ({self.external_ref})"
 
+
 class ConceptualVariable(models.Model):
     internal_label = models.TextField()
     concepts = models.ManyToManyField("Concept", symmetrical=False, related_name="conceptual_variables")
@@ -64,7 +67,6 @@ class ConceptualVariable(models.Model):
             return f"Conceptual Variable: {self.internal_label} (No linked represented variables)"
 
 
-
 class Category(models.Model):
     """careful when editing a category, most of the time we should be creating a new one instead"""
     code = models.CharField(max_length=255)
@@ -73,9 +75,17 @@ class Category(models.Model):
     def __str__(self):
         return f"{self.code} : {self.category_label}"
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['code', 'category_label'],
+                                    name='unique_code_category_link'
+                                    )
+        ]
+
 
 class RepresentedVariable(models.Model):
-    type = models.CharField(max_length=255, choices=(('question', 'question'), ('var_internal', 'variable interne'), ('var_recalc', 'variable calcule')))
+    type = models.CharField(max_length=255, choices=(('question', 'question'), ('var_internal', 'variable interne'),
+                                                     ('var_recalc', 'variable calcule')))
     # origin = models.ManyToManyField('self', symmetrical=False, related_name="children_variables")  # plutot faire une autre class ?
 
     # hidden = models.BooleanField(default=True)  # probablement a changer pour avoir plus de niveau
@@ -84,8 +94,11 @@ class RepresentedVariable(models.Model):
     question_text = models.TextField(null=True)  # uniquement pour les questions, sinon a none
     internal_label = models.CharField(null=True, max_length=510)  # init a variable_label le plus recent?
 
-    categories = models.ManyToManyField(Category, related_name="variables")  # plutot faire une autre class ? (BindingCategory)
-    type_categories = models.CharField(max_length=255, choices=(('code', 'code'), ('text', 'text'), ('numerical', 'numerical'), ('date', 'date')))
+    categories = models.ManyToManyField(Category,
+                                        related_name="variables")  # plutot faire une autre class ? (BindingCategory)
+    type_categories = models.CharField(max_length=255,
+                                       choices=(('code', 'code'), ('text', 'text'), ('numerical', 'numerical'),
+                                                ('date', 'date')))
     is_unique = models.BooleanField(default=False)
 
     def __str__(self):
@@ -108,6 +121,14 @@ class BindingSurveyRepresentedVariable(models.Model):
     universe = models.TextField()
     is_indexed = models.BooleanField(default=False)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['survey', 'variable_name'],
+                name='unique_variable_name_per_survey'
+            )
+        ]
+
     def __str__(self):
         return f"Binding: {self.variable_name} - Survey: {self.survey.name}"
 
@@ -129,4 +150,3 @@ class BindingConcept(models.Model):
 
     def __str__(self):
         return f"Binding Concept: {self.parent.name} -> {self.child.name}"
-
