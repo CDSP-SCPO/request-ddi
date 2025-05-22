@@ -208,3 +208,6 @@ header{
     margin-left: 5px;
 }
 
+.logo{
+    width: 200px; /* c'est 108 dans le figma */
+}

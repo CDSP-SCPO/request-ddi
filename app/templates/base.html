@@ -38,16 +38,14 @@
             <div class="">
                 <div class="d-flex justify-content-between align-items-center">
                     <!-- Logo à gauche -->
-                    <div class="logo">
-                        <a href="{% url 'app:representedvariable_search' %}">
-                            <img class="img-fluid mb-3" src="{% static 'img/logo-cdsp-navbar.png' %}" alt="Logo CDSP">
-                        </a>
-                    </div>
+                    <a href="{% url 'app:representedvariable_search' %}">
+                        <img class="img-fluid mb-3 logo" src="{% static 'svg/logo/REQUEST_LOGO-03.svg' %}" alt="Logo CDSP">
+                    </a>
                     {% if show_search_bar %}
                     <!-- Barre de recherche -->
                     <form class="ml-3" action="{% url 'app:search_results' %}" method="get">
                         <div class="input-group">
-                            <input type="text" class="form-control" name="q" placeholder="Rechercher..." aria-label="Rechercher" aria-describedby="search-button">
+                            <input type="text" class="form-control" name="q" placeholder="Rechercher..." aria-label="Rechercher" aria-describedby="search-button" value="{{ request.GET.q }}">
                             <div class="input-group-append">
                                 <button class="btn btn-secondary" type="submit" id="search-button">
                                     <i class="fas fa-search"></i>

@@ -144,7 +144,7 @@ class BaseUploadView(FormView):
             binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
                 variable_name=variable_name,
                 survey=survey,
-                variable=represented_variable,
+                variable = represented_variable,
                 defaults={
                     'survey': survey,
                     'variable': represented_variable,
@@ -220,7 +220,7 @@ class BaseUploadView(FormView):
 
         cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
 
-        if name_question_for_comparison:
+        if name_question_for_comparison :
             if name_question_for_comparison in cleaned_questions:
                 var_represented = RepresentedVariable.objects.filter(
                     question_text=cleaned_questions[name_question_for_comparison].question_text
@@ -306,6 +306,7 @@ class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
+
     def add_form_to_context(self, context):
         context['xml_form'] = XMLUploadForm()
 
@@ -329,11 +330,11 @@ class XMLUploadView(BaseUploadView):
                     self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
         return results
 
+
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
         start_time = datetime.now()  # Début du parsing
         try:
-            print(f"Début du parsing du fichier {file.name} à {start_time}")
 
             file.seek(0)
             content = file.read().decode('utf-8')
@@ -368,7 +369,6 @@ class XMLUploadView(BaseUploadView):
                 ])
 
             end_time = datetime.now()  # Fin du parsing
-            print(f"Fichier {file.name} parsé en {end_time - start_time}")
             return data
 
         except Exception as e:
@@ -392,7 +392,6 @@ class XMLUploadView(BaseUploadView):
 
         for doi, questions in data_by_doi.items():
             try:
-                print(f"Traitement du DOI: {doi}")
                 start_time = datetime.now()  # Début du traitement du DOI
 
                 survey = Survey.objects.get(external_ref=doi)
@@ -419,7 +418,6 @@ class XMLUploadView(BaseUploadView):
                     num_records += 1
 
                 end_time = datetime.now()  # Fin du traitement du DOI
-                print(f"Traitement du DOI {doi} terminé en {end_time - start_time}")
 
             except Survey.DoesNotExist:
                 error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
@@ -476,8 +474,6 @@ class SearchResultsDataView(ListView):
         survey_filter = self.request.POST.getlist('survey[]', None)
         subcollection_filter = self.request.POST.getlist('sub_collections[]', None)
         collections_filter = self.request.POST.getlist('collections[]', None)
-        start_date = self.request.POST.get('startDate')
-        end_date = self.request.POST.get('endDate')
         years = self.request.POST.getlist('years[]', [])
 
         survey_filter = [int(survey_id) for survey_id in survey_filter if survey_id.isdigit()]
@@ -506,19 +502,18 @@ class SearchResultsDataView(ListView):
             search = search.filter('terms', **{"survey.subcollection.collection_id": collections_filter})
 
         if years:
-            search = search.filter('terms', **{"survey.start_date.year": years})
-
-        if start_date and end_date:
-            start_date = datetime.strptime(start_date, '%d/%m/%Y')
-            end_date = datetime.strptime(end_date, '%d/%m/%Y')
-            date_range_query = Q('range', **{
-                'survey.start_date': {
-                    'gte': start_date,
-                    'lte': end_date
-                }
-            })
-            no_start_date_query = Q('term', has_start_date=False)
-            search = search.query('bool', should=[date_range_query, no_start_date_query], minimum_should_match=1)
+            # Construire des filtres de range pour chaque année sélectionnée
+            year_filters = [
+                Q('range', **{
+                    "survey.start_date": {
+                        "gte": f"{year}-01-01",
+                        "lt": f"{year + 1}-01-01"
+                    }
+                })
+                for year in years
+            ]
+            # Appliquer les filtres avec un bool should pour les combiner
+            search = search.query('bool', should=year_filters, minimum_should_match=1)
 
         return search
 
@@ -526,6 +521,8 @@ class SearchResultsDataView(ListView):
         search = self.build_filtered_search()
         start = int(self.request.POST.get('start', 0))
         limit = int(self.request.POST.get('limit', self.paginate_by))
+
+        response = search[start:start + limit].execute()
         return search[start:start + limit].execute()
 
     def apply_search_filters(self, search, search_value, search_locations):
@@ -570,17 +567,13 @@ class SearchResultsDataView(ListView):
                 )
             elif search_location == 'variable_name':
                 queries.append(
-                    {"multi_match": {
-                        "query": search_value,
-                        "fields": ["variable_name", "variable.internal_label"],
-                        "type": "best_fields",
-                        "operator": "and",
-                        "boost": 10
+                    {"match_phrase_prefix": {
+                        "variable_name": {"query": search_value, "boost": 10}
                     }}
                 )
                 for term in terms:
                     queries.append(
-                        {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
+                    {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
                     )
             elif search_location == 'internal_label':
                 queries.append(
@@ -593,6 +586,7 @@ class SearchResultsDataView(ListView):
                     queries.append(
                         {"match": {"variable.internal_label": {"query": term, "operator": "or", "boost": 1}}}
                     )
+
 
         if queries:
             search = search.query(
@@ -628,7 +622,7 @@ class SearchResultsDataView(ListView):
             for cat in sorted_categories:
                 if category_matched and cat.category_label == remove_html_tags(category_matched):
                     all_clean_categories.append(
-                        f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{cat.code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{cat.category_label}</mark></td></tr>"
+                         f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{cat.code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{cat.category_label}</mark></td></tr>"
                     )
                 else:
                     all_clean_categories.append(
@@ -645,6 +639,8 @@ class SearchResultsDataView(ListView):
                                                                 'highlight') and 'variable.internal_label' in result.meta.highlight:
                 internal_label = result.meta.highlight['variable.internal_label'][0]
 
+            survey_doi = getattr(result.survey, 'external_ref', "N/A")
+
             data.append({
                 "id": result.meta.id,
                 "variable_name": variable_name,
@@ -654,6 +650,7 @@ class SearchResultsDataView(ListView):
                 "categories": "<table class='styled-table'>" + "".join(all_clean_categories) + "</table>",
                 "internal_label": internal_label,
                 "is_category_search": is_category_search,
+                "survey_doi": survey_doi
             })
         return data
 
@@ -662,9 +659,7 @@ class SearchResultsDataView(ListView):
 
         total_records = self.build_filtered_search().count()
         filtered_records = response.hits.total.value
-        data = self.format_search_results(response, request.POST.getlist('search_location[]',
-                                                                         ['questions', 'categories', 'variable_name',
-                                                                          'internal_label']))
+        data = self.format_search_results(response, request.POST.getlist('search_location[]', ['questions', 'categories', 'variable_name', 'internal_label']))
 
         return JsonResponse({
             "recordsTotal": total_records,
@@ -875,11 +870,13 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
 
 
+
 def search_results(request):
     selected_surveys = request.GET.getlist('survey')
     selected_sub_collection = request.GET.getlist('subcollection')
     selected_collection = request.GET.getlist('collection')
     search_locations = request.GET.getlist('search_location')
+    search_query = request.GET.get('q', '')
 
     # Initialiser search_location avec toutes les options si elle est vide
     if not search_locations:
@@ -915,6 +912,7 @@ def search_results(request):
         'selected_collection': selected_collection,
         'show_search_bar': True,
         'decades': decades,
+        'search_query': search_query,
     }
     return render(request, 'search_results.html', context)
 
@@ -1113,6 +1111,8 @@ def get_distributor(request):
     return JsonResponse({"distributors": list(distributors)})
 
 
+
+
 def get_subcollections_by_collections(request):
     collection_ids = request.GET.get('collections_ids', '').split(',')
     collection_ids = [id for id in collection_ids if id]
@@ -1158,12 +1158,12 @@ def get_surveys_by_subcollections(request):
     data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
     return JsonResponse(data)
 
-
 def get_decades(request):
     # Récupérer les années uniques des enquêtes
     years = Survey.objects.values_list('start_date', flat=True).distinct()
     years = [year.year for year in years if year is not None]
-    years.sort()
+    years = list(set(years))
+    years.sort(reverse=True)
 
     # Regrouper les années par décennies
     decades = {}
@@ -1176,16 +1176,19 @@ def get_decades(request):
     data = {'decades': decades}
     return JsonResponse(data)
 
-
 def get_years_by_decade(request):
-    decade = int(request.GET.get('decade', 0))
+    try:
+        decade = int(request.GET.get('decade', 0))
+    except ValueError:
+        return JsonResponse({'error': 'Invalid decade value'}, status=400)
+    print("decade", decade)
     start_year = decade
     end_year = decade + 9
 
-    years = Survey.objects.filter(start_date__year__range=(start_year, end_year)).values_list('start_date',
-                                                                                              flat=True).distinct()
-    years = [year.year for year in years if year is not None]
+    years = Survey.objects.filter(start_date__year__range=(start_year, end_year)) \
+                          .values_list('start_date__year', flat=True) \
+                          .distinct()
+    years = list(set(years))  # Éliminer les doublons
     years.sort()
 
-    data = {'years': years}
-    return JsonResponse(data)
+    return JsonResponse({'years': years})
