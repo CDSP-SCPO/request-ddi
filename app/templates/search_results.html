@@ -21,7 +21,6 @@
                 </div>
             </div>
             <div id="selected-filters-container" class="selected-filters-container overflow-auto">
-                <!-- Les cartes de filtres vont être dynamiquement insérées ici -->
             </div>
             <div class="table-container">
                 <table id="survey-table" class="" style="width:100%">
@@ -169,7 +168,6 @@
 {% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
     <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
     <style>
 
@@ -235,18 +233,17 @@
             overflow: hidden; /* Empêche le dépassement du contenu */
         }
         .bootstrap-select .btn {
-            max-width: 200px; /* Limite la largeur maximale du bouton */
-            max-height: 40px; /* Limite la hauteur maximale du bouton */
-            overflow: hidden; /* Cache le texte qui dépasse */
-            text-overflow: ellipsis; /* Affiche "..." si le texte est trop long */
-            white-space: nowrap; /* Empêche le texte de passer à la ligne */
+            max-width: 200px;
+            max-height: 40px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     </style>
 {% endblock %}
 
 {% block extra_js %}
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
         $(document).ready(function () {
             var selectedIds = new Set();
@@ -313,6 +310,21 @@
 
                     handleFilterChange(filterType, filterValue, filterLabel);
                     updateFilterCounts();
+                    if (filterType === 'subcollection') {
+                        const selectedSubcollections = $('.subcollection-checkbox:checked').map(function() {
+                            return this.value;
+                        }).get();
+
+                        if (selectedSubcollections.length === 0) {
+                            const allSubcollections = $('.subcollection-checkbox').map(function() {
+                                return this.value;
+                            }).get();
+                            updateSurveys(allSubcollections);
+                        } else {
+                            updateSurveys(selectedSubcollections);
+                        }
+                    }
+                    $('#survey-table').DataTable().ajax.reload();
                 });
                 $('.survey-checkbox').off('change').on('change', function () {
                     var checkbox = $(this);
@@ -321,9 +333,11 @@
                     var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
 
                     handleFilterChange(filterType, filterValue, filterLabel);
-                    updateFilterCounts(); // Ensure counts are updated
+                    updateFilterCounts();
                 });
             }
+
+            attachDynamicCheckboxEvents()
 
             $('.collection-checkbox, .search-location-checkbox').on('change', function () {
                 var checkbox = $(this);
@@ -341,6 +355,7 @@
 
                     updateSubcollections(selectedCollections);
                 }
+                $('#survey-table').DataTable().ajax.reload();
             });
 
             function updateSubcollections(selectedCollections) {
@@ -349,6 +364,7 @@
                     .then(data => {
                         const subcollectionsFilter = $('#subcollections-filter');
                         subcollectionsFilter.empty();
+                        const availableSubcollectionIds = data.subcollections.map(subcollection => subcollection.id);
                         data.subcollections.forEach(subcollection => {
                             const checkbox = $('<input type="checkbox" class="form-check-input subcollection-checkbox checkbox-custom" value="' + subcollection.id + '" id="subcollection-' + subcollection.id + '">');
                             const label = $('<label class="form-check-label" for="subcollection-' + subcollection.id + '">' + subcollection.name + '</label>');
@@ -356,7 +372,40 @@
                             div.append(checkbox).append(label);
                             subcollectionsFilter.append(div);
                         });
+                        $('.subcollection-checkbox').each(function() {
+                            const subcollectionId = $(this).val();
+                            if (!availableSubcollectionIds.includes(subcollectionId)) {
+                                $(this).prop('checked', false);
+                            }
+                        });
 
+                        attachDynamicCheckboxEvents();
+                        updateFilterCounts();
+                        const allSubcollections = data.subcollections.map(subcollection => subcollection.id);
+                        updateSurveys(allSubcollections);
+                    });
+            }
+
+            function updateSurveys(selectedSubcollections) {
+                fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubcollections.join(',')}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const surveysFilter = $('#survey-filter');
+                        surveysFilter.empty();
+                        const availableSurveyIds = data.surveys.map(survey => survey.id);
+                        data.surveys.forEach(survey => {
+                            const checkbox = $('<input type="checkbox" class="form-check-input survey-checkbox checkbox-custom" value="' + survey.id + '" id="survey-' + survey.id + '">');
+                            const label = $('<label class="form-check-label" for="survey-' + survey.id + '">' + survey.name + '</label>');
+                            const div = $('<div class="form-check-custom"></div>');
+                            div.append(checkbox).append(label);
+                            surveysFilter.append(div);
+                        });
+                        $('.survey-checkbox').each(function() {
+                            const surveyId = $(this).val();
+                            if (!availableSurveyIds.includes(surveyId)) {
+                                $(this).prop('checked', false);
+                            }
+                        });
                         attachDynamicCheckboxEvents();
                         updateFilterCounts();
                     });
@@ -380,25 +429,12 @@
                 }).get();
             }
 
-            function getDateRange() {
-                var dateRange = $('#date-range-picker').val();
-                if (dateRange) {
-                    var dates = dateRange.split(' - ');
-                    return {
-                        startDate: dates[0],
-                        endDate: dates[1]
-                    };
-                }
-                return {
-                    startDate: null,
-                    endDate: null
-                };
-            }
-
             function getSearchLocation() {
-                return $('.search-location-checkbox:checked').map(function() {
+                var searchLocation = $('.search-location-checkbox:checked').map(function() {
                     return this.value;
                 }).get();
+                console.log("Search location:", searchLocation); // Ajoutez ceci pour vérifier les types de métadonnées sélectionnés
+                return searchLocation;
             }
 
             var currentLimit = 10;
@@ -422,16 +458,18 @@
                         d.collections = getCollectionFilter();
                         d.sub_collections = getSubCollectionFilter();
                         d.search_location = getSearchLocation();
-                        var dateRange = getDateRange();
-                        if (dateRange.startDate && dateRange.endDate) {
-                            d.startDate = dateRange.startDate;
-                            d.endDate = dateRange.endDate;
-                        }
+                        d.years = getYearsFilter();
                     },
                     "headers": {'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()},
                     "dataSrc": function(json) {
                         totalRecords = json.recordsTotal;
+                        currentRecords = json.data.length;
                         $('#results-count').text(totalRecords + ' résultats');
+                        if (currentRecords < totalRecords) {
+                            $('#load-more').show();
+                        } else {
+                            $('#load-more').hide();
+                        }
                         return json.data;
                     },
                     "error": function (jqXHR, textStatus, errorThrown) {
@@ -444,6 +482,13 @@
                         "render": function (data, type, row) {
                             var url = '/question/' + row.id + '/';
                             var categoriesDisplay = row.categories;
+                            var survey_doi= row.survey_doi;
+                            var doiUrl = 'https://doi.org/' + survey_doi;
+                            var hasHighlightedModalities = row.is_category_search && row.categories && row.categories.includes('<mark style=');
+                            var caretIcon = hasHighlightedModalities ?
+                                '<img src="{% static "svg/buttons/caret_down_modality.svg" %}" alt="Caret Down" class="icon-caret">' :
+                                '<img src="{% static "svg/buttons/caret_down.svg" %}" alt="Caret Down" class="icon-caret">'
+
                             return `
                                 <div class="custom-card-dt">
                                     <div class="custom-content-card">
@@ -463,20 +508,20 @@
                                             </div>
                                             <div class="custom-card-second-part">
                                                 <div class="container-buttons-card">
-                                                    <span type="button" id="toggle-categories" onclick="toggleCategories('categories-` + row.id + `')" class="button-card">
+                                                    <span type="button" id="toggle-categories" onclick="toggleCategories('categories-${row.id}')" class="button-card">
                                                         <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
                                                         <span>Modalités</span>
-                                                        <i class="fas fa-caret-down"></i>
+                                                        ${caretIcon}
                                                     </span>
 
-                                                    <span type="button" onclick="accessData('` + row.id + `')" class="button-card button-access-data">
+                                                    <span type="button" onclick="window.location.href='${doiUrl}'" class="button-card button-access-data">
                                                         <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
                                                         <span>Accéder aux données</span>
                                                     </span>
                                                 </div>
 
 
-                                                <div id="categories-` + row.id + `" class="categories-list mt-3" style="` + (row.is_category_search ? 'display: none;' : 'display: block;') + `">
+                                                <div id="categories-` + row.id + `" class="categories-list mt-3" style="display: none;">
                                                     ` + categoriesDisplay + `
                                                 </div>
                                             </div>
@@ -523,8 +568,6 @@
                 window.location.href = `/export/questions/?${queryString}`;
             });
 
-
-            // Charger les décennies
             // Charger les décennies avec checkbox
             function loadDecades() {
                 $.ajax({
@@ -533,12 +576,14 @@
                     success: function (data) {
                         const decadesFilter = $('#years-filter');
                         decadesFilter.empty();
-                        // Ajouter les décennies
-                        for (const [decade, years] of Object.entries(data.decades)) {
-                            var chevronIconPath = '{% static "svg/icons/chevron_right.svg" %}';
+                        const sortedDecades = Object.keys(data.decades).sort((a, b) => b - a);
+
+                        sortedDecades.forEach(decade => {
+                            const years = data.decades[decade];
+                            const chevronIconPath = '{% static "svg/icons/chevron_right.svg" %}';
                             const decadeDiv = $('<div class="form-check-custom decade-item"></div>');
                             const checkboxAndLabelDiv = $('<div class="checkbox-and-label"></div>');
-                            
+
                             const decadeCheckbox = $('<input type="checkbox" class="form-check-input decade-checkbox checkbox-custom" value="' + decade + '" id="decade-' + decade + '">');
                             const decadeLabel = $('<label class="form-check-label" for="decade-' + decade + '">Années ' + decade + '</label>');
 
@@ -547,34 +592,64 @@
                             const chevronIcon = $('<img src="' + chevronIconPath + '" class="chevron-icon decade-chevron" alt="chevron">');
 
                             decadeDiv.append(checkboxAndLabelDiv).append(chevronIcon);
-
                             decadesFilter.append(decadeDiv);
 
-                            // Gestion des événements pour les décennies
+                            // Coche/Décoche la décennie si toutes les années sont cochées/décochées
+                            const allSelected = years.every(year => selectedYears.has(parseInt(year)));
+                            const someSelected = years.some(year => selectedYears.has(parseInt(year)));
+
+                            decadeCheckbox.prop('checked', allSelected);
+                            decadeCheckbox[0].indeterminate = someSelected && !allSelected;
+                            if (someSelected && !allSelected){
+                                console.log("decadeCheckbox", decadeCheckbox);
+                                console.log("decadeCheckbox[0]", decadeCheckbox[0]);
+                                console.log("Indeterminate state set to:", someSelected && !allSelected);
+                            }
+                            console.log("decadeCheckbox", decadeCheckbox);
+                            console.log("decadeCheckbox[0]", decadeCheckbox[0]);
+                            console.log("Indeterminate state set to:", someSelected && !allSelected);
+
                             decadeCheckbox.on('change', function() {
-                                const isChecked = $(this).is(':checked');
-                                if (isChecked) {
-                                    // Sélectionner toutes les années de la décennie
+                                const checkboxElement = this;
+                                const isChecked = $(checkboxElement).is(':checked');
+                                const isIndeterminate = checkboxElement.indeterminate;
+
+                                if (isIndeterminate) {
+                                    // Si la case à cocher est dans un état intermédiaire, déselectionnez toutes les années
                                     years.forEach(year => {
-                                        selectedYears.add(year);
+                                        selectedYears.delete(parseInt(year));
+                                    });
+                                    checkboxElement.indeterminate = false; // Réinitialisez l'état intermédiaire
+                                    $(checkboxElement).prop('checked', false); // Assurez-vous que la checkbox est décochée
+                                } else if (isChecked) {
+                                    // Si la case à cocher est cochée, sélectionnez toutes les années
+                                    years.forEach(year => {
+                                        selectedYears.add(parseInt(year));
                                     });
                                 } else {
-                                    // Désélectionner toutes les années de la décennie
+                                    // Si la case à cocher est décochée, déselectionnez toutes les années
                                     years.forEach(year => {
-                                        selectedYears.delete(year);
+                                        selectedYears.delete(parseInt(year));
                                     });
                                 }
+
                                 updateFilters();
+                                $('#survey-table').DataTable().ajax.reload();
                             });
-                            $('.decade-chevron').on('click', function() {
+
+
+                            chevronIcon.on('click', function() {
                                 loadYears(decade);
                             });
-                        }
+                        });
                     }
                 });
             }
 
-            // Charger les années d'une décennie
+
+
+
+
             function loadYears(decade) {
                 $.ajax({
                     url: '/get-years-by-decade/',
@@ -583,36 +658,45 @@
                     success: function (data) {
                         const decadesFilter = $('#years-filter');
                         decadesFilter.empty();
-                        var chevronIconPathReturn = '{% static "svg/icons/chevron_left.svg" %}';
-                        // Ajouter un bouton de retour
-                        const chevronIcon = $('<img src="' + chevronIconPathReturn + '" class="chevron-icon decade-chevron" alt="chevron">');
-                        const backButton = $('<img src="' + chevronIconPathReturn + '" class="back-button"></div>');
+                        const chevronIconPathReturn = '{% static "svg/icons/chevron_left.svg" %}';
+
+                        const backButton = $('<img src="' + chevronIconPathReturn + '" class="back-button" alt="Retour">');
                         backButton.on('click', function() {
                             loadDecades();
                         });
                         decadesFilter.append(backButton);
-                        // Ajouter les années
-                        for (const year of data.years) {
-                            const yearDiv = $('<div class="form-check year-item"></div>');
-                            
+
+                        data.years.forEach(year => {
+                            const yearDiv = $('<div class="form-check-custom year-item"></div>');
+
                             const yearCheckbox = $('<input type="checkbox" class="form-check-input year-checkbox checkbox-custom" value="' + year + '" id="year-' + year + '">');
                             const yearLabel = $('<label class="form-check-label" for="year-' + year + '">' + year + '</label>');
+
+                            if (selectedYears.has(year)) {
+                                yearCheckbox.prop('checked', true);
+                            }
+
                             yearDiv.append(yearCheckbox).append(yearLabel);
                             decadesFilter.append(yearDiv);
 
-                            // Gestion des événements pour les années
                             yearCheckbox.on('change', function() {
                                 const year = $(this).val();
                                 if ($(this).is(':checked')) {
-                                    selectedYears.add(year);
+                                    selectedYears.add(parseInt(year));
                                 } else {
-                                    selectedYears.delete(year);
+                                    selectedYears.delete(parseInt(year));
                                 }
                                 updateFilters();
+                                $('#survey-table').DataTable().ajax.reload();
+                                updateDecadeCheckboxes(data);
                             });
-                        }
+                        });
                     }
                 });
+            }
+
+            function getYearsFilter() {
+                return Array.from(selectedYears);
             }
 
             // Ensemble pour stocker les années sélectionnées
@@ -620,13 +704,28 @@
 
             // Fonction pour mettre à jour les filtres
             function updateFilters() {
-                const yearsArray = Array.from(selectedYears);
+                // const yearsArray = Array.from(selectedYears);
+                console.log("selected years update filters : ", selectedYears)
                 $('#survey-table').DataTable().ajax.reload();
             }
 
 
             // Charger les décennies au chargement de la page
             loadDecades();
+
+            function updateDecadeCheckboxes(data) {
+                $('.decade-checkbox').each(function() {
+                    const decade = $(this).val();
+                    const years = data.decades[decade] || [];
+                    const allSelected = years.every(year => selectedYears.has(parseInt(year)));
+                    const someSelected = years.some(year => selectedYears.has(parseInt(year)));
+
+                    $(this).prop('checked', allSelected);
+                    this.indeterminate = someSelected && !allSelected;
+                });
+            }
+
+
 
 
             $('#reset-filters').on('click', function() {
