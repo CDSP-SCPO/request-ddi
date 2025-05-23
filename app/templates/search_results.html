@@ -16,7 +16,7 @@
                             <img src="{% static 'svg/icons/export.svg' %}">
                             <span>Tout exporter</span>
                         </div>
-                    
+
                     </div>
                 </div>
             </div>
@@ -42,30 +42,38 @@
             <div class="accordion" id="filtersAccordion">
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingOne">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
+                             data-toggle="collapse" data-target="#collapseOne" aria-expanded="false"
+                             aria-controls="collapseOne">
                             <span>Types de métadonnées</span>
                             <span class="filter-count"></span>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
-                    <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" >
+                    <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne">
                         <div class="accordion-body">
                             <div id="search-location" class="div-all-checkboxes">
                                 <div class="form-check-custom">
-                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="questions" id="search-location-questions">
+                                    <input class="form-check-input search-location-checkbox checkbox-custom"
+                                           type="checkbox" value="questions" id="search-location-questions">
                                     <label class="form-check-label" for="search-location-questions">Questions</label>
                                 </div>
                                 <div class="form-check-custom">
-                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="categories" id="search-location-categories">
+                                    <input class="form-check-input search-location-checkbox checkbox-custom"
+                                           type="checkbox" value="categories" id="search-location-categories">
                                     <label class="form-check-label" for="search-location-categories">Modalités</label>
                                 </div>
                                 <div class="form-check-custom">
-                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="variable_name" id="search-location-variable_name">
-                                    <label class="form-check-label" for="search-location-variable_name">Nom de la variable</label>
+                                    <input class="form-check-input search-location-checkbox checkbox-custom"
+                                           type="checkbox" value="variable_name" id="search-location-variable_name">
+                                    <label class="form-check-label" for="search-location-variable_name">Nom de la
+                                        variable</label>
                                 </div>
                                 <div class="form-check-custom">
-                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="internal_label" id="search-location-internal_label">
-                                    <label class="form-check-label" for="search-location-internal_label">Libellé de la variable</label>
+                                    <input class="form-check-input search-location-checkbox checkbox-custom"
+                                           type="checkbox" value="internal_label" id="search-location-internal_label">
+                                    <label class="form-check-label" for="search-location-internal_label">Libellé de la
+                                        variable</label>
                                 </div>
                             </div>
                         </div>
@@ -73,18 +81,23 @@
                 </div>
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingTwo">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
+                             data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false"
+                             aria-controls="collapseTwo">
                             <span>Collections</span>
                             <span class="filter-count"></span>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
-                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" >
+                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo">
                         <div class="accordion-body">
                             <div id="collections-filter" class="div-all-checkboxes">
                                 {% for collection in collections %}
                                     <div class="form-check-custom">
-                                        <input class="form-check-input collection-checkbox checkbox-custom" type="checkbox" value="{{ collection.id }}" id="collection-{{ collection.id }}" {% if collection.id|stringformat:"s" in request.session.selected_collection %}checked{% endif %}>
+                                        <input class="form-check-input collection-checkbox checkbox-custom"
+                                               type="checkbox" value="{{ collection.id }}"
+                                               id="collection-{{ collection.id }}"
+                                               {% if collection.id|stringformat:"s" in request.session.selected_collection %}checked{% endif %}>
                                         <label class="form-check-label" for="collection-{{ collection.id }}">
                                             {{ collection.name }}
                                         </label>
@@ -96,7 +109,9 @@
                 </div>
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingThree">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
+                             data-toggle="collapse" data-target="#collapseThree" aria-expanded="false"
+                             aria-controls="collapseThree">
                             <span>Sous-Collections</span>
                             <span class="filter-count"></span>
                             <i class="fas fa-caret-down"></i>
@@ -107,7 +122,10 @@
                             <div id="subcollections-filter" class="div-all-checkboxes">
                                 {% for subcollection in subcollections %}
                                     <div class="form-check-custom">
-                                        <input class="form-check-input subcollection-checkbox checkbox-custom" type="checkbox" value="{{ subcollection.id }}" id="subcollection-{{ subcollection.id }}" {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}checked{% endif %}>
+                                        <input class="form-check-input subcollection-checkbox checkbox-custom"
+                                               type="checkbox" value="{{ subcollection.id }}"
+                                               id="subcollection-{{ subcollection.id }}"
+                                               {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}checked{% endif %}>
                                         <label class="form-check-label" for="subcollection-{{ subcollection.id }}">
                                             {{ subcollection.name }}
                                         </label>
@@ -119,18 +137,22 @@
                 </div>
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingFour">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
+                             data-toggle="collapse" data-target="#collapseFour" aria-expanded="false"
+                             aria-controls="collapseFour">
                             <span>Enquêtes</span>
                             <span class="filter-count"></span>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
-                    <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" >
+                    <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour">
                         <div class="accordion-body">
                             <div id="survey-filter" class="div-all-checkboxes">
                                 {% for survey in surveys %}
                                     <div class="form-check-custom">
-                                        <input class="form-check-input survey-checkbox checkbox-custom" type="checkbox" value="{{ survey.id }}" id="survey-{{ survey.id }}" {% if survey.id|stringformat:"s" in request.session.selected_surveys %}checked{% endif %}>
+                                        <input class="form-check-input survey-checkbox checkbox-custom" type="checkbox"
+                                               value="{{ survey.id }}" id="survey-{{ survey.id }}"
+                                               {% if survey.id|stringformat:"s" in request.session.selected_surveys %}checked{% endif %}>
                                         <label class="form-check-label" for="survey-{{ survey.id }}">
                                             {{ survey.name }}
                                         </label>
@@ -142,7 +164,9 @@
                 </div>
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingFive">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
+                             data-toggle="collapse" data-target="#collapseFive" aria-expanded="false"
+                             aria-controls="collapseFive">
                             <span>Années</span>
                             <i class="fas fa-caret-down"></i>
                         </div>
@@ -171,17 +195,20 @@
     <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
     <style>
 
-        .inner-container-custom{
-            --topbar-height : 64px;
-            --resetbar-height : 64px;
+        .inner-container-custom {
+            --topbar-height: 64px;
+            --resetbar-height: 64px;
         }
+
         .search-results-container {
             width: 70%;
             overflow: hidden;
         }
+
         .filters-container {
             width: 30%;
         }
+
         .badge-category {
             position: absolute;
             top: 10px;
@@ -195,6 +222,7 @@
             z-index: 1; /* S'assurer que le badge est au-dessus du texte */
             width: 15rem;
         }
+
         .category-dropdown {
             display: none;
             position: absolute;
@@ -209,14 +237,17 @@
             max-height: calc(100% - 40px); /* Limite à la hauteur de la carte parent, en laissant 40px de marge */
             overflow-y: auto; /* Scroll si nécessaire */
         }
+
         .category-item {
             padding: 5px;
             font-size: 0.75em; /* Réduit la taille du texte dans les catégories */
         }
+
         .highlight-category {
             background-color: yellow;
             font-weight: bold;
         }
+
         .category-dropdown a {
             display: block;
             padding: 5px;
@@ -224,14 +255,17 @@
             color: black;
             font-size: 0.75em; /* Réduit la taille du texte dans les liens */
         }
+
         .category-dropdown a:hover {
             background-color: #f1f1f1;
         }
+
         .card {
             position: relative; /* Important pour confiner le dropdown à la carte */
             margin-bottom: 20px;
             overflow: hidden; /* Empêche le dépassement du contenu */
         }
+
         .bootstrap-select .btn {
             max-width: 200px;
             max-height: 40px;
@@ -250,22 +284,29 @@
             var selectedFilters = {}; // Object to store selected filters
 
             function updateFiltersDisplay() {
+                console.log('salut')
                 const filterContainer = $('#selected-filters-container');
-                filterContainer.empty(); // Clear existing filters
+                filterContainer.empty();
 
                 let hasFilters = false;
 
                 $.each(selectedFilters, function (key, filters) {
-                    if (filters.length > 0) {
+                    const validFilters = filters.filter(function (filter) {
+                        return $('input[type="checkbox"][value="' + filter.value + '"]').length > 0;
+                    });
+
+                    selectedFilters[key] = validFilters; // met à jour l'objet
+
+                    if (validFilters.length > 0) {
                         hasFilters = true;
-                        filters.forEach(function(filter) {
+                        validFilters.forEach(function (filter) {
                             var card = $('<div class="selected-filter-card"> <span>' + filter.label + '</span> <span class="remove-filter">✖</span></div>');
                             card.find('.remove-filter').click(function () {
-                                var index = filters.findIndex(f => f.value === filter.value);
+                                var index = selectedFilters[key].findIndex(f => f.value === filter.value);
                                 if (index !== -1) {
-                                    filters.splice(index, 1); // Remove filter from specific category
+                                    selectedFilters[key].splice(index, 1);
                                     updateFiltersDisplay();
-                                    $('#survey-table').DataTable().ajax.reload(); // Reload based on new filters
+                                    $('#survey-table').DataTable().ajax.reload();
                                 }
                             });
                             filterContainer.append(card);
@@ -274,11 +315,12 @@
                 });
 
                 if (hasFilters) {
-                    filterContainer.show(); // Show the container if there are filters selected
+                    filterContainer.show();
                 } else {
-                    filterContainer.hide(); // Hide the container if no filters are selected
+                    filterContainer.hide();
                 }
             }
+
 
             updateFiltersDisplay()
 
@@ -299,7 +341,6 @@
                 $('#survey-table').DataTable().ajax.reload(); // Reload based on new filters
             }
 
-            
 
             function attachDynamicCheckboxEvents() {
                 $('.subcollection-checkbox, .survey-checkbox').off('change').on('change', function () {
@@ -311,12 +352,12 @@
                     handleFilterChange(filterType, filterValue, filterLabel);
                     updateFilterCounts();
                     if (filterType === 'subcollection') {
-                        const selectedSubcollections = $('.subcollection-checkbox:checked').map(function() {
+                        const selectedSubcollections = $('.subcollection-checkbox:checked').map(function () {
                             return this.value;
                         }).get();
 
                         if (selectedSubcollections.length === 0) {
-                            const allSubcollections = $('.subcollection-checkbox').map(function() {
+                            const allSubcollections = $('.subcollection-checkbox').map(function () {
                                 return this.value;
                             }).get();
                             updateSurveys(allSubcollections);
@@ -349,7 +390,7 @@
                 updateFilterCounts();
 
                 if (filterType === 'collection') {
-                    const selectedCollections = $('.collection-checkbox:checked').map(function() {
+                    const selectedCollections = $('.collection-checkbox:checked').map(function () {
                         return this.value;
                     }).get();
 
@@ -372,7 +413,7 @@
                             div.append(checkbox).append(label);
                             subcollectionsFilter.append(div);
                         });
-                        $('.subcollection-checkbox').each(function() {
+                        $('.subcollection-checkbox').each(function () {
                             const subcollectionId = $(this).val();
                             if (!availableSubcollectionIds.includes(subcollectionId)) {
                                 $(this).prop('checked', false);
@@ -400,37 +441,38 @@
                             div.append(checkbox).append(label);
                             surveysFilter.append(div);
                         });
-                        $('.survey-checkbox').each(function() {
+                        $('.survey-checkbox').each(function () {
                             const surveyId = $(this).val();
                             if (!availableSurveyIds.includes(surveyId)) {
                                 $(this).prop('checked', false);
                             }
                         });
                         attachDynamicCheckboxEvents();
+                        updateFiltersDisplay();
                         updateFilterCounts();
                     });
             }
 
             function getSurveyFilter() {
-                return $('.survey-checkbox:checked').map(function() {
+                return $('.survey-checkbox:checked').map(function () {
                     return this.value;
                 }).get();
             }
 
             function getCollectionFilter() {
-                return $('.collection-checkbox:checked').map(function() {
+                return $('.collection-checkbox:checked').map(function () {
                     return this.value;
                 }).get();
             }
 
             function getSubCollectionFilter() {
-                return $('.subcollection-checkbox:checked').map(function() {
+                return $('.subcollection-checkbox:checked').map(function () {
                     return this.value;
                 }).get();
             }
 
             function getSearchLocation() {
-                var searchLocation = $('.search-location-checkbox:checked').map(function() {
+                var searchLocation = $('.search-location-checkbox:checked').map(function () {
                     return this.value;
                 }).get();
                 console.log("Search location:", searchLocation); // Ajoutez ceci pour vérifier les types de métadonnées sélectionnés
@@ -445,7 +487,7 @@
                 "dom": 'rt',
                 "info": false,
                 "ordering": false,
-                
+
                 "ajax": {
                     "url": "{% url 'app:search_results_data' %}",
                     "type": "POST",
@@ -461,7 +503,7 @@
                         d.years = getYearsFilter();
                     },
                     "headers": {'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()},
-                    "dataSrc": function(json) {
+                    "dataSrc": function (json) {
                         totalRecords = json.recordsTotal;
                         currentRecords = json.data.length;
                         $('#results-count').text(totalRecords + ' résultats');
@@ -482,7 +524,7 @@
                         "render": function (data, type, row) {
                             var url = '/question/' + row.id + '/';
                             var categoriesDisplay = row.categories;
-                            var survey_doi= row.survey_doi;
+                            var survey_doi = row.survey_doi;
                             var doiUrl = 'https://doi.org/' + survey_doi;
                             var hasHighlightedModalities = row.is_category_search && row.categories && row.categories.includes('<mark style=');
                             var caretIcon = hasHighlightedModalities ?
@@ -600,7 +642,7 @@
 
                             decadeCheckbox.prop('checked', allSelected);
                             decadeCheckbox[0].indeterminate = someSelected && !allSelected;
-                            if (someSelected && !allSelected){
+                            if (someSelected && !allSelected) {
                                 console.log("decadeCheckbox", decadeCheckbox);
                                 console.log("decadeCheckbox[0]", decadeCheckbox[0]);
                                 console.log("Indeterminate state set to:", someSelected && !allSelected);
@@ -609,7 +651,7 @@
                             console.log("decadeCheckbox[0]", decadeCheckbox[0]);
                             console.log("Indeterminate state set to:", someSelected && !allSelected);
 
-                            decadeCheckbox.on('change', function() {
+                            decadeCheckbox.on('change', function () {
                                 const checkboxElement = this;
                                 const isChecked = $(checkboxElement).is(':checked');
                                 const isIndeterminate = checkboxElement.indeterminate;
@@ -638,7 +680,7 @@
                             });
 
 
-                            chevronIcon.on('click', function() {
+                            chevronIcon.on('click', function () {
                                 loadYears(decade);
                             });
                         });
@@ -647,21 +689,18 @@
             }
 
 
-
-
-
             function loadYears(decade) {
                 $.ajax({
                     url: '/get-years-by-decade/',
                     type: 'GET',
-                    data: { decade: decade },
+                    data: {decade: decade},
                     success: function (data) {
                         const decadesFilter = $('#years-filter');
                         decadesFilter.empty();
                         const chevronIconPathReturn = '{% static "svg/icons/chevron_left.svg" %}';
 
                         const backButton = $('<img src="' + chevronIconPathReturn + '" class="back-button" alt="Retour">');
-                        backButton.on('click', function() {
+                        backButton.on('click', function () {
                             loadDecades();
                         });
                         decadesFilter.append(backButton);
@@ -679,7 +718,7 @@
                             yearDiv.append(yearCheckbox).append(yearLabel);
                             decadesFilter.append(yearDiv);
 
-                            yearCheckbox.on('change', function() {
+                            yearCheckbox.on('change', function () {
                                 const year = $(this).val();
                                 if ($(this).is(':checked')) {
                                     selectedYears.add(parseInt(year));
@@ -714,7 +753,7 @@
             loadDecades();
 
             function updateDecadeCheckboxes(data) {
-                $('.decade-checkbox').each(function() {
+                $('.decade-checkbox').each(function () {
                     const decade = $(this).val();
                     const years = data.decades[decade] || [];
                     const allSelected = years.every(year => selectedYears.has(parseInt(year)));
@@ -726,15 +765,13 @@
             }
 
 
-
-
-            $('#reset-filters').on('click', function() {
+            $('#reset-filters').on('click', function () {
                 selectedFilters = {}; // Reset the filters object
                 selectedIds.clear(); // Clear selected IDs
 
                 // Uncheck all checkboxes
                 $('.form-check-input').prop('checked', false);
-                
+
                 updateFiltersDisplay(); // Update filter cards displayed
                 $('#survey-table').DataTable().ajax.reload(); // Reload table data
             });
@@ -745,7 +782,7 @@
                     var accordionItem = $(this);
                     var checkboxes = accordionItem.find('.form-check-input:checked');
                     var count = checkboxes.length;
-                    var filterCountElement = accordionItem.find('.filter-count'); 
+                    var filterCountElement = accordionItem.find('.filter-count');
 
                     if (count > 0) {
                         filterCountElement.text(count).show();
@@ -754,13 +791,14 @@
                     }
                 });
             }
+
             updateFilterCounts();
 
             $('.form-check-input').on('change', function () {
                 updateFilterCounts();
             });
 
-            
+
         });
 
         function toggleCategories(categoryId) {
@@ -786,24 +824,24 @@
             document.documentElement.style.setProperty('--selected-filters-container-height', selectedFiltersContainerHeight + 'px');
         }
 
-        $(document).ready(function() {
+        $(document).ready(function () {
             updateTableContainerHeight();
 
-            var observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
+            var observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
                     if (mutation.attributeName === "style") {
                         updateTableContainerHeight();
                     }
                 });
             });
             var targetNode = document.getElementById('selected-filters-container');
-            var config = { attributes: true, attributeFilter: ['style'] };
+            var config = {attributes: true, attributeFilter: ['style']};
 
             // Démarrer l'observation
             observer.observe(targetNode, config);
         });
 
-        $(window).resize(function() {
+        $(window).resize(function () {
             updateTableContainerHeight();
         });
 
