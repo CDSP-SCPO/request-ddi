@@ -284,7 +284,6 @@
             var selectedFilters = {}; // Object to store selected filters
 
             function updateFiltersDisplay() {
-                console.log('salut')
                 const filterContainer = $('#selected-filters-container');
                 filterContainer.empty();
 
@@ -302,13 +301,19 @@
                         validFilters.forEach(function (filter) {
                             var card = $('<div class="selected-filter-card"> <span>' + filter.label + '</span> <span class="remove-filter">✖</span></div>');
                             card.find('.remove-filter').click(function () {
-                                var index = selectedFilters[key].findIndex(f => f.value === filter.value);
-                                if (index !== -1) {
-                                    selectedFilters[key].splice(index, 1);
-                                    updateFiltersDisplay();
-                                    $('#survey-table').DataTable().ajax.reload();
-                                }
-                            });
+                            var index = selectedFilters[key].findIndex(f => f.value === filter.value);
+                            if (index !== -1) {
+                                selectedFilters[key].splice(index, 1);
+
+                                // ➕ Décoche la checkbox correspondante
+                                $('input[type="checkbox"][value="' + filter.value + '"]').prop('checked', false);
+
+                                updateFiltersDisplay();
+                                updateFilterCounts();
+                                $('#survey-table').DataTable().ajax.reload();
+                            }
+                        });
+
                             filterContainer.append(card);
                         });
                     }
@@ -340,6 +345,7 @@
                 updateFiltersDisplay();
                 $('#survey-table').DataTable().ajax.reload(); // Reload based on new filters
             }
+
 
 
             function attachDynamicCheckboxEvents() {
@@ -453,29 +459,17 @@
                     });
             }
 
-            function getSurveyFilter() {
-                return $('.survey-checkbox:checked').map(function () {
+            function getFilterValues(className) {
+                return $(`.${className}:checked`).map(function() {
                     return this.value;
                 }).get();
             }
 
-            function getCollectionFilter() {
-                return $('.collection-checkbox:checked').map(function () {
-                    return this.value;
-                }).get();
-            }
-
-            function getSubCollectionFilter() {
-                return $('.subcollection-checkbox:checked').map(function () {
-                    return this.value;
-                }).get();
-            }
 
             function getSearchLocation() {
                 var searchLocation = $('.search-location-checkbox:checked').map(function () {
                     return this.value;
                 }).get();
-                console.log("Search location:", searchLocation); // Ajoutez ceci pour vérifier les types de métadonnées sélectionnés
                 return searchLocation;
             }
 
@@ -496,9 +490,9 @@
                         d.start = d.start || 0;
                         d.limit = currentLimit;
                         d.q = "{{ request.GET.q }}";
-                        d.survey = getSurveyFilter();
-                        d.collections = getCollectionFilter();
-                        d.sub_collections = getSubCollectionFilter();
+                        d.survey = getFilterValues('survey-checkbox');
+                        d.collections = getFilterValues('collection-checkbox');
+                        d.sub_collections = getFilterValues('subcollection-checkbox')
                         d.search_location = getSearchLocation();
                         d.years = getYearsFilter();
                     },
@@ -642,14 +636,6 @@
 
                             decadeCheckbox.prop('checked', allSelected);
                             decadeCheckbox[0].indeterminate = someSelected && !allSelected;
-                            if (someSelected && !allSelected) {
-                                console.log("decadeCheckbox", decadeCheckbox);
-                                console.log("decadeCheckbox[0]", decadeCheckbox[0]);
-                                console.log("Indeterminate state set to:", someSelected && !allSelected);
-                            }
-                            console.log("decadeCheckbox", decadeCheckbox);
-                            console.log("decadeCheckbox[0]", decadeCheckbox[0]);
-                            console.log("Indeterminate state set to:", someSelected && !allSelected);
 
                             decadeCheckbox.on('change', function () {
                                 const checkboxElement = this;
@@ -687,7 +673,6 @@
                     }
                 });
             }
-
 
             function loadYears(decade) {
                 $.ajax({
@@ -764,8 +749,7 @@
                 });
             }
 
-
-            $('#reset-filters').on('click', function () {
+            $('#reset-filters').on('click', function() {
                 selectedFilters = {}; // Reset the filters object
                 selectedIds.clear(); // Clear selected IDs
 
