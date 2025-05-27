@@ -284,7 +284,6 @@
             var selectedFilters = {}; // Object to store selected filters
 
             function updateFiltersDisplay() {
-                console.log('salut')
                 const filterContainer = $('#selected-filters-container');
                 filterContainer.empty();
 
@@ -341,6 +340,7 @@
                 $('#survey-table').DataTable().ajax.reload(); // Reload based on new filters
             }
 
+            
 
             function attachDynamicCheckboxEvents() {
                 $('.subcollection-checkbox, .survey-checkbox').off('change').on('change', function () {
@@ -453,29 +453,17 @@
                     });
             }
 
-            function getSurveyFilter() {
-                return $('.survey-checkbox:checked').map(function () {
+            function getFilterValues(className) {
+                return $(`.${className}:checked`).map(function() {
                     return this.value;
                 }).get();
             }
 
-            function getCollectionFilter() {
-                return $('.collection-checkbox:checked').map(function () {
-                    return this.value;
-                }).get();
-            }
-
-            function getSubCollectionFilter() {
-                return $('.subcollection-checkbox:checked').map(function () {
-                    return this.value;
-                }).get();
-            }
 
             function getSearchLocation() {
                 var searchLocation = $('.search-location-checkbox:checked').map(function () {
                     return this.value;
                 }).get();
-                console.log("Search location:", searchLocation); // Ajoutez ceci pour vérifier les types de métadonnées sélectionnés
                 return searchLocation;
             }
 
@@ -496,9 +484,9 @@
                         d.start = d.start || 0;
                         d.limit = currentLimit;
                         d.q = "{{ request.GET.q }}";
-                        d.survey = getSurveyFilter();
-                        d.collections = getCollectionFilter();
-                        d.sub_collections = getSubCollectionFilter();
+                        d.survey = getFilterValues('survey-checkbox');
+                        d.collections = getFilterValues('collection-checkbox');
+                        d.sub_collections = getFilterValues('subcollection-checkbox')
                         d.search_location = getSearchLocation();
                         d.years = getYearsFilter();
                     },
@@ -689,6 +677,9 @@
             }
 
 
+
+
+
             function loadYears(decade) {
                 $.ajax({
                     url: '/get-years-by-decade/',
@@ -765,7 +756,9 @@
             }
 
 
-            $('#reset-filters').on('click', function () {
+
+
+            $('#reset-filters').on('click', function() {
                 selectedFilters = {}; // Reset the filters object
                 selectedIds.clear(); // Clear selected IDs
 
