@@ -9,24 +9,21 @@ from html import unescape
 from django import forms
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.db import IntegrityError, transaction
-from django.db.models.signals import post_delete, post_save
-from django.dispatch import Signal, receiver
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse, reverse_lazy
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse_lazy
 # views.py
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import ListView, TemplateView
+from django.views.generic import ListView
 from django.views.generic.edit import FormView
 
 # -- THIRDPARTY
 import requests
 from bs4 import BeautifulSoup
-from elasticsearch_dsl import A, Q, Search
+from elasticsearch_dsl import Q
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
@@ -38,7 +35,6 @@ from .models import (
     BindingSurveyRepresentedVariable, Category, Collection, ConceptualVariable,
     Distributor, RepresentedVariable, Subcollection, Survey,
 )
-from .signals import data_imported
 from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
@@ -391,8 +387,6 @@ class XMLUploadView(BaseUploadView):
         for doi, questions in data_by_doi.items():
             try:
                 with transaction.atomic():
-                    start_time = datetime.now()  # Début du traitement du DOI
-
                     survey = Survey.objects.get(external_ref=doi)
 
                     for question_data in questions:
@@ -412,11 +406,9 @@ class XMLUploadView(BaseUploadView):
                         if created_binding:
                             num_new_bindings += 1
 
-                        data_imported.send(sender=self.__class__, instance=binding)
+                        transaction.on_commit(lambda b=binding: BindingSurveyDocument().update(b))
 
                         num_records += 1
-
-                    end_time = datetime.now()  # Fin du traitement du DOI
 
             except Survey.DoesNotExist:
                 error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
