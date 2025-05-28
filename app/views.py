@@ -9,24 +9,21 @@ from html import unescape
 from django import forms
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.db import IntegrityError, transaction
-from django.db.models.signals import post_delete, post_save
-from django.dispatch import Signal, receiver
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse, reverse_lazy
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse_lazy
 # views.py
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import ListView, TemplateView
+from django.views.generic import ListView
 from django.views.generic.edit import FormView
 
 # -- THIRDPARTY
 import requests
 from bs4 import BeautifulSoup
-from elasticsearch_dsl import A, Q, Search
+from elasticsearch_dsl import Q
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
@@ -38,7 +35,6 @@ from .models import (
     BindingSurveyRepresentedVariable, Category, Collection, ConceptualVariable,
     Distributor, RepresentedVariable, Subcollection, Survey,
 )
-from .signals import data_imported
 from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
@@ -327,7 +323,6 @@ class XMLUploadView(BaseUploadView):
         return results
 
 
-
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
         start_time = datetime.now()  # Début du parsing
@@ -391,8 +386,6 @@ class XMLUploadView(BaseUploadView):
         for doi, questions in data_by_doi.items():
             try:
                 with transaction.atomic():
-                    start_time = datetime.now()  # Début du traitement du DOI
-
                     survey = Survey.objects.get(external_ref=doi)
 
                     for question_data in questions:
@@ -412,11 +405,9 @@ class XMLUploadView(BaseUploadView):
                         if created_binding:
                             num_new_bindings += 1
 
-                        data_imported.send(sender=self.__class__, instance=binding)
+                        transaction.on_commit(lambda b=binding: BindingSurveyDocument().update(b))
 
                         num_records += 1
-
-                    end_time = datetime.now()  # Fin du traitement du DOI
 
             except Survey.DoesNotExist:
                 error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
@@ -1158,36 +1149,70 @@ def get_surveys_by_subcollections(request):
     return JsonResponse(data)
 
 def get_decades(request):
-    # Récupérer les années uniques des enquêtes
-    years = Survey.objects.values_list('start_date', flat=True).distinct()
+    collection_ids = request.GET.get('collections_ids', '').split(',')
+    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
+    survey_ids = request.GET.get('survey_ids', '').split(',')
+
+    collection_ids = [id for id in collection_ids if id]
+    subcollection_ids = [id for id in subcollection_ids if id]
+    survey_ids = [id for id in survey_ids if id]
+
+    if survey_ids:
+        surveys = Survey.objects.filter(id__in=survey_ids)
+    elif subcollection_ids:
+        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids)
+    elif collection_ids:
+        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
+    else:
+        surveys = Survey.objects.all()
+
+    years = surveys.values_list('start_date', flat=True).distinct()
     years = [year.year for year in years if year is not None]
     years = list(set(years))
     years.sort(reverse=True)
 
-    # Regrouper les années par décennies
     decades = {}
     for year in years:
         decade = (year // 10) * 10
         if decade not in decades:
             decades[decade] = []
         decades[decade].append(year)
-    # Préparer les données à renvoyer
-    data = {'decades': decades}
-    return JsonResponse(data)
+
+    return JsonResponse({'decades': decades})
+
 
 def get_years_by_decade(request):
     try:
         decade = int(request.GET.get('decade', 0))
     except ValueError:
         return JsonResponse({'error': 'Invalid decade value'}, status=400)
-    print("decade", decade)
+
     start_year = decade
     end_year = decade + 9
 
-    years = Survey.objects.filter(start_date__year__range=(start_year, end_year)) \
-                          .values_list('start_date__year', flat=True) \
-                          .distinct()
-    years = list(set(years))  # Éliminer les doublons
+    collection_ids = request.GET.get('collections_ids', '').split(',')
+    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
+    survey_ids = request.GET.get('survey_ids', '').split(',')
+
+    collection_ids = [id for id in collection_ids if id]
+    subcollection_ids = [id for id in subcollection_ids if id]
+    survey_ids = [id for id in survey_ids if id]
+
+    if survey_ids:
+        surveys = Survey.objects.filter(id__in=survey_ids)
+    elif subcollection_ids:
+        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids)
+    elif collection_ids:
+        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
+    else:
+        surveys = Survey.objects.all()
+
+    years = surveys.filter(start_date__year__range=(start_year, end_year)) \
+                   .values_list('start_date__year', flat=True) \
+                   .distinct()
+    years = list(set(years))
     years.sort()
 
     return JsonResponse({'years': years})
+
+

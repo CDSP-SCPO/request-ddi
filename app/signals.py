@@ -12,9 +12,6 @@ from .models import (
     RepresentedVariable, Survey,
 )
 
-# Définir un signal personnalisé
-data_imported = Signal()
-
 @receiver(pre_delete, sender=Survey)
 def delete_related_data_on_survey_delete(sender, instance, **kwargs):
     # Récupérer toutes les liaisons (bindings) associées à l'enquête avant suppression
@@ -38,9 +35,6 @@ def update_index(sender, instance, **kwargs):
 def delete_index(sender, instance, **kwargs):
     BindingSurveyDocument().delete(instance)
 
-@receiver(data_imported)
-def handle_data_imported(sender, instance, **kwargs):
-    BindingSurveyDocument().update(instance)
 
 def delete_represented_variable_if_unused(represented_variable):
     categories = represented_variable.categories.all()
