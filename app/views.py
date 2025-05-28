@@ -323,7 +323,6 @@ class XMLUploadView(BaseUploadView):
         return results
 
 
-
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
         start_time = datetime.now()  # Début du parsing
