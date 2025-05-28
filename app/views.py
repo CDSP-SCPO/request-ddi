@@ -375,7 +375,7 @@ class XMLUploadView(BaseUploadView):
         num_new_bindings = 0
         error_files = []
 
-        # Utiliser un dictionnaire pour regrouper les données par DOI
+        # Regroupement par DOI
         data_by_doi = {}
         for question_data in question_datas:
             doi = question_data[0]
@@ -383,31 +383,32 @@ class XMLUploadView(BaseUploadView):
                 data_by_doi[doi] = []
             data_by_doi[doi].append(question_data)
 
+        # Liste temporaire des bindings à indexer après validation
+        bindings_to_index = []
+
         for doi, questions in data_by_doi.items():
             try:
-                with transaction.atomic():
-                    survey = Survey.objects.get(external_ref=doi)
+                survey = Survey.objects.get(external_ref=doi)
 
-                    for question_data in questions:
-                        variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
+                for question_data in questions:
+                    variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
 
-                        represented_variable, created_variable = self.get_or_create_represented_variable(
-                            variable_name, question_text, category_label, variable_label
-                        )
+                    represented_variable, created_variable = self.get_or_create_represented_variable(
+                        variable_name, question_text, category_label, variable_label
+                    )
 
-                        if created_variable:
-                            num_new_variables += 1
+                    if created_variable:
+                        num_new_variables += 1
 
-                        binding, created_binding = self.get_or_create_binding(
-                            survey, represented_variable, variable_name, universe, notes
-                        )
+                    binding, created_binding = self.get_or_create_binding(
+                        survey, represented_variable, variable_name, universe, notes
+                    )
 
-                        if created_binding:
-                            num_new_bindings += 1
+                    if created_binding:
+                        num_new_bindings += 1
+                        bindings_to_index.append(binding)  # Stocker ici
 
-                        transaction.on_commit(lambda b=binding: BindingSurveyDocument().update(b))
-
-                        num_records += 1
+                    num_records += 1
 
             except Survey.DoesNotExist:
                 error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
@@ -422,11 +423,15 @@ class XMLUploadView(BaseUploadView):
                 error_files.append(error_message)
                 print(error_message)
 
-        # Si des erreurs ont été rencontrées, on les affiche
+        # Si erreurs, on lève une exception et on ne fait pas l'indexation
         if error_files:
             self.errors = error_files
             error_summary = "<br/>".join(error_files)
             raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
+
+        # Sinon, tout est OK, on peut indexer les bindings
+        for binding in bindings_to_index:
+            BindingSurveyDocument().update(binding)
 
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
