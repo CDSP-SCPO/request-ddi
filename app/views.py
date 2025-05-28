@@ -2,7 +2,6 @@
 import csv
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from html import unescape
 
@@ -318,17 +317,15 @@ class XMLUploadView(BaseUploadView):
     def convert_data(self, files):
         results = []
         seen_invalid_dois = set()
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            future_to_file = {executor.submit(self.parse_xml_file, file, seen_invalid_dois): file for file in files}
-            for future in as_completed(future_to_file):
-                file = future_to_file[future]
-                try:
-                    result = future.result()
-                    if result:
-                        results.extend(result)
-                except Exception as e:
-                    self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
+        for file in files:
+            try:
+                result = self.parse_xml_file(file, seen_invalid_dois)
+                if result:
+                    results.extend(result)
+            except Exception as e:
+                self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
         return results
+
 
 
     def parse_xml_file(self, file, seen_invalid_dois):
