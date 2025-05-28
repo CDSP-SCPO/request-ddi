@@ -2,7 +2,6 @@
 import csv
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from html import unescape
 
@@ -318,17 +317,15 @@ class XMLUploadView(BaseUploadView):
     def convert_data(self, files):
         results = []
         seen_invalid_dois = set()
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            future_to_file = {executor.submit(self.parse_xml_file, file, seen_invalid_dois): file for file in files}
-            for future in as_completed(future_to_file):
-                file = future_to_file[future]
-                try:
-                    result = future.result()
-                    if result:
-                        results.extend(result)
-                except Exception as e:
-                    self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
+        for file in files:
+            try:
+                result = self.parse_xml_file(file, seen_invalid_dois)
+                if result:
+                    results.extend(result)
+            except Exception as e:
+                self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
         return results
+
 
 
     def parse_xml_file(self, file, seen_invalid_dois):
@@ -375,6 +372,7 @@ class XMLUploadView(BaseUploadView):
             print(f"Erreur lors du parsing du fichier {file.name}: {str(e)}")
             return None
 
+    @transaction.atomic
     def process_data(self, question_datas):
         num_records = 0
         num_new_surveys = 0
@@ -392,32 +390,33 @@ class XMLUploadView(BaseUploadView):
 
         for doi, questions in data_by_doi.items():
             try:
-                start_time = datetime.now()  # Début du traitement du DOI
+                with transaction.atomic():
+                    start_time = datetime.now()  # Début du traitement du DOI
 
-                survey = Survey.objects.get(external_ref=doi)
+                    survey = Survey.objects.get(external_ref=doi)
 
-                for question_data in questions:
-                    variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
+                    for question_data in questions:
+                        variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
 
-                    represented_variable, created_variable = self.get_or_create_represented_variable(
-                        variable_name, question_text, category_label, variable_label
-                    )
+                        represented_variable, created_variable = self.get_or_create_represented_variable(
+                            variable_name, question_text, category_label, variable_label
+                        )
 
-                    if created_variable:
-                        num_new_variables += 1
+                        if created_variable:
+                            num_new_variables += 1
 
-                    binding, created_binding = self.get_or_create_binding(
-                        survey, represented_variable, variable_name, universe, notes
-                    )
+                        binding, created_binding = self.get_or_create_binding(
+                            survey, represented_variable, variable_name, universe, notes
+                        )
 
-                    if created_binding:
-                        num_new_bindings += 1
+                        if created_binding:
+                            num_new_bindings += 1
 
-                    data_imported.send(sender=self.__class__, instance=binding)
+                        data_imported.send(sender=self.__class__, instance=binding)
 
-                    num_records += 1
+                        num_records += 1
 
-                end_time = datetime.now()  # Fin du traitement du DOI
+                    end_time = datetime.now()  # Fin du traitement du DOI
 
             except Survey.DoesNotExist:
                 error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
