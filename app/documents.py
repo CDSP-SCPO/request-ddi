@@ -166,3 +166,42 @@ class BindingSurveyDocument(Document):
 
         end_time = time.time()
         print(f"Temps total de l'update de l'index: {end_time - start_time:.4f} secondes.")
+
+    def clean_orphaned_documents(self):
+            """Supprime les documents Elasticsearch qui ne sont plus présents en base de données."""
+            print("🔍 Recherche des documents orphelins dans Elasticsearch...")
+
+            # Obtenir tous les IDs en base
+            db_ids = set(BindingSurveyRepresentedVariable.objects.values_list('id', flat=True))
+
+            # Obtenir tous les IDs dans l'index
+            es = self._get_connection()
+            index_name = self._index._name
+
+            try:
+                es_ids = set()
+                scroll = es.search(index=index_name, scroll='2m', size=1000, body={"query": {"match_all": {}}})
+                scroll_id = scroll['_scroll_id']
+                hits = scroll['hits']['hits']
+
+                while hits:
+                    for hit in hits:
+                        es_ids.add(int(hit['_id']))
+                    scroll = es.scroll(scroll_id=scroll_id, scroll='2m')
+                    scroll_id = scroll['_scroll_id']
+                    hits = scroll['hits']['hits']
+
+                # Identifier les documents à supprimer
+                orphan_ids = es_ids - db_ids
+                print(f"🧹 {len(orphan_ids)} documents orphelins trouvés à supprimer.")
+
+                for orphan_id in orphan_ids:
+                    try:
+                        es.delete(index=index_name, id=orphan_id)
+                        print(f"❌ Document supprimé : ID {orphan_id}")
+                    except NotFoundError:
+                        print(f"⚠️ Document déjà supprimé : ID {orphan_id}")
+
+            except Exception as e:
+                print(f"Erreur lors du nettoyage de l'index : {e}")
+
