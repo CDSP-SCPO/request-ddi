@@ -314,14 +314,16 @@ class XMLUploadView(BaseUploadView):
         results = []
         seen_invalid_dois = set()
         for file in files:
+            print(f"\n📂 Début du traitement du fichier : {file.name}")
             try:
                 result = self.parse_xml_file(file, seen_invalid_dois)
                 if result:
+                    print(f"✅ {len(result)} variables extraites du fichier {file.name}")
                     results.extend(result)
             except Exception as e:
                 self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
+                print(f"❌ Erreur lors de la lecture du fichier {file.name}: {str(e)}")
         return results
-
 
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
@@ -387,8 +389,10 @@ class XMLUploadView(BaseUploadView):
         bindings_to_index = []
 
         for doi, questions in data_by_doi.items():
+            print(f"\n📄 Traitement des variables pour le DOI : {doi}")
             try:
                 survey = Survey.objects.get(external_ref=doi)
+                print(f"✅ Enquête trouvée pour le DOI : {doi} → {survey.name}")
 
                 for question_data in questions:
                     variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
