@@ -139,7 +139,7 @@ class BaseUploadView(FormView):
             binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
                 variable_name=variable_name,
                 survey=survey,
-                variable = represented_variable,
+                variable=represented_variable,
                 defaults={
                     'survey': survey,
                     'variable': represented_variable,
@@ -215,7 +215,7 @@ class BaseUploadView(FormView):
 
         cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
 
-        if name_question_for_comparison :
+        if name_question_for_comparison:
             if name_question_for_comparison in cleaned_questions:
                 var_represented = RepresentedVariable.objects.filter(
                     question_text=cleaned_questions[name_question_for_comparison].question_text
@@ -301,7 +301,6 @@ class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
-
     def add_form_to_context(self, context):
         context['xml_form'] = XMLUploadForm()
 
@@ -328,8 +327,9 @@ class XMLUploadView(BaseUploadView):
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
         start_time = datetime.now()  # Début du parsing
-        try:
+        print(f"\n⏳ Début du parsing du fichier : {file.name} à {start_time.strftime('%H:%M:%S')}")
 
+        try:
             file.seek(0)
             content = file.read().decode('utf-8')
             soup = BeautifulSoup(content, "xml")
@@ -337,6 +337,8 @@ class XMLUploadView(BaseUploadView):
             # Récupérer DOI et titre
             doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={
                 "agency": "DataCite"}) else soup.find("IDNo").text.strip()
+            print(f"🔍 DOI trouvé : {doi}")
+
             if not doi.startswith("doi:"):
                 if doi not in seen_invalid_dois:
                     seen_invalid_dois.add(doi)
@@ -357,16 +359,20 @@ class XMLUploadView(BaseUploadView):
                     line["name"].strip(),
                     line.find("labl").text.strip() if line.find("labl") else "",
                     line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
-                    categories,  # Catégories
+                    categories,
                     line.find("universe").text.strip() if line.find("universe") else "",
                     line.find("notes").text.strip() if line.find("notes") else "",
                 ])
 
-            end_time = datetime.now()  # Fin du parsing
+            end_time = datetime.now()
+            duration = (end_time - start_time).total_seconds()
+            print(
+                f"✅ Fin du parsing du fichier : {file.name} à {end_time.strftime('%H:%M:%S')} (durée : {duration:.2f} secondes)")
+
             return data
 
         except Exception as e:
-            print(f"Erreur lors du parsing du fichier {file.name}: {str(e)}")
+            print(f"❌ Erreur lors du parsing du fichier {file.name}: {str(e)}")
             return None
 
     @transaction.atomic
@@ -572,7 +578,7 @@ class SearchResultsDataView(ListView):
                 )
                 for term in terms:
                     queries.append(
-                    {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
+                        {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
                     )
             elif search_location == 'internal_label':
                 queries.append(
@@ -585,7 +591,6 @@ class SearchResultsDataView(ListView):
                     queries.append(
                         {"match": {"variable.internal_label": {"query": term, "operator": "or", "boost": 1}}}
                     )
-
 
         if queries:
             search = search.query(
@@ -621,7 +626,7 @@ class SearchResultsDataView(ListView):
             for cat in sorted_categories:
                 if category_matched and cat.category_label == remove_html_tags(category_matched):
                     all_clean_categories.append(
-                         f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{cat.code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{cat.category_label}</mark></td></tr>"
+                        f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{cat.code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{cat.category_label}</mark></td></tr>"
                     )
                 else:
                     all_clean_categories.append(
@@ -658,7 +663,9 @@ class SearchResultsDataView(ListView):
 
         total_records = self.build_filtered_search().count()
         filtered_records = response.hits.total.value
-        data = self.format_search_results(response, request.POST.getlist('search_location[]', ['questions', 'categories', 'variable_name', 'internal_label']))
+        data = self.format_search_results(response, request.POST.getlist('search_location[]',
+                                                                         ['questions', 'categories', 'variable_name',
+                                                                          'internal_label']))
 
         return JsonResponse({
             "recordsTotal": total_records,
@@ -867,7 +874,6 @@ class CustomLoginView(LoginView):
     template_name = 'login.html'
     authentication_form = CustomAuthenticationForm
     redirect_authenticated_user = True
-
 
 
 def search_results(request):
@@ -1110,8 +1116,6 @@ def get_distributor(request):
     return JsonResponse({"distributors": list(distributors)})
 
 
-
-
 def get_subcollections_by_collections(request):
     collection_ids = request.GET.get('collections_ids', '').split(',')
     collection_ids = [id for id in collection_ids if id]
@@ -1156,6 +1160,7 @@ def get_surveys_by_subcollections(request):
 
     data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
     return JsonResponse(data)
+
 
 def get_decades(request):
     collection_ids = request.GET.get('collections_ids', '').split(',')
@@ -1217,11 +1222,9 @@ def get_years_by_decade(request):
         surveys = Survey.objects.all()
 
     years = surveys.filter(start_date__year__range=(start_year, end_year)) \
-                   .values_list('start_date__year', flat=True) \
-                   .distinct()
+        .values_list('start_date__year', flat=True) \
+        .distinct()
     years = list(set(years))
     years.sort()
 
     return JsonResponse({'years': years})
-
-
