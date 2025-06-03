@@ -605,57 +605,81 @@ class SearchResultsDataView(ListView):
         is_category_search = 'categories' in search_locations
 
         for result in response.hits:
-            original_question = getattr(result.variable, 'question_text', "N/A")
+            try:
+                print(f"\n--- Traitement du résultat ID: {result.meta.id} ---")
 
-            highlighted_question = (
-                result.meta.highlight['variable.question_text'][0]
-                if hasattr(result.meta, 'highlight') and 'variable.question_text' in result.meta.highlight
-                else original_question
-            )
+                variable = getattr(result, 'variable', None)
+                survey = getattr(result, 'survey', None)
 
-            category_matched = None
-            all_clean_categories = []
-            sorted_categories = sorted(result.variable.categories, key=lambda cat: (
-                int(cat.code) if cat.code.isdigit() else float('inf'), cat.code))
+                if not variable:
+                    print(f"⚠️ Variable manquante pour le résultat ID {result.meta.id}")
+                if not survey:
+                    print(f"⚠️ Survey manquant pour le résultat ID {result.meta.id}")
 
-            if 'categories' in search_locations and hasattr(result.meta, 'highlight'):
-                if 'variable.categories.category_label' in result.meta.highlight:
-                    category_highlight = result.meta.highlight['variable.categories.category_label']
-                    category_matched = category_highlight[0] if category_highlight else None
+                original_question = getattr(variable, 'question_text', "N/A")
+                highlighted_question = (
+                    result.meta.highlight['variable.question_text'][0]
+                    if hasattr(result.meta, 'highlight') and 'variable.question_text' in result.meta.highlight
+                    else original_question
+                )
 
-            for cat in sorted_categories:
-                if category_matched and cat.category_label == remove_html_tags(category_matched):
-                    all_clean_categories.append(
-                        f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{cat.code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{cat.category_label}</mark></td></tr>"
-                    )
-                else:
-                    all_clean_categories.append(
-                        f"<tr><td class='code-cell'>{cat.code}</td><td class='text-cell'>{cat.category_label}</td></tr>"
-                    )
+                categories = getattr(variable, 'categories', []) or []
+                all_clean_categories = []
+                category_matched = None
 
-            variable_name = result.variable_name
-            if 'variable_name' in search_locations and hasattr(result.meta,
-                                                               'highlight') and 'variable_name' in result.meta.highlight:
-                variable_name = result.meta.highlight['variable_name'][0]
+                if 'categories' in search_locations and hasattr(result.meta, 'highlight'):
+                    if 'variable.categories.category_label' in result.meta.highlight:
+                        category_highlight = result.meta.highlight['variable.categories.category_label']
+                        category_matched = category_highlight[0] if category_highlight else None
 
-            internal_label = result.variable.internal_label
-            if 'internal_label' in search_locations and hasattr(result.meta,
-                                                                'highlight') and 'variable.internal_label' in result.meta.highlight:
-                internal_label = result.meta.highlight['variable.internal_label'][0]
+                try:
+                    sorted_categories = sorted(categories, key=lambda cat: (
+                        int(cat.code) if cat.code.isdigit() else float('inf'), cat.code))
+                except Exception as e:
+                    print(f"❌ Erreur lors du tri des catégories pour ID {result.meta.id} : {e}")
+                    sorted_categories = categories
 
-            survey_doi = getattr(result.survey, 'external_ref', "N/A")
+                for cat in sorted_categories:
+                    code = getattr(cat, 'code', 'N/A')
+                    label = getattr(cat, 'category_label', 'N/A')
+                    if category_matched and label == remove_html_tags(category_matched):
+                        all_clean_categories.append(
+                            f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{label}</mark></td></tr>"
+                        )
+                    else:
+                        all_clean_categories.append(
+                            f"<tr><td class='code-cell'>{code}</td><td class='text-cell'>{label}</td></tr>"
+                        )
 
-            data.append({
-                "id": result.meta.id,
-                "variable_name": variable_name,
-                "question_text": highlighted_question,
-                "survey_name": getattr(result.survey, 'name', "N/A"),
-                "notes": getattr(result, 'notes', "N/A"),
-                "categories": "<table class='styled-table'>" + "".join(all_clean_categories) + "</table>",
-                "internal_label": internal_label,
-                "is_category_search": is_category_search,
-                "survey_doi": survey_doi
-            })
+                variable_name = getattr(result, 'variable_name', 'N/A')
+                if 'variable_name' in search_locations and hasattr(result.meta,
+                                                                   'highlight') and 'variable_name' in result.meta.highlight:
+                    variable_name = result.meta.highlight['variable_name'][0]
+
+                internal_label = getattr(variable, 'internal_label', 'N/A')
+                if 'internal_label' in search_locations and hasattr(result.meta,
+                                                                    'highlight') and 'variable.internal_label' in result.meta.highlight:
+                    internal_label = result.meta.highlight['variable.internal_label'][0]
+
+                survey_doi = getattr(survey, 'external_ref', "N/A")
+                survey_name = getattr(survey, 'name', "N/A")
+
+                data.append({
+                    "id": result.meta.id,
+                    "variable_name": variable_name,
+                    "question_text": highlighted_question,
+                    "survey_name": survey_name,
+                    "notes": getattr(result, 'notes', "N/A"),
+                    "categories": "<table class='styled-table'>" + "".join(all_clean_categories) + "</table>",
+                    "internal_label": internal_label,
+                    "is_category_search": is_category_search,
+                    "survey_doi": survey_doi
+                })
+
+            except Exception as e:
+                print(
+                    f"❌ Erreur inattendue lors du traitement du résultat ID {getattr(result.meta, 'id', 'inconnu')} : {e}")
+
         return data
 
     def post(self, request, *args, **kwargs):
