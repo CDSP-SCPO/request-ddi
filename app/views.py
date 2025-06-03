@@ -466,6 +466,7 @@ class SearchResultsDataView(ListView):
 
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
+        print("🚦 Entrée dans dispatch()")
         if 'search_location' not in self.request.session or not self.request.session['search_location']:
             self.request.session['search_location'] = ['questions', 'categories', 'variable_name', 'internal_label']
         return super().dispatch(*args, **kwargs)
@@ -683,20 +684,43 @@ class SearchResultsDataView(ListView):
         return data
 
     def post(self, request, *args, **kwargs):
-        response = self.get_queryset()
+        print("📥 Requête POST reçue dans SearchResultsDataView")
 
-        total_records = self.build_filtered_search().count()
-        filtered_records = response.hits.total.value
-        data = self.format_search_results(response, request.POST.getlist('search_location[]',
-                                                                         ['questions', 'categories', 'variable_name',
-                                                                          'internal_label']))
+        try:
+            # Étape 1 : récupération du queryset
+            print("🔍 Appel à get_queryset()")
+            response = self.get_queryset()
 
-        return JsonResponse({
-            "recordsTotal": total_records,
-            "recordsFiltered": filtered_records,
-            "draw": int(request.POST.get('draw', 1)),
-            "data": data
-        })
+            # Étape 2 : comptage total des résultats
+            print("📊 Calcul du nombre total de résultats")
+            total_records = self.build_filtered_search().count()
+
+            # Étape 3 : comptage des résultats filtrés
+            filtered_records = response.hits.total.value
+            print(f"✅ Résultats filtrés : {filtered_records} / Total : {total_records}")
+
+            # Étape 4 : formatage des résultats
+            print("🧩 Formatage des résultats")
+            search_locations = request.POST.getlist(
+                'search_location[]',
+                ['questions', 'categories', 'variable_name', 'internal_label']
+            )
+            data = self.format_search_results(response, search_locations)
+
+            # Étape 5 : retour JSON
+            print("📤 Envoi de la réponse JSON")
+            return JsonResponse({
+                "recordsTotal": total_records,
+                "recordsFiltered": filtered_records,
+                "draw": int(request.POST.get('draw', 1)),
+                "data": data
+            })
+
+        except Exception as e:
+            print(f"❌ Erreur dans post(): {e}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({"error": str(e)}, status=500)
 
 
 class CSVUploadViewCollection(FormView):
