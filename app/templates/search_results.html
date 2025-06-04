@@ -322,6 +322,11 @@
         }
 
         function updateDecadeCheckboxes(data) {
+
+            if (!data || !data.decades_by_year) {
+                return;
+            }
+
             Object.entries(data.decades_by_year).forEach(([decade, years]) => {
                 const allSelected = years.every(year => selectedYears.has(parseInt(year)));
                 const someSelected = years.some(year => selectedYears.has(parseInt(year)));
@@ -351,6 +356,16 @@
                 }, intervalTime);
             });
         }
+
+        function addYearToFilters(year) {
+            const yearStr = year.toString();
+            selectedYears.add(parseInt(yearStr));
+            if (!selectedFilters['year']) selectedFilters['year'] = [];
+            if (!selectedFilters['year'].some(f => f.value === yearStr)) {
+                selectedFilters['year'].push({ value: yearStr, label: `Année ${yearStr}` });
+            }
+        }
+
 
 
 
@@ -451,7 +466,6 @@
                         survey_ids: surveys.join(',')
                     },
                     success: function (data) {
-                        console.log('📦 Décennies chargées depuis le serveur:', data);
                         const decadesFilter = $('#years-filter');
                         decadesFilter.empty();
                         const sortedDecades = Object.keys(data.decades).sort((a, b) => b - a);
@@ -568,17 +582,14 @@
                         yearCheckbox.on('change', function () {
                             const year = parseInt($(this).val());
                             if ($(this).is(':checked')) {
-                                selectedYears.add(year);
-                                if (!selectedFilters['year']) selectedFilters['year'] = [];
-                                if (!selectedFilters['year'].some(f => f.value === year.toString())) {
-                                    selectedFilters['year'].push({value: year.toString(), label: `Année ${year}`});
-                                }
+                                addYearToFilters(year);
                             } else {
                                 selectedYears.delete(year);
                                 if (selectedFilters['year']) {
                                     selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
                                 }
                             }
+
 
                             updateFiltersDisplay();
                             updateDecadeCheckboxes(data);
@@ -670,11 +681,7 @@
         }
 
         async function applyFiltersFromURL() {
-
-            console.log('➡️ applyFiltersFromURL called');
             const urlParams = new URLSearchParams(window.location.search);
-            console.log('🔍 URL params:', Object.fromEntries(urlParams.entries()));
-
 
             // Texte de recherche
             const q = urlParams.get('q');
@@ -688,27 +695,24 @@
                 $(`.collection-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
             });
 
-            // Étape 2 : attendre que les sous-collections soient chargées
+            // Étape 2 : charger les sous-collections si nécessaire
             const subCollections = urlParams.getAll('sub_collections');
-                if (collections.length > 0 || subCollections.length > 0) {
-                    // Si aucune collection cochée, on force le chargement de toutes les sous-collections
-                    if (collections.length === 0) {
-                        await waitForElement('.collection-checkbox');
-                        const allCollectionIds = $('.collection-checkbox').map(function () {
-                            return this.value;
-                        }).get();
-                        updateSubcollections(allCollectionIds);
-                    }
-
-                    await waitForElement('.subcollection-checkbox');
-                    console.log('📂 Sous-collections à cocher :', subCollections);
-                    subCollections.forEach(val => {
-                        $(`.subcollection-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
-                    });
+            if (collections.length > 0 || subCollections.length > 0) {
+                if (collections.length === 0) {
+                    await waitForElement('.collection-checkbox');
+                    const allCollectionIds = $('.collection-checkbox').map(function () {
+                        return this.value;
+                    }).get();
+                    updateSubcollections(allCollectionIds);
                 }
 
+                await waitForElement('.subcollection-checkbox');
+                subCollections.forEach(val => {
+                    $(`.subcollection-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
+                });
+            }
 
-            // Étape 3 : attendre que les enquêtes soient chargées
+            // Étape 3 : cocher les enquêtes
             const surveys = urlParams.getAll('survey');
             if (surveys.length > 0) {
                 await waitForElement('.survey-checkbox');
@@ -717,32 +721,53 @@
                 });
             }
 
-            // Étape 4 : cocher les types de métadonnées
+            // Étape 4 : cocher les lieux de recherche
             const searchLocations = urlParams.getAll('search_location');
             searchLocations.forEach(val => {
                 $(`.search-location-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
             });
 
-            // Étape 5 : gérer les années
-            const years = urlParams.getAll('years');
-            years.forEach(year => {
-                selectedYears.add(parseInt(year));
-                if (!selectedFilters['year']) selectedFilters['year'] = [];
-                if (!selectedFilters['year'].some(f => f.value === year)) {
-                    selectedFilters['year'].push({value: year, label: `Année ${year}`});
-                }
-            });
-
-            // Charger les décennies pour afficher les années cochées
+            // Étape 5 : charger les décennies
             await loadDecades();
 
-            // Mise à jour finale
+            // Étape 6 : gérer les années individuelles
+            const years = urlParams.getAll('years');
+
+            // Ajouter les années au Set et aux filtres
+            years.forEach(year => {
+                addYearToFilters(parseInt(year));
+            });
+
+
+            // Étape 7 : ouvrir les décennies concernées et cocher les années
+            const decadesToOpen = new Set();
+            years.forEach(year => {
+                const decade = Math.floor(parseInt(year) / 10) * 10;
+                decadesToOpen.add(decade);
+            });
+
+            for (const decade of decadesToOpen) {
+                await loadYears(decade.toString());
+
+                years.forEach(year => {
+                    if (Math.floor(parseInt(year) / 10) * 10 === decade) {
+                        const checkbox = $(`.year-checkbox[value="${year}"]`);
+                        if (checkbox.length > 0) {
+                            checkbox.prop('checked', true);
+                            addYearToFilters(parseInt(year)); // <--
+                        }
+                    }
+                });
+            }
+
+            // Étape 8 : mise à jour finale
             updateFiltersDisplay();
             updateFilterCounts();
             $('#survey-table').DataTable().ajax.reload();
-            console.log('✅ applyFiltersFromURL terminé');
-
         }
+
+
+
 
         // ---------------------------
         // 5. Initialisation DataTable
@@ -926,13 +951,21 @@
             });
 
 
-            $('#reset-filters').on('click', function () {
+            $('#reset-filters').on('click', async function () {
                 selectedFilters = {};
                 selectedIds.clear();
-                $('.form-check-input').prop('checked', false);
+                selectedYears.clear(); // 🔁 Vide les années sélectionnées
+
+                $('.form-check-input').prop('checked', false); // Décoche toutes les cases visibles
+
                 updateFiltersDisplay();
+                updateFilterCounts();
+
+                await loadDecades(); // 🔁 Recharge les décennies et années (remet à zéro l'affichage dynamique)
+
                 table.ajax.reload();
             });
+
 
             $('#load-more').on('click', function () {
                 currentLimit += 10;
