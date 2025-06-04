@@ -282,11 +282,81 @@
 
 {% block extra_js %}
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-    <script>
-        $(document).ready(function () {
-        var selectedIds = new Set();
-        var selectedFilters = {}; // Object to store selected filters
 
+    <script>
+        // ---------------------------
+        // 1. Variables globales
+        // ---------------------------
+        var selectedIds = new Set();
+        var selectedFilters = {};
+        const selectedYears = new Set();
+        var currentLimit = 10;
+        var table;
+
+        // ---------------------------
+        // 2. Fonctions utilitaires
+        // ---------------------------
+        function getFilterValues(className) {
+            return $(`.${className}:checked`).map(function () {
+                return this.value;
+            }).get();
+        }
+
+        function getSearchLocation() {
+            return getFilterValues('search-location-checkbox');
+        }
+
+        function getYearsFilter() {
+            return Array.from(selectedYears);
+        }
+
+        function toggleCategories(categoryId) {
+            var categoriesDiv = document.getElementById(categoryId);
+            categoriesDiv.style.display = (categoriesDiv.style.display === "none") ? "block" : "none";
+        }
+
+        function updateTableContainerHeight() {
+            const height = $('#selected-filters-container').is(':visible') ?
+                $('#selected-filters-container').outerHeight(true) : 0;
+            document.documentElement.style.setProperty('--selected-filters-container-height', height + 'px');
+        }
+
+        function updateDecadeCheckboxes(data) {
+            Object.entries(data.decades_by_year).forEach(([decade, years]) => {
+                const allSelected = years.every(year => selectedYears.has(parseInt(year)));
+                const someSelected = years.some(year => selectedYears.has(parseInt(year)));
+
+                const checkbox = document.getElementById(`decade-${decade}`);
+                if (checkbox) {
+                    checkbox.checked = allSelected;
+                    checkbox.indeterminate = someSelected && !allSelected;
+                }
+            });
+        }
+
+        function waitForElement(selector, timeout = 5000) {
+            return new Promise((resolve, reject) => {
+                const intervalTime = 100;
+                let timeElapsed = 0;
+
+                const interval = setInterval(() => {
+                    if ($(selector).length > 0) {
+                        clearInterval(interval);
+                        resolve();
+                    } else if (timeElapsed >= timeout) {
+                        clearInterval(interval);
+                        reject(`⏰ Élément "${selector}" introuvable après ${timeout} ms`);
+                    }
+                    timeElapsed += intervalTime;
+                }, intervalTime);
+            });
+        }
+
+
+
+        // ---------------------------
+        // 3. Filtres : affichage, comptage, reset
+        // ---------------------------
         function updateFiltersDisplay() {
             const filterContainer = $('#selected-filters-container');
             filterContainer.empty();
@@ -338,84 +408,189 @@
             }
         }
 
+        function updateFilterCounts() {
+            $('.accordion-item').each(function () {
+                var accordionItem = $(this);
+                var checkboxes = accordionItem.find('.form-check-input:checked');
+                var count = checkboxes.length;
+                var filterCountElement = accordionItem.find('.filter-count');
 
-        updateFiltersDisplay()
-
-        function handleFilterChange(filterType, filterValue, filterLabel) {
-            if (!selectedFilters[filterType]) {
-                selectedFilters[filterType] = [];
-            }
-
-            // Check if the filter is already selected and remove if necessary
-            var existingFilterIndex = selectedFilters[filterType].findIndex(f => f.value === filterValue);
-            if (existingFilterIndex !== -1) {
-                selectedFilters[filterType].splice(existingFilterIndex, 1); // De-select the filter
-            } else {
-                selectedFilters[filterType].push({value: filterValue, label: filterLabel}); // Add filter
-            }
-
-            updateFiltersDisplay();
-            loadDecades(); //
-            $('#survey-table').DataTable().ajax.reload(); // Reload based on new filters
-        }
-
-
-        function attachDynamicCheckboxEvents() {
-            $('.subcollection-checkbox, .survey-checkbox').off('change').on('change', function () {
-                var checkbox = $(this);
-                var filterType = checkbox.attr('class').split(' ')[1].split('-')[0];
-                var filterValue = checkbox.val();
-                var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
-
-                handleFilterChange(filterType, filterValue, filterLabel);
-                updateFilterCounts();
-                if (filterType === 'subcollection') {
-                    const selectedSubcollections = $('.subcollection-checkbox:checked').map(function () {
-                        return this.value;
-                    }).get();
-
-                    if (selectedSubcollections.length === 0) {
-                        const allSubcollections = $('.subcollection-checkbox').map(function () {
-                            return this.value;
-                        }).get();
-                        updateSurveys(allSubcollections);
-                    } else {
-                        updateSurveys(selectedSubcollections);
-                    }
+                if (count > 0) {
+                    filterCountElement.text(count).show();
+                } else {
+                    filterCountElement.hide();
                 }
-                $('#survey-table').DataTable().ajax.reload();
             });
-            $('.survey-checkbox').off('change').on('change', function () {
-                var checkbox = $(this);
-                var filterType = checkbox.attr('class').split(' ')[1].split('-')[0];
-                var filterValue = checkbox.val();
-                var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
 
-                handleFilterChange(filterType, filterValue, filterLabel);
-                updateFilterCounts();
+            // ✅ Mise à jour spécifique pour les années
+            const yearCount = selectedYears.size;
+            const yearFilterCount = $('#headingFive .filter-count');
+            if (yearCount > 0) {
+                yearFilterCount.text(yearCount).show();
+            } else {
+                yearFilterCount.hide();
+            }
+        }
+
+
+        // ---------------------------
+        // 4. Chargement AJAX
+        // ---------------------------
+        function loadDecades() {
+            return new Promise((resolve, reject) => {
+                const collections = getFilterValues('collection-checkbox');
+                const subcollections = getFilterValues('subcollection-checkbox');
+                const surveys = getFilterValues('survey-checkbox');
+
+                $.ajax({
+                    url: '/get-decades/',
+                    type: 'GET',
+                    data: {
+                        collections_ids: collections.join(','),
+                        subcollections_ids: subcollections.join(','),
+                        survey_ids: surveys.join(',')
+                    },
+                    success: function (data) {
+                        console.log('📦 Décennies chargées depuis le serveur:', data);
+                        const decadesFilter = $('#years-filter');
+                        decadesFilter.empty();
+                        const sortedDecades = Object.keys(data.decades).sort((a, b) => b - a);
+
+                        sortedDecades.forEach(decade => {
+                            const years = data.decades[decade];
+                            const chevronIconPath = '{% static "svg/icons/chevron_right.svg" %}';
+                            const decadeDiv = $('<div class="form-check-custom decade-item"></div>');
+                            const checkboxAndLabelDiv = $('<div class="checkbox-and-label"></div>');
+
+                            const decadeCheckbox = $('<input type="checkbox" class="form-check-input decade-checkbox checkbox-custom" value="' + decade + '" id="decade-' + decade + '">');
+                            const decadeLabel = $('<label class="form-check-label" for="decade-' + decade + '">Années ' + decade + '</label>');
+
+                            checkboxAndLabelDiv.append(decadeCheckbox).append(decadeLabel);
+
+                            const chevronIcon = $('<img src="' + chevronIconPath + '" class="chevron-icon decade-chevron" alt="chevron">');
+
+                            decadeDiv.append(checkboxAndLabelDiv).append(chevronIcon);
+                            decadesFilter.append(decadeDiv);
+
+                            const allSelected = years.every(year => selectedYears.has(parseInt(year)));
+                            const someSelected = years.some(year => selectedYears.has(parseInt(year)));
+
+                            decadeCheckbox.prop('checked', allSelected);
+                            decadeCheckbox[0].indeterminate = someSelected && !allSelected;
+
+                            decadeCheckbox.on('change', function () {
+                                const isChecked = this.checked;
+                                const isIndeterminate = this.indeterminate;
+
+                                if (isIndeterminate) {
+                                    years.forEach(year => {
+                                        selectedYears.delete(parseInt(year));
+                                        if (selectedFilters['year']) {
+                                            selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
+                                        }
+                                    });
+                                    this.indeterminate = false;
+                                    $(this).prop('checked', false);
+                                } else if (isChecked) {
+                                    years.forEach(year => {
+                                        selectedYears.add(parseInt(year));
+                                        if (!selectedFilters['year']) selectedFilters['year'] = [];
+                                        if (!selectedFilters['year'].some(f => f.value === year.toString())) {
+                                            selectedFilters['year'].push({value: year.toString(), label: `Année ${year}`});
+                                        }
+                                    });
+                                } else {
+                                    years.forEach(year => {
+                                        selectedYears.delete(parseInt(year));
+                                        if (selectedFilters['year']) {
+                                            selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
+                                        }
+                                    });
+                                }
+
+                                updateFiltersDisplay();
+                                updateFilterCounts();
+                                updateFilters();
+                                $('#survey-table').DataTable().ajax.reload();
+                            });
+
+                            chevronIcon.on('click', function () {
+                                loadYears(decade);
+                            });
+                        });
+
+                        resolve(); // ✅ Important pour pouvoir await cette fonction
+                    },
+                    error: function () {
+                        reject();
+                    }
+                });
             });
         }
 
-        attachDynamicCheckboxEvents()
+        function loadYears(decade) {
+            const collections = getFilterValues('collection-checkbox');
+            const subcollections = getFilterValues('subcollection-checkbox');
+            const surveys = getFilterValues('survey-checkbox');
+            $.ajax({
+                url: '/get-years-by-decade/',
+                type: 'GET',
+                data: {
+                    decade: decade,
+                    collections_ids: collections.join(','),
+                    subcollections_ids: subcollections.join(','),
+                    survey_ids: surveys.join(',')
+                },
+                success: function (data) {
+                    const decadesFilter = $('#years-filter');
+                    decadesFilter.empty();
+                    const chevronIconPathReturn = '{% static "svg/icons/chevron_left.svg" %}';
 
-        $('.collection-checkbox, .search-location-checkbox').on('change', function () {
-            var checkbox = $(this);
-            var filterType = checkbox.attr('class').split(' ')[1].split('-')[0];
-            var filterValue = checkbox.val();
-            var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
+                    const backButton = $('<img src="' + chevronIconPathReturn + '" class="back-button" alt="Retour">');
+                    backButton.on('click', function () {
+                        loadDecades();
+                    });
+                    decadesFilter.append(backButton);
 
-            handleFilterChange(filterType, filterValue, filterLabel);
-            updateFilterCounts();
+                    data.years.forEach(year => {
+                        const yearDiv = $('<div class="form-check-custom year-item"></div>');
 
-            if (filterType === 'collection') {
-                const selectedCollections = $('.collection-checkbox:checked').map(function () {
-                    return this.value;
-                }).get();
+                        const yearCheckbox = $('<input type="checkbox" class="form-check-input year-checkbox checkbox-custom" value="' + year + '" id="year-' + year + '">');
+                        const yearLabel = $('<label class="form-check-label" for="year-' + year + '">' + year + '</label>');
 
-                updateSubcollections(selectedCollections);
-            }
-            $('#survey-table').DataTable().ajax.reload();
-        });
+                        if (selectedYears.has(year)) {
+                            yearCheckbox.prop('checked', true);
+                        }
+
+                        yearDiv.append(yearCheckbox).append(yearLabel);
+                        decadesFilter.append(yearDiv);
+
+                        yearCheckbox.on('change', function () {
+                            const year = parseInt($(this).val());
+                            if ($(this).is(':checked')) {
+                                selectedYears.add(year);
+                                if (!selectedFilters['year']) selectedFilters['year'] = [];
+                                if (!selectedFilters['year'].some(f => f.value === year.toString())) {
+                                    selectedFilters['year'].push({value: year.toString(), label: `Année ${year}`});
+                                }
+                            } else {
+                                selectedYears.delete(year);
+                                if (selectedFilters['year']) {
+                                    selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
+                                }
+                            }
+
+                            updateFiltersDisplay();
+                            updateDecadeCheckboxes(data);
+                            updateFilterCounts();
+                            $('#survey-table').DataTable().ajax.reload();
+                        });
+
+
+                    });
+                }
+            });
+        }
 
         function updateSubcollections(selectedCollections) {
             fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
@@ -471,73 +646,177 @@
                 });
         }
 
-        function getFilterValues(className) {
-            return $(`.${className}:checked`).map(function () {
-                return this.value;
-            }).get();
+        // Fonction pour mettre à jour les filtres
+        function updateFilters() {
+            $('#survey-table').DataTable().ajax.reload();
         }
 
+        function handleFilterChange(filterType, filterValue, filterLabel) {
+            if (!selectedFilters[filterType]) {
+                selectedFilters[filterType] = [];
+            }
 
-        function getSearchLocation() {
-            var searchLocation = $('.search-location-checkbox:checked').map(function () {
-                return this.value;
-            }).get();
-            return searchLocation;
+            // Check if the filter is already selected and remove if necessary
+            var existingFilterIndex = selectedFilters[filterType].findIndex(f => f.value === filterValue);
+            if (existingFilterIndex !== -1) {
+                selectedFilters[filterType].splice(existingFilterIndex, 1); // De-select the filter
+            } else {
+                selectedFilters[filterType].push({value: filterValue, label: filterLabel}); // Add filter
+            }
+
+            updateFiltersDisplay();
+            loadDecades(); //
+            $('#survey-table').DataTable().ajax.reload(); // Reload based on new filters
         }
 
-        var currentLimit = 10;
-        var table = $('#survey-table').DataTable({
-            "processing": true,
-            "serverSide": true,
-            "paging": false,
-            "dom": 'rt',
-            "info": false,
-            "ordering": false,
+        async function applyFiltersFromURL() {
 
-            "ajax": {
-                "url": "{% url 'app:search_results_data' %}",
-                "type": "POST",
-                "async": true,
-                "data": function (d) {
-                    d.start = d.start || 0;
-                    d.limit = currentLimit;
-                    d.q = "{{ request.GET.q }}";
-                    d.survey = getFilterValues('survey-checkbox');
-                    d.collections = getFilterValues('collection-checkbox');
-                    d.sub_collections = getFilterValues('subcollection-checkbox')
-                    d.search_location = getSearchLocation();
-                    d.years = getYearsFilter();
-                },
-                "headers": {'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()},
-                "dataSrc": function (json) {
-                    totalRecords = json.recordsTotal;
-                    currentRecords = json.data.length;
-                    $('#results-count').text(totalRecords + ' résultats');
-                    if (currentRecords < totalRecords) {
-                        $('#load-more').show();
-                    } else {
-                        $('#load-more').hide();
+            console.log('➡️ applyFiltersFromURL called');
+            const urlParams = new URLSearchParams(window.location.search);
+            console.log('🔍 URL params:', Object.fromEntries(urlParams.entries()));
+
+
+            // Texte de recherche
+            const q = urlParams.get('q');
+            if (q) {
+                $('input[name="q"]').val(q);
+            }
+
+            // Étape 1 : cocher les collections
+            const collections = urlParams.getAll('collections');
+            collections.forEach(val => {
+                $(`.collection-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
+            });
+
+            // Étape 2 : attendre que les sous-collections soient chargées
+            const subCollections = urlParams.getAll('sub_collections');
+                if (collections.length > 0 || subCollections.length > 0) {
+                    // Si aucune collection cochée, on force le chargement de toutes les sous-collections
+                    if (collections.length === 0) {
+                        await waitForElement('.collection-checkbox');
+                        const allCollectionIds = $('.collection-checkbox').map(function () {
+                            return this.value;
+                        }).get();
+                        updateSubcollections(allCollectionIds);
                     }
-                    return json.data;
-                },
-                "error": function (jqXHR, textStatus, errorThrown) {
-                    console.error('DataTables AJAX Error:', textStatus, errorThrown);
-                }
-            },
-            "columns": [
-                {
-                    "data": "id",
-                    "render": function (data, type, row) {
-                        var url = '/question/' + row.id + '/';
-                        var categoriesDisplay = row.categories;
-                        var survey_doi = row.survey_doi;
-                        var doiUrl = 'https://doi.org/' + survey_doi;
-                        var hasHighlightedModalities = row.is_category_search && row.categories && row.categories.includes('<mark style=');
-                        var caretIcon = hasHighlightedModalities ?
-                            '<img src="{% static "svg/buttons/caret_down_modality.svg" %}" alt="Caret Down" class="icon-caret">' :
-                            '<img src="{% static "svg/buttons/caret_down.svg" %}" alt="Caret Down" class="icon-caret">'
 
-                        return `
+                    await waitForElement('.subcollection-checkbox');
+                    console.log('📂 Sous-collections à cocher :', subCollections);
+                    subCollections.forEach(val => {
+                        $(`.subcollection-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
+                    });
+                }
+
+
+            // Étape 3 : attendre que les enquêtes soient chargées
+            const surveys = urlParams.getAll('survey');
+            if (surveys.length > 0) {
+                await waitForElement('.survey-checkbox');
+                surveys.forEach(val => {
+                    $(`.survey-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
+                });
+            }
+
+            // Étape 4 : cocher les types de métadonnées
+            const searchLocations = urlParams.getAll('search_location');
+            searchLocations.forEach(val => {
+                $(`.search-location-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
+            });
+
+            // Étape 5 : gérer les années
+            const years = urlParams.getAll('years');
+            years.forEach(year => {
+                selectedYears.add(parseInt(year));
+                if (!selectedFilters['year']) selectedFilters['year'] = [];
+                if (!selectedFilters['year'].some(f => f.value === year)) {
+                    selectedFilters['year'].push({value: year, label: `Année ${year}`});
+                }
+            });
+
+            // Charger les décennies pour afficher les années cochées
+            await loadDecades();
+
+            // Mise à jour finale
+            updateFiltersDisplay();
+            updateFilterCounts();
+            $('#survey-table').DataTable().ajax.reload();
+            console.log('✅ applyFiltersFromURL terminé');
+
+        }
+
+        // ---------------------------
+        // 5. Initialisation DataTable
+        // ---------------------------
+        function initializeDataTable() {
+            table = $('#survey-table').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "paging": false,
+        "dom": 'rt',
+        "info": false,
+        "ordering": false,
+
+        "ajax": {
+            "url": "{% url 'app:search_results_data' %}",
+            "type": "POST",
+            "async": true,
+            "data": function (d) {
+                d.start = d.start || 0;
+                d.limit = currentLimit;
+                d.q = "{{ request.GET.q }}";
+                d.survey = getFilterValues('survey-checkbox');
+                d.collections = getFilterValues('collection-checkbox');
+                d.sub_collections = getFilterValues('subcollection-checkbox')
+                d.search_location = getSearchLocation();
+                d.years = getYearsFilter();
+            },
+            "headers": {'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()},
+            "dataSrc": function (json) {
+                totalRecords = json.recordsTotal;
+                currentRecords = json.data.length;
+                $('#results-count').text(totalRecords + ' résultats');
+                if (currentRecords < totalRecords) {
+                    $('#load-more').show();
+                } else {
+                    $('#load-more').hide();
+                }
+                return json.data;
+            },
+            "error": function (jqXHR, textStatus, errorThrown) {
+                console.error('DataTables AJAX Error:', textStatus, errorThrown);
+            }
+        },
+        "columns": [
+            {
+                "data": "id",
+                "render": function (data, type, row) {
+                    const searchParams = new URLSearchParams();
+
+                    // Texte recherché (depuis le champ input)
+                    const searchInput = document.querySelector('input[name="q"]');
+                    if (searchInput && searchInput.value) {
+                        searchParams.set('q', searchInput.value);
+                    }
+
+                    // Filtres dynamiques
+                    getFilterValues('survey-checkbox').forEach(val => searchParams.append('survey', val));
+                    getFilterValues('collection-checkbox').forEach(val => searchParams.append('collections', val));
+                    getFilterValues('subcollection-checkbox').forEach(val => searchParams.append('sub_collections', val));
+                    getYearsFilter().forEach(val => searchParams.append('years', val));
+                    getSearchLocation().forEach(val => searchParams.append('search_location', val));
+
+
+                    const url = '/question/' + row.id + '/?' + searchParams.toString();
+
+                    var categoriesDisplay = row.categories;
+                    var survey_doi = row.survey_doi;
+                    var doiUrl = 'https://doi.org/' + survey_doi;
+                    var hasHighlightedModalities = row.is_category_search && row.categories && row.categories.includes('<mark style=');
+                    var caretIcon = hasHighlightedModalities ?
+                        '<img src="{% static "svg/buttons/caret_down_modality.svg" %}" alt="Caret Down" class="icon-caret">' :
+                        '<img src="{% static "svg/buttons/caret_down.svg" %}" alt="Caret Down" class="icon-caret">'
+
+                    return `
                                     <div class="custom-card-dt">
                                         <div class="custom-content-card">
                                             <div class="custom-card-first-part">
@@ -545,6 +824,7 @@
                                                     <input type="checkbox" class="form-check-input checkbox-custom" value="${row.id}">
                                                     <div class="custom-title-2 custom-title-2-bold">
                                                         <a class="custom-name-card color-black-1" type="button" href="${url}">${row.question_text || row.internal_label}</a>
+
                                                     </div>
                                                 </div>
                                                 <div class="custom-metadatas">
@@ -576,325 +856,139 @@
 
                                         </div>
                                     </div>`;
+                }
+            },
+        ],
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
+            "emptyTable": "Aucun élément à afficher."
+        }
+    });
+        }
+
+        // ---------------------------
+        // 6. Gestion des événements
+        // ---------------------------
+        function attachDynamicCheckboxEvents() {
+            $('.subcollection-checkbox, .survey-checkbox').off('change').on('change', function () {
+                var checkbox = $(this);
+                var filterType = checkbox.attr('class').split(' ')[1].split('-')[0];
+                var filterValue = checkbox.val();
+                var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
+
+                handleFilterChange(filterType, filterValue, filterLabel);
+                updateFilterCounts();
+                if (filterType === 'subcollection') {
+                    const selectedSubcollections = $('.subcollection-checkbox:checked').map(function () {
+                        return this.value;
+                    }).get();
+
+                    if (selectedSubcollections.length === 0) {
+                        const allSubcollections = $('.subcollection-checkbox').map(function () {
+                            return this.value;
+                        }).get();
+                        updateSurveys(allSubcollections);
+                    } else {
+                        updateSurveys(selectedSubcollections);
                     }
-                },
-            ],
-            "language": {
-                "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/French.json",
-                "emptyTable": "Aucun élément à afficher."
-            }
-        });
-
-        $('#load-more').on('click', function () {
-            currentLimit += 10;
-            table.ajax.reload(null, false);
-        });
-
-        $('#survey-table tbody').on('change', 'input[type="checkbox"]', function () {
-            if (this.checked) {
-                selectedIds.add(this.value);
-            } else {
-                selectedIds.delete(this.value);
-            }
-
-            var allChecked = $('#survey-table tbody input[type="checkbox"]').length === $('#survey-table tbody input[type="checkbox"]:checked').length;
-            $('#select-all').prop('checked', allChecked);
-            $('#select-all').prop('indeterminate', !allChecked && $('#survey-table tbody input[type="checkbox"]:checked').length > 0);
-        });
-
-        $('#export-all').on('click', function () {
-            window.location.href = '/export/questions/';
-        });
-
-        $('#export-selected').on('click', function () {
-            if (selectedIds.size === 0) {
-                alert('Veuillez sélectionner au moins une question à exporter.');
-                return;
-            }
-            var selectedArray = Array.from(selectedIds);
-            var queryString = selectedArray.map(id => `ids=${id}`).join('&');
-            window.location.href = `/export/questions/?${queryString}`;
-        });
-
-        // Charger les décennies avec checkbox
-        function loadDecades() {
-
-            const collections = getFilterValues('collection-checkbox');
-            const subcollections = getFilterValues('subcollection-checkbox');
-            const surveys = getFilterValues('survey-checkbox');
-
-            $.ajax({
-                url: '/get-decades/',
-                type: 'GET',
-                data: {
-                    collections_ids: collections.join(','),
-                    subcollections_ids: subcollections.join(','),
-                    survey_ids: surveys.join(',')
-                },
-
-                success: function (data) {
-                    const decadesFilter = $('#years-filter');
-                    decadesFilter.empty();
-                    const sortedDecades = Object.keys(data.decades).sort((a, b) => b - a);
-
-                    sortedDecades.forEach(decade => {
-                        const years = data.decades[decade];
-                        const chevronIconPath = '{% static "svg/icons/chevron_right.svg" %}';
-                        const decadeDiv = $('<div class="form-check-custom decade-item"></div>');
-                        const checkboxAndLabelDiv = $('<div class="checkbox-and-label"></div>');
-
-                        const decadeCheckbox = $('<input type="checkbox" class="form-check-input decade-checkbox checkbox-custom" value="' + decade + '" id="decade-' + decade + '">');
-                        const decadeLabel = $('<label class="form-check-label" for="decade-' + decade + '">Années ' + decade + '</label>');
-
-                        checkboxAndLabelDiv.append(decadeCheckbox).append(decadeLabel);
-
-                        const chevronIcon = $('<img src="' + chevronIconPath + '" class="chevron-icon decade-chevron" alt="chevron">');
-
-                        decadeDiv.append(checkboxAndLabelDiv).append(chevronIcon);
-                        decadesFilter.append(decadeDiv);
-
-                        // Coche/Décoche la décennie si toutes les années sont cochées/décochées
-                        const allSelected = years.every(year => selectedYears.has(parseInt(year)));
-                        const someSelected = years.some(year => selectedYears.has(parseInt(year)));
-
-                        decadeCheckbox.prop('checked', allSelected);
-                        decadeCheckbox[0].indeterminate = someSelected && !allSelected;
-
-                        decadeCheckbox.on('change', function () {
-                            const checkboxElement = this;
-                            const isChecked = $(checkboxElement).is(':checked');
-                            const isIndeterminate = checkboxElement.indeterminate;
-
-                            if (isIndeterminate) {
-                                years.forEach(year => {
-                                    selectedYears.delete(parseInt(year));
-                                    if (selectedFilters['year']) {
-                                        selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
-                                    }
-                                });
-                                checkboxElement.indeterminate = false;
-                                $(checkboxElement).prop('checked', false);
-                            } else if (isChecked) {
-                                years.forEach(year => {
-                                    selectedYears.add(parseInt(year));
-
-                                    if (!selectedFilters['year']) {
-                                        selectedFilters['year'] = [];
-                                    }
-
-                                    if (!selectedFilters['year'].some(f => f.value === year.toString())) {
-                                        selectedFilters['year'].push({value: year.toString(), label: `Année ${year}`});
-                                    }
-                                });
-                            } else {
-                                years.forEach(year => {
-                                    selectedYears.delete(parseInt(year));
-
-                                    if (selectedFilters['year']) {
-                                        selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
-                                    }
-                                });
-                            }
-
-                            updateFiltersDisplay(); // ✅ Met à jour l'affichage des filtres
-                            updateFilterCounts();
-                            updateFilters();        // 🔁 Recharge les données
-                            $('#survey-table').DataTable().ajax.reload();
-                        });
-
-
-                        chevronIcon.on('click', function () {
-                            loadYears(decade);
-                        });
-                    });
                 }
+                $('#survey-table').DataTable().ajax.reload();
+            });
+            $('.survey-checkbox').off('change').on('change', function () {
+                var checkbox = $(this);
+                var filterType = checkbox.attr('class').split(' ')[1].split('-')[0];
+                var filterValue = checkbox.val();
+                var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
+
+                handleFilterChange(filterType, filterValue, filterLabel);
+                updateFilterCounts();
             });
         }
 
-        function loadYears(decade) {
-            const collections = getFilterValues('collection-checkbox');
-            const subcollections = getFilterValues('subcollection-checkbox');
-            const surveys = getFilterValues('survey-checkbox');
-            $.ajax({
-                url: '/get-years-by-decade/',
-                type: 'GET',
-                data: {
-                    decade: decade,
-                    collections_ids: collections.join(','),
-                    subcollections_ids: subcollections.join(','),
-                    survey_ids: surveys.join(',')
-                },
-                success: function (data) {
-                    const decadesFilter = $('#years-filter');
-                    decadesFilter.empty();
-                    const chevronIconPathReturn = '{% static "svg/icons/chevron_left.svg" %}';
+        function attachStaticEventListeners() {
+            $('.collection-checkbox, .search-location-checkbox').on('change', function () {
+                var checkbox = $(this);
+                var filterType = checkbox.attr('class').split(' ')[1].split('-')[0];
+                var filterValue = checkbox.val();
+                var filterLabel = $('label[for="' + checkbox.attr('id') + '"]').text();
 
-                    const backButton = $('<img src="' + chevronIconPathReturn + '" class="back-button" alt="Retour">');
-                    backButton.on('click', function () {
-                        loadDecades();
-                    });
-                    decadesFilter.append(backButton);
+                handleFilterChange(filterType, filterValue, filterLabel);
+                updateFilterCounts();
 
-                    data.years.forEach(year => {
-                        const yearDiv = $('<div class="form-check-custom year-item"></div>');
-
-                        const yearCheckbox = $('<input type="checkbox" class="form-check-input year-checkbox checkbox-custom" value="' + year + '" id="year-' + year + '">');
-                        const yearLabel = $('<label class="form-check-label" for="year-' + year + '">' + year + '</label>');
-
-                        if (selectedYears.has(year)) {
-                            yearCheckbox.prop('checked', true);
-                        }
-
-                        yearDiv.append(yearCheckbox).append(yearLabel);
-                        decadesFilter.append(yearDiv);
-
-                        yearCheckbox.on('change', function () {
-                            const year = parseInt($(this).val());
-                            if ($(this).is(':checked')) {
-                                selectedYears.add(year);
-                                if (!selectedFilters['year']) selectedFilters['year'] = [];
-                                if (!selectedFilters['year'].some(f => f.value === year.toString())) {
-                                    selectedFilters['year'].push({ value: year.toString(), label: `Année ${year}` });
-                                }
-                            } else {
-                                selectedYears.delete(year);
-                                if (selectedFilters['year']) {
-                                    selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
-                                }
-                            }
-
-                            updateFiltersDisplay();
-                            updateDecadeCheckboxes(data);
-                            updateFilterCounts();
-                            $('#survey-table').DataTable().ajax.reload();
-                        });
-
-
-
-                    });
+                if (filterType === 'collection') {
+                    const selectedCollections = $('.collection-checkbox:checked').map(function () {
+                        return this.value;
+                    }).get();
+                    updateSubcollections(selectedCollections);
                 }
+
+                $('#survey-table').DataTable().ajax.reload();
             });
-        }
-
-        function getYearsFilter() {
-            return Array.from(selectedYears);
-        }
-
-        // Ensemble pour stocker les années sélectionnées
-        const selectedYears = new Set();
-
-        // Fonction pour mettre à jour les filtres
-        function updateFilters() {
-            $('#survey-table').DataTable().ajax.reload();
-        }
 
 
-        // Charger les décennies au chargement de la page
-        loadDecades();
-
-        function updateDecadeCheckboxes(data) {
-            $('.decade-checkbox').each(function () {
-                const decade = $(this).val();
-                const years = data.decades[decade] || [];
-                const allSelected = years.every(year => selectedYears.has(parseInt(year)));
-                const someSelected = years.some(year => selectedYears.has(parseInt(year)));
-
-                $(this).prop('checked', allSelected);
-                this.indeterminate = someSelected && !allSelected;
+            $('#reset-filters').on('click', function () {
+                selectedFilters = {};
+                selectedIds.clear();
+                $('.form-check-input').prop('checked', false);
+                updateFiltersDisplay();
+                table.ajax.reload();
             });
-        }
 
-        $('#reset-filters').on('click', function () {
-            selectedFilters = {}; // Reset the filters object
-            selectedIds.clear(); // Clear selected IDs
+            $('#load-more').on('click', function () {
+                currentLimit += 10;
+                table.ajax.reload(null, false);
+            });
 
-            // Uncheck all checkboxes
-            $('.form-check-input').prop('checked', false);
+            $('#export-all').on('click', function () {
+                window.location.href = '/export/questions/';
+            });
 
-            updateFiltersDisplay(); // Update filter cards displayed
-            $('#survey-table').DataTable().ajax.reload(); // Reload table data
-        });
-
-
-        function updateFilterCounts() {
-            $('.accordion-item').each(function () {
-                var accordionItem = $(this);
-                var checkboxes = accordionItem.find('.form-check-input:checked');
-                var count = checkboxes.length;
-                var filterCountElement = accordionItem.find('.filter-count');
-
-                if (count > 0) {
-                    filterCountElement.text(count).show();
-                } else {
-                    filterCountElement.hide();
+            $('#export-selected').on('click', function () {
+                if (selectedIds.size === 0) {
+                    alert('Veuillez sélectionner au moins une question à exporter.');
+                    return;
                 }
+                const query = Array.from(selectedIds).map(id => `ids=${id}`).join('&');
+                window.location.href = `/export/questions/?${query}`;
             });
 
-            // ✅ Mise à jour spécifique pour les années
-            const yearCount = selectedYears.size;
-            const yearFilterCount = $('#headingFive .filter-count');
-            if (yearCount > 0) {
-                yearFilterCount.text(yearCount).show();
-            } else {
-                yearFilterCount.hide();
-            }
+            $('#survey-table tbody').on('change', 'input[type="checkbox"]', function () {
+                if (this.checked) selectedIds.add(this.value);
+                else selectedIds.delete(this.value);
+
+                const all = $('#survey-table tbody input[type="checkbox"]');
+                const checked = $('#survey-table tbody input[type="checkbox"]:checked');
+                $('#select-all').prop('checked', all.length === checked.length);
+                $('#select-all').prop('indeterminate', checked.length > 0 && all.length !== checked.length);
+            });
+
+            $(window).resize(updateTableContainerHeight);
         }
 
-
-        updateFilterCounts();
-
-        $('.form-check-input').on('change', function () {
+        // ---------------------------
+        // 7. Ready: lancement initial
+        // ---------------------------
+        $(document).ready(async function () {
+            updateTableContainerHeight();
+            initializeDataTable();
+            attachStaticEventListeners();
+            attachDynamicCheckboxEvents();
+            await loadDecades();
+            await applyFiltersFromURL();
+            updateFiltersDisplay();
             updateFilterCounts();
+
+            const targetNode = document.getElementById('selected-filters-container');
+            if (targetNode) {
+                const observer = new MutationObserver(function (mutations) {
+                    mutations.forEach(function (mutation) {
+                        if (mutation.attributeName === "style") {
+                            updateTableContainerHeight();
+                        }
+                    });
+                });
+                observer.observe(targetNode, {attributes: true, attributeFilter: ['style']});
+            }
         });
-
-
-    });
-
-    function toggleCategories(categoryId) {
-        var categoriesDiv = document.getElementById(categoryId);
-        if (categoriesDiv.style.display === "none") {
-            categoriesDiv.style.display = "block";
-        } else {
-            categoriesDiv.style.display = "none";
-        }
-    }
-
-    function getSelectedFiltersContainerHeight() {
-        var container = $('#selected-filters-container');
-        if (container.is(':visible')) {
-            return container.outerHeight(true);
-        } else {
-            return 0;
-        }
-    }
-
-    function updateTableContainerHeight() {
-        var selectedFiltersContainerHeight = getSelectedFiltersContainerHeight();
-        document.documentElement.style.setProperty('--selected-filters-container-height', selectedFiltersContainerHeight + 'px');
-    }
-
-    $(document).ready(function () {
-        updateTableContainerHeight();
-
-        var observer = new MutationObserver(function (mutations) {
-            mutations.forEach(function (mutation) {
-                if (mutation.attributeName === "style") {
-                    updateTableContainerHeight();
-                }
-            });
-        });
-        var targetNode = document.getElementById('selected-filters-container');
-        var config = {attributes: true, attributeFilter: ['style']};
-
-        // Démarrer l'observation
-        observer.observe(targetNode, config);
-    });
-
-    $(window).resize(function () {
-        updateTableContainerHeight();
-    });
-
-
-
     </script>
 {% endblock %}
