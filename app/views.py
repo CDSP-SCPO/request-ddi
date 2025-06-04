@@ -607,8 +607,6 @@ class SearchResultsDataView(ListView):
 
         for result in response.hits:
             try:
-                print(f"\n--- Traitement du résultat ID: {result.meta.id} ---")
-
                 variable = getattr(result, 'variable', None)
                 survey = getattr(result, 'survey', None)
 
@@ -684,23 +682,17 @@ class SearchResultsDataView(ListView):
         return data
 
     def post(self, request, *args, **kwargs):
-        print("📥 Requête POST reçue dans SearchResultsDataView")
-
         try:
             # Étape 1 : récupération du queryset
-            print("🔍 Appel à get_queryset()")
             response = self.get_queryset()
 
             # Étape 2 : comptage total des résultats
-            print("📊 Calcul du nombre total de résultats")
             total_records = self.build_filtered_search().count()
 
             # Étape 3 : comptage des résultats filtrés
             filtered_records = response.hits.total.value
-            print(f"✅ Résultats filtrés : {filtered_records} / Total : {total_records}")
 
             # Étape 4 : formatage des résultats
-            print("🧩 Formatage des résultats")
             search_locations = request.POST.getlist(
                 'search_location[]',
                 ['questions', 'categories', 'variable_name', 'internal_label']
@@ -708,7 +700,6 @@ class SearchResultsDataView(ListView):
             data = self.format_search_results(response, search_locations)
 
             # Étape 5 : retour JSON
-            print("📤 Envoi de la réponse JSON")
             return JsonResponse({
                 "recordsTotal": total_records,
                 "recordsFiltered": filtered_records,
@@ -889,6 +880,7 @@ class ExportQuestionsCSVView(View):
 
 class QuestionDetailView(View):
     def get(self, request, id, *args, **kwargs):
+        search_params = request.GET.urlencode()
         question = get_object_or_404(BindingSurveyRepresentedVariable, id=id)
         question_represented_var = question.variable
         question_conceptual_var = question_represented_var.conceptual_var
@@ -914,7 +906,17 @@ class QuestionDetailView(View):
             id__in=similar_representative_questions.values_list('id', flat=True)
         )
 
-        context = locals()
+        context = {
+            'question': question,
+            'question_represented_var': question_represented_var,
+            'question_conceptual_var': question_conceptual_var,
+            'question_survey': question_survey,
+            'categories': categories,
+            'similar_representative_questions': similar_representative_questions,
+            'similar_conceptual_questions': similar_conceptual_questions,
+            'search_params': search_params,
+        }
+
         return render(request, 'question_detail.html', context)
 
 
