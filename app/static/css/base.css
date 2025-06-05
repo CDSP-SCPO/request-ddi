@@ -91,6 +91,17 @@ header{
     border-right: 1px solid #D3DFD5
 }
 
+.custom-text-white-buttons{
+    font-family:  "Inter Tight", sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.5px;
+    text-align: center;
+    vertical-align: middle;
+
+}
+
 
 
 
@@ -210,4 +221,33 @@ header{
 
 .logo{
     width: 200px; /* c'est 108 dans le figma */
+}
+
+.button-card{
+    border: 1px solid #D3DFD5;
+    min-width: 80px;
+    border-radius: 16px;
+    gap: 10px;
+    border-width: 1px;
+    display:inline-flex;
+    padding:12px;
+    align-items: center;
+
+}
+
+.icon-access-data{
+    width: 30px;
+    height: 15px;
+}
+
+.button-access-data{
+    background-color: #E3FFE8;
+
+}
+
+.white-button {
+    min-width:80px;
+    display:flex;
+    gap:10px;
+    padding:16px;
 }
