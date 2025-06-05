@@ -68,12 +68,6 @@
     
   }
 
-  .export-link {
-    min-width:80px;
-    display:flex;
-    gap:10px;
-    padding:16px;
-}
 .export-container{
     width: 100%;
     display: flex;
@@ -135,30 +129,9 @@
     gap:16px;
 }
 
-.button-card{
-    border: 1px solid #D3DFD5;
-    min-width: 80px;
-    border-radius: 16px;
-    gap: 10px;
-    border-width: 1px;
-    display:inline-flex;
-    padding:12px;
-    align-items: center;
-
-}
-
-.button-access-data{
-    background-color: #E3FFE8;
-
-}
-
 .icon-modalites{
     width: 20px;
     height: 20px;
-}
-.icon-access-data{
-    width: 30px;
-    height: 15px;
 }
 
 .styled-table {
