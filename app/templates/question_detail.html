@@ -8,6 +8,7 @@
             {% if search_params %}
                     <div type="button" class="white-button custom-text-white-buttons"
                             onclick="window.location.href='{% url 'app:search_results' %}?{{ search_params }}'">
+                        <img src="{% static 'svg/icons/return.svg' %}">
                         <span>Retour à la recherche</span>
                     </div>
                 {% else %}
@@ -198,7 +199,7 @@
                                                     <img src="{% static 'svg/buttons/caret_down.svg' %}" alt="Caret Down" class="icon-caret">
                                                 </span>
                                                 <span type="button"
-                                                      onclick="window.location.href='https://doi.org/{{ question.external_ref }}'"
+                                                      onclick="window.location.href='https://doi.org/{{ question.survey.external_ref }}'"
                                                       class="button-card button-access-data-card">
                                                     <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
                                                     <span>Accéder aux données</span>
