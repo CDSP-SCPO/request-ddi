@@ -8,15 +8,15 @@
                 <div class="export-container custom-body d-flex justify-content-between align-items-center">
                     <span id="results-count">0 résultats</span>
                     <div class="d-flex align-items-center container-buttons-export">
-                        <div id="export-selected" class="export-link" type="button">
+                        <div id="export-selected" class="button-custom" type="button">
                             <img src="{% static 'svg/icons/export.svg' %}">
                             <span>Exporter la sélection</span>
                         </div>
-                        <div id="export-all" class="export-link" type="button">
+                        <div id="export-all" class="button-custom" type="button">
                             <img src="{% static 'svg/icons/export.svg' %}">
                             <span>Tout exporter</span>
                         </div>
-
+                    
                     </div>
                 </div>
             </div>
@@ -42,40 +42,30 @@
             <div class="accordion" id="filtersAccordion">
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingOne">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
-                             data-toggle="collapse" data-target="#collapseOne" aria-expanded="false"
-                             aria-controls="collapseOne">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
                             <span>Types de métadonnées</span>
                             <span class="filter-count"></span>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
-
-
-                    <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne">
+                    <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" >
                         <div class="accordion-body">
                             <div id="search-location" class="div-all-checkboxes">
                                 <div class="form-check-custom">
-                                    <input class="form-check-input search-location-checkbox checkbox-custom"
-                                           type="checkbox" value="questions" id="search-location-questions">
+                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="questions" id="search-location-questions">
                                     <label class="form-check-label" for="search-location-questions">Questions</label>
                                 </div>
                                 <div class="form-check-custom">
-                                    <input class="form-check-input search-location-checkbox checkbox-custom"
-                                           type="checkbox" value="categories" id="search-location-categories">
+                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="categories" id="search-location-categories">
                                     <label class="form-check-label" for="search-location-categories">Modalités</label>
                                 </div>
                                 <div class="form-check-custom">
-                                    <input class="form-check-input search-location-checkbox checkbox-custom"
-                                           type="checkbox" value="variable_name" id="search-location-variable_name">
-                                    <label class="form-check-label" for="search-location-variable_name">Nom de la
-                                        variable</label>
+                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="variable_name" id="search-location-variable_name">
+                                    <label class="form-check-label" for="search-location-variable_name">Nom de la variable</label>
                                 </div>
                                 <div class="form-check-custom">
-                                    <input class="form-check-input search-location-checkbox checkbox-custom"
-                                           type="checkbox" value="internal_label" id="search-location-internal_label">
-                                    <label class="form-check-label" for="search-location-internal_label">Libellé de la
-                                        variable</label>
+                                    <input class="form-check-input search-location-checkbox checkbox-custom" type="checkbox" value="internal_label" id="search-location-internal_label">
+                                    <label class="form-check-label" for="search-location-internal_label">Libellé de la variable</label>
                                 </div>
                             </div>
                         </div>
@@ -83,23 +73,18 @@
                 </div>
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingTwo">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
-                             data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false"
-                             aria-controls="collapseTwo">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
                             <span>Collections</span>
                             <span class="filter-count"></span>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
-                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo">
+                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" >
                         <div class="accordion-body">
                             <div id="collections-filter" class="div-all-checkboxes">
                                 {% for collection in collections %}
                                     <div class="form-check-custom">
-                                        <input class="form-check-input collection-checkbox checkbox-custom"
-                                               type="checkbox" value="{{ collection.id }}"
-                                               id="collection-{{ collection.id }}"
-                                               {% if collection.id|stringformat:"s" in request.session.selected_collection %}checked{% endif %}>
+                                        <input class="form-check-input collection-checkbox checkbox-custom" type="checkbox" value="{{ collection.id }}" id="collection-{{ collection.id }}" {% if collection.id|stringformat:"s" in request.session.selected_collection %}checked{% endif %}>
                                         <label class="form-check-label" for="collection-{{ collection.id }}">
                                             {{ collection.name }}
                                         </label>
@@ -111,9 +96,7 @@
                 </div>
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingThree">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
-                             data-toggle="collapse" data-target="#collapseThree" aria-expanded="false"
-                             aria-controls="collapseThree">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
                             <span>Sous-Collections</span>
                             <span class="filter-count"></span>
                             <i class="fas fa-caret-down"></i>
@@ -124,10 +107,7 @@
                             <div id="subcollections-filter" class="div-all-checkboxes">
                                 {% for subcollection in subcollections %}
                                     <div class="form-check-custom">
-                                        <input class="form-check-input subcollection-checkbox checkbox-custom"
-                                               type="checkbox" value="{{ subcollection.id }}"
-                                               id="subcollection-{{ subcollection.id }}"
-                                               {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}checked{% endif %}>
+                                        <input class="form-check-input subcollection-checkbox checkbox-custom" type="checkbox" value="{{ subcollection.id }}" id="subcollection-{{ subcollection.id }}" {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}checked{% endif %}>
                                         <label class="form-check-label" for="subcollection-{{ subcollection.id }}">
                                             {{ subcollection.name }}
                                         </label>
@@ -139,22 +119,18 @@
                 </div>
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingFour">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
-                             data-toggle="collapse" data-target="#collapseFour" aria-expanded="false"
-                             aria-controls="collapseFour">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
                             <span>Enquêtes</span>
                             <span class="filter-count"></span>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
-                    <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour">
+                    <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" >
                         <div class="accordion-body">
                             <div id="survey-filter" class="div-all-checkboxes">
                                 {% for survey in surveys %}
                                     <div class="form-check-custom">
-                                        <input class="form-check-input survey-checkbox checkbox-custom" type="checkbox"
-                                               value="{{ survey.id }}" id="survey-{{ survey.id }}"
-                                               {% if survey.id|stringformat:"s" in request.session.selected_surveys %}checked{% endif %}>
+                                        <input class="form-check-input survey-checkbox checkbox-custom" type="checkbox" value="{{ survey.id }}" id="survey-{{ survey.id }}" {% if survey.id|stringformat:"s" in request.session.selected_surveys %}checked{% endif %}>
                                         <label class="form-check-label" for="survey-{{ survey.id }}">
                                             {{ survey.name }}
                                         </label>
@@ -166,15 +142,12 @@
                 </div>
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingFive">
-                        <div class="accordion-button collapsed custom-body color-grey-1" type="button"
-                             data-toggle="collapse" data-target="#collapseFive" aria-expanded="false"
-                             aria-controls="collapseFive">
+                        <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
                             <span>Années</span>
                             <span class="filter-count"></span>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
-
                     <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive">
                         <div class="accordion-body" class="div-all-checkboxes">
                             <div id="years-filter">
@@ -199,20 +172,17 @@
     <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
     <style>
 
-        .inner-container-custom {
-            --topbar-height: 64px;
-            --resetbar-height: 64px;
+        .inner-container-custom{
+            --topbar-height : 64px;
+            --resetbar-height : 64px;
         }
-
         .search-results-container {
             width: 70%;
             overflow: hidden;
         }
-
         .filters-container {
             width: 30%;
         }
-
         .badge-category {
             position: absolute;
             top: 10px;
@@ -226,7 +196,6 @@
             z-index: 1; /* S'assurer que le badge est au-dessus du texte */
             width: 15rem;
         }
-
         .category-dropdown {
             display: none;
             position: absolute;
@@ -241,17 +210,14 @@
             max-height: calc(100% - 40px); /* Limite à la hauteur de la carte parent, en laissant 40px de marge */
             overflow-y: auto; /* Scroll si nécessaire */
         }
-
         .category-item {
             padding: 5px;
             font-size: 0.75em; /* Réduit la taille du texte dans les catégories */
         }
-
         .highlight-category {
             background-color: yellow;
             font-weight: bold;
         }
-
         .category-dropdown a {
             display: block;
             padding: 5px;
@@ -259,17 +225,14 @@
             color: black;
             font-size: 0.75em; /* Réduit la taille du texte dans les liens */
         }
-
         .category-dropdown a:hover {
             background-color: #f1f1f1;
         }
-
         .card {
             position: relative; /* Important pour confiner le dropdown à la carte */
             margin-bottom: 20px;
             overflow: hidden; /* Empêche le dépassement du contenu */
         }
-
         .bootstrap-select .btn {
             max-width: 200px;
             max-height: 40px;

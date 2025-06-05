@@ -139,7 +139,7 @@ class BaseUploadView(FormView):
             binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
                 variable_name=variable_name,
                 survey=survey,
-                variable=represented_variable,
+                variable = represented_variable,
                 defaults={
                     'survey': survey,
                     'variable': represented_variable,
@@ -215,7 +215,7 @@ class BaseUploadView(FormView):
 
         cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
 
-        if name_question_for_comparison:
+        if name_question_for_comparison :
             if name_question_for_comparison in cleaned_questions:
                 var_represented = RepresentedVariable.objects.filter(
                     question_text=cleaned_questions[name_question_for_comparison].question_text
@@ -301,6 +301,7 @@ class XMLUploadView(BaseUploadView):
     template_name = 'upload_xml.html'
     form_class = XMLUploadForm
 
+
     def add_form_to_context(self, context):
         context['xml_form'] = XMLUploadForm()
 
@@ -324,12 +325,12 @@ class XMLUploadView(BaseUploadView):
                 print(f"❌ Erreur lors de la lecture du fichier {file.name}: {str(e)}")
         return results
 
+
     def parse_xml_file(self, file, seen_invalid_dois):
         """Parser un fichier XML et retourner ses données."""
         start_time = datetime.now()  # Début du parsing
-        print(f"\n⏳ Début du parsing du fichier : {file.name} à {start_time.strftime('%H:%M:%S')}")
-
         try:
+
             file.seek(0)
             content = file.read().decode('utf-8')
             soup = BeautifulSoup(content, "xml")
@@ -337,8 +338,6 @@ class XMLUploadView(BaseUploadView):
             # Récupérer DOI et titre
             doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={
                 "agency": "DataCite"}) else soup.find("IDNo").text.strip()
-            print(f"🔍 DOI trouvé : {doi}")
-
             if not doi.startswith("doi:"):
                 if doi not in seen_invalid_dois:
                     seen_invalid_dois.add(doi)
@@ -364,15 +363,11 @@ class XMLUploadView(BaseUploadView):
                     line.find("notes").text.strip() if line.find("notes") else "",
                 ])
 
-            end_time = datetime.now()
-            duration = (end_time - start_time).total_seconds()
-            print(
-                f"✅ Fin du parsing du fichier : {file.name} à {end_time.strftime('%H:%M:%S')} (durée : {duration:.2f} secondes)")
-
+            end_time = datetime.now()  # Fin du parsing
             return data
 
         except Exception as e:
-            print(f"❌ Erreur lors du parsing du fichier {file.name}: {str(e)}")
+            print(f"Erreur lors du parsing du fichier {file.name}: {str(e)}")
             return None
 
     @transaction.atomic
@@ -383,7 +378,7 @@ class XMLUploadView(BaseUploadView):
         num_new_bindings = 0
         error_files = []
 
-        # Regroupement par DOI
+        # Utiliser un dictionnaire pour regrouper les données par DOI
         data_by_doi = {}
         for question_data in question_datas:
             doi = question_data[0]
@@ -395,10 +390,9 @@ class XMLUploadView(BaseUploadView):
         bindings_to_index = []
 
         for doi, questions in data_by_doi.items():
-            print(f"\n📄 Traitement des variables pour le DOI : {doi}")
             try:
+
                 survey = Survey.objects.get(external_ref=doi)
-                print(f"✅ Enquête trouvée pour le DOI : {doi} → {survey.name}")
 
                 for question_data in questions:
                     variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
@@ -416,7 +410,7 @@ class XMLUploadView(BaseUploadView):
 
                     if created_binding:
                         num_new_bindings += 1
-                        bindings_to_index.append(binding)  # Stocker ici
+                        bindings_to_index.append(binding)
 
                     num_records += 1
 
@@ -433,7 +427,7 @@ class XMLUploadView(BaseUploadView):
                 error_files.append(error_message)
                 print(error_message)
 
-        # Si erreurs, on lève une exception et on ne fait pas l'indexation
+        # Si des erreurs ont été rencontrées, on les affiche
         if error_files:
             self.errors = error_files
             error_summary = "<br/>".join(error_files)
@@ -442,7 +436,7 @@ class XMLUploadView(BaseUploadView):
         # Sinon, tout est OK, on peut indexer les bindings
         for binding in bindings_to_index:
             BindingSurveyDocument().update(binding)
-
+            
         return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
 
@@ -466,7 +460,6 @@ class SearchResultsDataView(ListView):
 
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
-        print("🚦 Entrée dans dispatch()")
         if 'search_location' not in self.request.session or not self.request.session['search_location']:
             self.request.session['search_location'] = ['questions', 'categories', 'variable_name', 'internal_label']
         return super().dispatch(*args, **kwargs)
@@ -579,7 +572,7 @@ class SearchResultsDataView(ListView):
                 )
                 for term in terms:
                     queries.append(
-                        {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
+                    {"match": {"variable_name": {"query": search_value, "operator": "and", "boost": 5}}}
                     )
             elif search_location == 'internal_label':
                 queries.append(
@@ -592,6 +585,7 @@ class SearchResultsDataView(ListView):
                     queries.append(
                         {"match": {"variable.internal_label": {"query": term, "operator": "or", "boost": 1}}}
                     )
+
 
         if queries:
             search = search.query(
@@ -682,24 +676,16 @@ class SearchResultsDataView(ListView):
         return data
 
     def post(self, request, *args, **kwargs):
+
         try:
-            # Étape 1 : récupération du queryset
             response = self.get_queryset()
-
-            # Étape 2 : comptage total des résultats
             total_records = self.build_filtered_search().count()
-
-            # Étape 3 : comptage des résultats filtrés
             filtered_records = response.hits.total.value
-
-            # Étape 4 : formatage des résultats
             search_locations = request.POST.getlist(
                 'search_location[]',
                 ['questions', 'categories', 'variable_name', 'internal_label']
             )
             data = self.format_search_results(response, search_locations)
-
-            # Étape 5 : retour JSON
             return JsonResponse({
                 "recordsTotal": total_records,
                 "recordsFiltered": filtered_records,
@@ -906,17 +892,19 @@ class QuestionDetailView(View):
             id__in=similar_representative_questions.values_list('id', flat=True)
         )
 
-        context = {
-            'question': question,
-            'question_represented_var': question_represented_var,
-            'question_conceptual_var': question_conceptual_var,
-            'question_survey': question_survey,
-            'categories': categories,
-            'similar_representative_questions': similar_representative_questions,
-            'similar_conceptual_questions': similar_conceptual_questions,
-            'search_params': search_params,
-        }
+        for q in similar_representative_questions:
+            q.categories = sorted(
+                q.variable.categories.all(),
+                key=lambda x: (int(x.code) if x.code.isdigit() else float('inf'), x.code)
+            )
 
+        for q in similar_conceptual_questions:
+            q.categories = sorted(
+                q.variable.categories.all(),
+                key=lambda x: (int(x.code) if x.code.isdigit() else float('inf'), x.code)
+            )
+
+        context = locals()
         return render(request, 'question_detail.html', context)
 
 
@@ -924,6 +912,7 @@ class CustomLoginView(LoginView):
     template_name = 'login.html'
     authentication_form = CustomAuthenticationForm
     redirect_authenticated_user = True
+
 
 
 def search_results(request):
@@ -1166,6 +1155,8 @@ def get_distributor(request):
     return JsonResponse({"distributors": list(distributors)})
 
 
+
+
 def get_subcollections_by_collections(request):
     collection_ids = request.GET.get('collections_ids', '').split(',')
     collection_ids = [id for id in collection_ids if id]
@@ -1211,7 +1202,6 @@ def get_surveys_by_subcollections(request):
     data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
     return JsonResponse(data)
 
-
 def get_decades(request):
     collection_ids = request.GET.get('collections_ids', '').split(',')
     subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
@@ -1231,6 +1221,7 @@ def get_decades(request):
         surveys = Survey.objects.all()
 
     years = surveys.values_list('start_date', flat=True).distinct()
+
     years = [year.year for year in years if year is not None]
     years = list(set(years))
     years.sort(reverse=True)
@@ -1241,7 +1232,6 @@ def get_decades(request):
         if decade not in decades:
             decades[decade] = []
         decades[decade].append(year)
-
     return JsonResponse({'decades': decades})
 
 
@@ -1250,10 +1240,8 @@ def get_years_by_decade(request):
         decade = int(request.GET.get('decade', 0))
     except ValueError:
         return JsonResponse({'error': 'Invalid decade value'}, status=400)
-
     start_year = decade
     end_year = decade + 9
-
     collection_ids = request.GET.get('collections_ids', '').split(',')
     subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
     survey_ids = request.GET.get('survey_ids', '').split(',')
@@ -1275,6 +1263,7 @@ def get_years_by_decade(request):
         .values_list('start_date__year', flat=True) \
         .distinct()
     years = list(set(years))
+
     years.sort()
 
     return JsonResponse({'years': years})

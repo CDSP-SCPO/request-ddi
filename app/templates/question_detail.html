@@ -2,163 +2,286 @@
 {% load static %}
 
 {% block content %}
-    <div class="inner-container-custom d-flex">
-        <div class="top-bar">
-            <div class="return-search-container">
-                {% if search_params %}
-                    <button type="button" class="btn btn-secondary"
+<div class="inner-container-custom d-flex">
+    <div class="top-bar">
+        <div class="return-search-container">
+            {% if search_params %}
+                    <div type="button" class="white-button custom-text-white-buttons"
                             onclick="window.location.href='{% url 'app:search_results' %}?{{ search_params }}'">
-                        Retour à la recherche
-                    </button>
+                        <span>Retour à la recherche</span>
+                    </div>
                 {% else %}
-                    <button type="button" class="btn btn-secondary"
+                    <div type="button" class="white-button custom-text-white-buttons"
                             onclick="window.location.href='{% url 'app:search_results' %}'">
-                        Retour à la recherche
-                    </button>
+                        <span>Retour à la recherche</span>
+                    </div>
                 {% endif %}
-
-
-            </div>
-            <div class="export-access-container">
-                <button type="button" class="btn btn-primary" onclick="exportMetadata()">
-                    Exporter les métadonnées
-                </button>
-                <button type="button" class="btn btn-primary"
-                        onclick="window.location.href='https://doi.org/{{ question_survey.external_ref }}'">
-                    Accéder aux données
-                </button>
-            </div>
         </div>
-        <div class="details-variable-container">
-            <div class="">
-                <h5 class="card-title">{{ question_represented_var.question_text|default:"N/A" }}</h5>
-                <h6 class="card-subtitle mb-2 text-muted">
-                    <span class="detail-label">Enquête:</span> {{ question_survey.name }}
+        <div class="export-access-container">
+            <div class="white-button custom-text-white-buttons" type="button" onclick="exportMetadata()">
+                <img src="{% static 'svg/icons/export.svg' %}">
+                <span>Exporter les métadonnées</span>
+            </div>
+            <span type="button" onclick="window.location.href='https://doi.org/{{ question_survey.external_ref }}'" class="button-card button-access-data custom-text-white-buttons">
+                <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
+                <span>Accéder aux données</span>
+            </span>
+        </div>
+    </div>
+    <div class="details-variable-container">
+        <div class="information-variable">
+            <div class="custom-title-1">{{ question_represented_var.question_text|default:"N/A" }}</div>
+            <div class="custom-title-2">
+                <div class="">
+                    Enquête : <span class="ft-600">{{ question_survey.name }}</span>
                     {% if question_survey.dist_date %}
                         (Date : {{ question_survey.dist_date|date:"d-m-Y" }})
                     {% endif %}
-                </h6>
-                <h6 class="card-subtitle mb-2 text-muted">
-                    <span class="detail-label">Nom de la variable:</span> {{ question.variable_name }}
-                </h6>
-                <h6 class="card-subtitle mb-2 text-muted">
-                    <span class="detail-label">Libellé de la variable:</span> {{ question_represented_var.internal_label }}
-                </h6>
-                <h6 class="card-subtitle mb-3 text-muted">
-                    <span class="detail-label">DOI:</span> {{ question_survey.external_ref }}
-                </h6>
-
-                {% if question.universe %}
-                    <div class="info-row">
-                        <span class="info-label">Univers de la variable:</span>
-                        <span class="info-value">{{ question.universe }}</span>
-                    </div>
-                {% endif %}
-
-                <div class="modalities-container mt-4">
-                    <h4>Modalités</h4>
-                    {% if categories %}
-                        <table class="styled-table">
-                            <thead>
-                            <tr>
-                                <th class="code-cell">Code</th>
-                                <th class="text-cell">Label</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {% for category in categories %}
-                                <tr>
-                                    <td class="code-cell">{{ category.code }}</td>
-                                    <td class="text-cell">{{ category.category_label }}</td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p>Aucune catégorie associée.</p>
-                    {% endif %}
                 </div>
-
-                <div class="similar-questions-container mt-5">
-                    <h2>
-                        Questions identiques
-                        <span
-                                class="info-icon"
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="top"
-                                title="Questions avec les mêmes intitulés de questions, codes et modalités.">
-                        &#9432;
-                    </span>
-                    </h2>
-                    <div class="row row-cols-1 row-cols-md-2 g-4">
-                        {% for question in similar_representative_questions %}
-                            <div class="col mb-3">
-                                <a href="{% url 'app:question_detail' question.id %}?{{ search_params }}"
-                                   class="text-decoration-none card-link">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <h5 class="card-title">{{ question.variable_name }}</h5>
-                                            <h6 class="card-subtitle mb-2 text-muted">
-                                                Enquête: {{ question.survey }}</h6>
-                                        </div>
-                                    </div>
-                                </a>
-                            </div>
-                        {% endfor %}
-                        {% if not similar_representative_questions %}
-                            <p>Aucune question identique trouvée.</p>
-                        {% endif %}
-                    </div>
+                <div class="">
+                    Nom de la variable : <span class="ft-600">{{ question.variable_name }}</span>
                 </div>
-
-                <div class="similar-questions-container mt-5">
-                    <h2>
-                        Questions similaires
-                        <span
-                                class="info-icon"
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="top"
-                                title="Questions avec les mêmes intitulés de questions, mais dont les codes et/ou modalités peuvent différer.">
-                        &#9432;
-                    </span>
-                    </h2>
-                    <div class="row row-cols-1 row-cols-md-2 g-4">
-                        {% for question in similar_conceptual_questions %}
-                            <div class="col mb-3">
-                                <a href="{% url 'app:question_detail' question.id %}?{{ search_params }}"
-                                   class="text-decoration-none card-link">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <h5 class="card-title">{{ question.variable_name }}</h5>
-                                            <h6 class="card-subtitle mb-2 text-muted">
-                                                Enquête: {{ question.survey }}</h6>
-                                        </div>
-                                    </div>
-                                </a>
-                            </div>
-                        {% endfor %}
-                        {% if not similar_conceptual_questions %}
-                            <p>Aucune question similaire trouvée.</p>
-                        {% endif %}
-                    </div>
+                <div class="">
+                    Libellé de la variable : <span class="ft-600">{{ question_represented_var.internal_label }}</span>
                 </div>
             </div>
+
+
+            <div class="modalities-container">
+                <div class="custom-headline">Modalités</div>
+                {% if categories %}
+                <table class="styled-table">
+                    <thead>
+                        <tr class="title-modalities-table">
+                            <th class="code-cell">Code</th>
+                            <th class="text-cell">Label</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in categories %}
+                        <tr>
+                            <td class="code-cell title-modalities-table">{{ category.code }}</td>
+                            <td class="text-cell custom-title-2">{{ category.category_label }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>Aucune catégorie associée.</p>
+                {% endif %}
+            </div>  
+        </div>
+        <div class="questions-container">          
+
+            <div class="accordion accordion-custom" id="questionsAccordion">
+                <div class="accordion-item accordion-item-custom padding-filters-container">
+                    <div class="accordion-header" id="headingIdentiques">
+                        <div class="accordion-button collapsed custom-body">
+                            <div type="button"
+                                 class="header-container-questions"
+                                 data-toggle="collapse"
+                                 data-target="#collapseIdentiques"
+                                 aria-expanded="{% if similar_representative_questions|length <= 5 %}true{% else %}false{% endif %}"
+                                 aria-controls="collapseIdentiques">
+                                <span class="custom-title-1">Questions identiques</span>
+                                <span class="badge badge-custom {% if similar_representative_questions|length == 0 %}d-none{% endif %}">
+                                    {{ similar_representative_questions|length }}
+                                </span>
+                                <i class="fas fa-caret-down"></i>
+                            </div>
+                            <span class="info-icon" data-toggle="tooltip" data-placement="top"
+                                  title="Questions avec les mêmes intitulés de questions, codes et modalités.">
+                                <img src="{% static 'svg/icons/information.svg' %}" alt="info" class="information-icon" />
+                            </span>
+                        </div>
+                    </div>
+                
+                    <div id="collapseIdentiques" class="collapse {% if similar_representative_questions|length <= 5 %}show{% endif %}"
+                         aria-labelledby="headingIdentiques">
+                        <div class="accordion-body">
+                            <div class="row row-cols-1 row-cols-md-2 g-4">
+                                {% for question in similar_representative_questions %}
+                                <div class="col mb-3">
+                                    <a href="{% url 'app:question_detail' question.id %}" class="text-decoration-none card-link">
+                                        <div class="card-question-detail h-100">
+                                            <div class="custom-title-2">
+                                                <div class="">{{ question.variable_name }}</div>
+                                                <div>Enquête : <span class="ft-600">{{ question.survey }}</span></div>
+                                            </div>
+                                            <div class="container-buttons-card">
+                                                <span type="button" id="toggle-categories"
+                                                      onclick="toggleCategories('categories-{{ question.id }}')"
+                                                      class="button-card">
+                                                    <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
+                                                    <span>Modalités</span>
+                                                    <img src="{% static 'svg/buttons/caret_down.svg' %}" alt="Caret Down" class="icon-caret">
+                                                </span>
+                                            </div>
+                                            <div id="categories-{{ question.id }}" class="categories-list mt-3" style="display: none;">
+                                                {% if question.categories %}
+                                                <table class="styled-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="code-cell">Code</th>
+                                                            <th class="text-cell">Label</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for category in question.categories %}
+                                                        <tr>
+                                                            <td class="code-cell">{{ category.code }}</td>
+                                                            <td class="text-cell">{{ category.category_label }}</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                                {% else %}
+                                                <p>Aucune catégorie associée.</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                                {% endfor %}
+                                {% if not similar_representative_questions %}
+                                <div class="col">
+                                    <span>Aucune question identique trouvée.</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            
+                <div class="accordion-item accordion-item-custom padding-filters-container">
+                    <div class="accordion-header" id="headingSimilaires">
+                        <div class="accordion-button collapsed custom-body">
+                            <div type="button"
+                                 class="header-container-questions"
+                                 data-toggle="collapse"
+                                 data-target="#collapseSimilaires"
+                                 aria-expanded="{% if similar_conceptual_questions|length <= 5 %}true{% else %}false{% endif %}"
+                                 aria-controls="collapseSimilaires">
+                                <span class="custom-title-1">Questions similaires</span>
+                                <span class="badge badge-custom {% if similar_conceptual_questions|length == 0 %}d-none{% endif %}">
+                                    {{ similar_conceptual_questions|length }}
+                                </span>
+                                <i class="fas fa-caret-down"></i>
+                            </div>
+                            <span class="info-icon" data-toggle="tooltip" data-placement="top"
+                                  title="Questions avec les mêmes intitulés de questions, mais dont les codes et/ou modalités peuvent différer.">
+                                <img src="{% static 'svg/icons/information.svg' %}" alt="info" class="information-icon" />
+                            </span>
+                        </div>
+                    </div>
+                
+                    <div id="collapseSimilaires"
+                         class="collapse {% if similar_conceptual_questions|length <= 5 %}show{% endif %}"
+                         aria-labelledby="headingSimilaires">
+                        <div class="accordion-body">
+                            <div class="row row-cols-1 row-cols-md-2 g-4">
+                                {% for question in similar_conceptual_questions %}
+                                <div class="col mb-3">
+                                    <div class="text-decoration-none card-link">
+                                        <div class="card-question-detail h-100">
+                                            <div class="custom-title-2">
+                                                <div>Enquête : <span class="ft-600">{{ question.survey }}</span></div>
+                                                <div>Nom de la variable : <span class="ft-600">{{ question.variable_name }}</span></div>
+                                            </div>
+                                            <div>
+                                                <span type="button" id="toggle-categories"
+                                                      onclick="toggleCategories('categories-{{ question.id }}')"
+                                                      class="button-card">
+                                                    <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
+                                                    <span>Modalités</span>
+                                                    <img src="{% static 'svg/buttons/caret_down.svg' %}" alt="Caret Down" class="icon-caret">
+                                                </span>
+                                                <span type="button"
+                                                      onclick="window.location.href='https://doi.org/{{ question.external_ref }}'"
+                                                      class="button-card button-access-data-card">
+                                                    <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
+                                                    <span>Accéder aux données</span>
+                                                </span>
+                                            </div>
+                                            <div id="categories-{{ question.id }}" class="categories-list mt-3" style="display: none;">
+                                                {% if question.categories %}
+                                                <table class="styled-table">
+                                                    <tbody>
+                                                        {% for category in question.categories %}
+                                                        <tr>
+                                                            <td class="code-cell-card">{{ category.code }}</td>
+                                                            <td class="text-cell">{{ category.category_label }}</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                                {% else %}
+                                                <p>Aucune catégorie associée.</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% if not similar_conceptual_questions %}
+                                <div class="col">
+                                    <span>Aucune question similaire trouvée.</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>              
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/question_detail.css' %}">
+<link rel="stylesheet" href="{% static 'css/question_detail.css' %}">
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-
-        $(document).ready(function () {
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-                new bootstrap.Tooltip(tooltipTriggerEl);
-            });
+<script>
+    function toggleCategories(categoryId) {
+        var categoriesDiv = document.getElementById(categoryId);
+        if (categoriesDiv.style.display === "none") {
+            categoriesDiv.style.display = "block";
+        } else {
+            categoriesDiv.style.display = "none";
+        }
+    }
+    $(document).ready(function() {
+        // Initialiser les tooltips
+        $('[data-toggle="tooltip"]').tooltip({
+            position: {
+            my: "right center",
+            at: "left center",
+            collision: "flipfit"
+            },
+            tooltipClass: "ui-tooltip"
         });
-    </script>
+
+        // Ajouter un gestionnaire d'événement pour les boutons d'accordéon
+        $('.accordion-button').on('click', function() {
+            // Changer l'icône de basculement
+            var caretIcon = $(this).find('i.fas');
+            if (caretIcon.length) {
+                var isExpanded = $(this).attr('aria-expanded') === 'true';
+                caretIcon.toggleClass('fa-caret-down', !isExpanded);
+                caretIcon.toggleClass('fa-caret-up', isExpanded);
+            }
+        });
+
+
+
+    });
+</script>
 {% endblock %}
+
+
+
+
