@@ -14,6 +14,7 @@
                 {% else %}
                     <div type="button" class="white-button custom-text-white-buttons"
                             onclick="window.location.href='{% url 'app:search_results' %}'">
+                        <img src="{% static 'svg/icons/return.svg' %}">
                         <span>Retour à la recherche</span>
                     </div>
                 {% endif %}
@@ -23,7 +24,7 @@
                 <img src="{% static 'svg/icons/export.svg' %}">
                 <span>Exporter les métadonnées</span>
             </div>
-            <span type="button" onclick="window.location.href='https://doi.org/{{ question_survey.external_ref }}'" class="button-card button-access-data custom-text-white-buttons">
+            <span type="button" onclick="window.location.href='https://doi.org/{{ question_survey.external_ref }}'" class="button-card button-access-data button-access-data-card-hover">
                 <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
                 <span>Accéder aux données</span>
             </span>
@@ -90,8 +91,12 @@
                                 </span>
                                 <i class="fas fa-caret-down"></i>
                             </div>
-                            <span class="info-icon" data-toggle="tooltip" data-placement="top"
-                                  title="Questions avec les mêmes intitulés de questions, codes et modalités.">
+                            <span class="info-icon" 
+                                onmouseover="this.querySelector('img').src='{% static 'svg/icons/information_hover.svg' %}'"
+                                onmouseout="this.querySelector('img').src='{% static 'svg/icons/information.svg' %}'"
+                                data-toggle="tooltip" 
+                                data-placement="top"
+                                title="Questions avec les mêmes intitulés de questions, codes et modalités.">
                                 <img src="{% static 'svg/icons/information.svg' %}" alt="info" class="information-icon" />
                             </span>
                         </div>
@@ -106,40 +111,17 @@
                                     <a href="{% url 'app:question_detail' question.id %}" class="text-decoration-none card-link">
                                         <div class="card-question-detail h-100">
                                             <div class="custom-title-2">
+                                                <div class="title-question" type="button" onclick="window.location.href='{% url 'app:question_detail' question.id %}'">
+                                                    Enquête : <span class="ft-600">{{ question.survey }}</span>
+                                                </div>
                                                 <div class="">{{ question.variable_name }}</div>
-                                                <div>Enquête : <span class="ft-600">{{ question.survey }}</span></div>
                                             </div>
-                                            <div class="container-buttons-card">
-                                                <span type="button" id="toggle-categories"
-                                                      onclick="toggleCategories('categories-{{ question.id }}')"
-                                                      class="button-card">
-                                                    <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
-                                                    <span>Modalités</span>
-                                                    <img src="{% static 'svg/buttons/caret_down.svg' %}" alt="Caret Down" class="icon-caret">
-                                                </span>
-                                            </div>
-                                            <div id="categories-{{ question.id }}" class="categories-list mt-3" style="display: none;">
-                                                {% if question.categories %}
-                                                <table class="styled-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th class="code-cell">Code</th>
-                                                            <th class="text-cell">Label</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for category in question.categories %}
-                                                        <tr>
-                                                            <td class="code-cell">{{ category.code }}</td>
-                                                            <td class="text-cell">{{ category.category_label }}</td>
-                                                        </tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                                {% else %}
-                                                <p>Aucune catégorie associée.</p>
-                                                {% endif %}
-                                            </div>
+                                            <span type="button"
+                                                    onclick="window.location.href='https://doi.org/{{ question.survey.external_ref }}'"
+                                                    class="button-card button-access-data-card button-access-data-card-hover">
+                                                <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
+                                                <span>Accéder aux données</span>
+                                            </span>
                                         </div>
                                     </a>
                                 </div>
@@ -170,8 +152,12 @@
                                 </span>
                                 <i class="fas fa-caret-down"></i>
                             </div>
-                            <span class="info-icon" data-toggle="tooltip" data-placement="top"
-                                  title="Questions avec les mêmes intitulés de questions, mais dont les codes et/ou modalités peuvent différer.">
+                            <span class="info-icon" 
+                                data-toggle="tooltip" 
+                                data-placement="top"
+                                onmouseover="this.querySelector('img').src='{% static 'svg/icons/information_hover.svg' %}'"
+                                onmouseout="this.querySelector('img').src='{% static 'svg/icons/information.svg' %}'"
+                                title="Questions avec les mêmes intitulés de questions, mais dont les codes et/ou modalités peuvent différer.">
                                 <img src="{% static 'svg/icons/information.svg' %}" alt="info" class="information-icon" />
                             </span>
                         </div>
@@ -187,20 +173,23 @@
                                     <div class="text-decoration-none card-link">
                                         <div class="card-question-detail h-100">
                                             <div class="custom-title-2">
-                                                <div>Enquête : <span class="ft-600">{{ question.survey }}</span></div>
+                                                <div class="title-question" type="button" onclick="window.location.href='{% url 'app:question_detail' question.id %}'">Enquête : <span class="ft-600">{{ question.survey }}</span></div>
                                                 <div>Nom de la variable : <span class="ft-600">{{ question.variable_name }}</span></div>
                                             </div>
-                                            <div>
+                                            <div class="container-button-card">
                                                 <span type="button" id="toggle-categories"
-                                                      onclick="toggleCategories('categories-{{ question.id }}')"
-                                                      class="button-card">
+                                                    onclick="toggleCategories('categories-{{ question.id }}')"
+                                                    class="button-card button-modalities-card"
+                                                    onmouseover="this.querySelector('.icon-modalites').src='{% static 'svg/icons/modalites_green.svg' %}'; this.querySelector('.icon-caret').src='{% static 'svg/buttons/caret_down_green.svg' %}'"
+                                                    onmouseout="this.querySelector('.icon-modalites').src='{% static 'svg/icons/modalites.svg' %}'; this.querySelector('.icon-caret').src='{% static 'svg/buttons/caret_down.svg' %}'">
+                                                    
                                                     <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
                                                     <span>Modalités</span>
                                                     <img src="{% static 'svg/buttons/caret_down.svg' %}" alt="Caret Down" class="icon-caret">
                                                 </span>
                                                 <span type="button"
                                                       onclick="window.location.href='https://doi.org/{{ question.survey.external_ref }}'"
-                                                      class="button-card button-access-data-card">
+                                                      class="button-card button-access-data-card button-access-data-card-hover">
                                                     <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
                                                     <span>Accéder aux données</span>
                                                 </span>
@@ -280,6 +269,7 @@
 
 
     });
+
 </script>
 {% endblock %}
 
