@@ -35,49 +35,57 @@
     <body class=" bg-color-principal body-custom flex-column min-vh-100">
         <!-- Header -->
         <header class="bg-color-principal">
-            <div class="">
-                <div class="d-flex justify-content-between align-items-center">
-                    <!-- Logo à gauche -->
+            <div class="d-flex align-items-center justify-content-between w-100">
+                <!-- Colonne gauche : Logo -->
+                <div class="flex-grow-1 d-flex justify-content-start">
                     <a href="{% url 'app:representedvariable_search' %}">
                         <img class="img-fluid mb-3 logo" src="{% static 'svg/logo/REQUEST_LOGO-03.svg' %}" alt="Logo CDSP">
                     </a>
+                </div>
+            
+                <!-- Colonne centrale : Barre de recherche -->
+                <div class="flex-grow-1 d-flex justify-content-center">
                     {% if show_search_bar %}
-                    <!-- Barre de recherche -->
-                    <form class="ml-3" action="{% url 'app:search_results' %}" method="get">
-                        <div class="input-group">
-                            <input type="text" class="form-control" name="q" placeholder="Rechercher..." aria-label="Rechercher" aria-describedby="search-button" value="{{ request.GET.q }}">
-                            <div class="input-group-append">
-                                <button class="btn btn-secondary" type="submit" id="search-button">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    {% endif %}
-        
-                    <!-- Boutons CSV et Profil utilisateur à droite -->
-                    <div class="d-flex align-items-center">
-                        <!-- CSV Buttons -->
-                        <div class="csv-buttons me-3">
-                            {% if user.is_authenticated and user.is_staff %}
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        Importer
+                        <form class="w-75" action="{% url 'app:search_results' %}" method="get">
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="q" placeholder="Rechercher..."
+                                       aria-label="Rechercher" aria-describedby="search-button" value="{{ request.GET.q }}">
+                                <div class="input-group-append">
+                                    <button class="btn btn-secondary" type="submit" id="search-button">
+                                        <i class="fas fa-search"></i>
                                     </button>
-                                    <div class="dropdown-menu">
-                                        <a class="dropdown-item" href="{% url 'app:upload_csv' %}">Import de CSV</a>
-                                        <a class="dropdown-item" href="{% url 'app:upload_xml' %}">Import de XML</a>
-                                    </div>
                                 </div>
-                            {% endif %}
-                            <a href="{% url 'app:export_page' %}" class="btn btn-secondary mx-2">Exporter CSV</a>
-                        </div> -->
-        
-                        <!-- User Profile/Connexion -->
-                        <!-- <div class="user-profile">
-                            {% if user.is_authenticated %}
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            
+                <!-- Colonne droite : Boutons utilisateur -->
+                <div class="flex-grow-1 d-flex justify-content-end">
+                    {% if user.is_authenticated %}
+                        <div class="d-flex align-items-center">
+                            <!-- CSV Buttons -->
+                            <div class="csv-buttons me-3">
+                                {% if user.is_staff %}
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-secondary dropdown-toggle"
+                                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            Importer
+                                        </button>
+                                        <div class="dropdown-menu">
+                                            <a class="dropdown-item" href="{% url 'app:upload_csv' %}">Import de CSV</a>
+                                            <a class="dropdown-item" href="{% url 'app:upload_xml' %}">Import de XML</a>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <a href="{% url 'app:export_page' %}" class="btn btn-secondary mx-2">Exporter CSV</a>
+                            </div>
+            
+                            <!-- User Profile -->
+                            <div class="user-profile">
                                 <div class="dropdown">
-                                    <a class="btn dropdown-toggle" href="#" role="button" id="userDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <a class="btn dropdown-toggle" href="#" role="button" id="userDropdown"
+                                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <i class="fas fa-user"></i> {{ user.username }}
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
@@ -89,13 +97,9 @@
                                         </form>
                                     </div>
                                 </div>
-                            {% else %}
-                                <a href="{% url 'app:login' %}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-sign-in-alt"></i> Connexion
-                                </a>
-                            {% endif %}
-                        </div> -->
-                    </div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </header>
