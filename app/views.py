@@ -486,7 +486,7 @@ class SearchResultsDataView(ListView):
         if search_value:
             search = self.apply_search_filters(search, search_value, search_locations)
 
-        search = search.highlight_options(pre_tags=["<mark style='background-color: yellow;'>"],
+        search = search.highlight_options(pre_tags=['<mark style="background-color: rgba(255, 70, 78, 0.15);">'],
                                           post_tags=["</mark>"], number_of_fragments=0, fragment_size=10000) \
             .highlight('variable.question_text', fragment_size=10000) \
             .highlight('variable.categories.category_label', fragment_size=10000) \

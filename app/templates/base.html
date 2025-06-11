@@ -43,23 +43,23 @@
         <!-- Colonne gauche : Logo -->
         <div class="flex-grow-1 d-flex justify-content-start">
             <a href="{% url 'app:representedvariable_search' %}">
-                <img class="img-fluid mb-3 logo" src="{% static 'svg/logo/REQUEST_LOGO-03.svg' %}" alt="Logo CDSP">
+                <img class="img-fluid logo" src="{% static 'svg/logo/REQUEST_LOGO-03.svg' %}" alt="Logo Request">
             </a>
         </div>
 
         <!-- Colonne centrale : Barre de recherche -->
         <div class="flex-grow-1 d-flex justify-content-center">
             {% if show_search_bar %}
-                <form class="w-75" action="{% url 'app:search_results' %}" method="get">
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="q" placeholder="Rechercher..."
-                               aria-label="Rechercher" aria-describedby="search-button" value="{{ request.GET.q }}">
-                        <div class="input-group-append">
-                            <button class="btn btn-secondary" type="submit" id="search-button">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
+                <form method="GET" action="{% url 'app:search_results' %}" id="header-form" class="search-bar">
+                    <div class="search-input-wrapper">
+                        <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" name="q" placeholder="mots clés..." value="{{ request.GET.q }}">
+                        <button type="submit" class="search-button">Rechercher</button>
                     </div>
+                    <input type="hidden" name="search_location[]" value="questions">
+                    <input type="hidden" name="search_location[]" value="categories">
+                    <input type="hidden" name="search_location[]" value="variable_name">
+                    <input type="hidden" name="search_location[]" value="internal_label">
                 </form>
             {% endif %}
         </div>
@@ -131,12 +131,13 @@
         <!-- Partie droite : bulle d'aide -->
         <div class="footer-right">
             <span class="custom-info-icon" data-toggle="custom-popover">
-                <img src="{% static 'svg/icons/help.svg' %}" alt="info" class="information-icon" />
+                <img src="{% static 'svg/icons/help.svg' %}" alt="info" class="information-icon"/>
             </span>
 
             <div class="custom-popover-content" style="display: none;">
-                <a href="https://www.sciencespo.fr/fr/termes-legaux/" target="_blank" class="popover-link">Mentions légales</a>
-                <hr class="popover-divider" />
+                <a href="https://www.sciencespo.fr/fr/termes-legaux/" target="_blank" class="popover-link">Mentions
+                    légales</a>
+                <hr class="popover-divider"/>
                 <p class="popover-meta">Mis à jour le 10/06/2025</p>
                 <p class="popover-meta">Copyright © 2025,<br> Sciences Po</p>
             </div>
@@ -150,46 +151,46 @@
 {% endblock %}
 
 <script>
-$(document).ready(function () {
-    let $currentPopover = null;
+    $(document).ready(function () {
+        let $currentPopover = null;
 
-    $('[data-toggle="custom-popover"]').on('click', function (e) {
-        e.stopPropagation();
+        $('[data-toggle="custom-popover"]').on('click', function (e) {
+            e.stopPropagation();
 
-        // Fermer le popover actuel s'il existe
-        if ($currentPopover) {
-            $currentPopover.remove();
-            $currentPopover = null;
-            return;
-        }
+            // Fermer le popover actuel s'il existe
+            if ($currentPopover) {
+                $currentPopover.remove();
+                $currentPopover = null;
+                return;
+            }
 
-        // Créer le popover
-        const content = $(this).next('.custom-popover-content').html();
-        const $popover = $('<div class="custom-popover-box ui-tooltip"></div>').html(content);
+            // Créer le popover
+            const content = $(this).next('.custom-popover-content').html();
+            const $popover = $('<div class="custom-popover-box ui-tooltip"></div>').html(content);
 
-        $('body').append($popover);
+            $('body').append($popover);
 
-        // Positionner à gauche de l'élément cliqué
-        const offset = $(this).offset();
-        const elementHeight = $(this).outerHeight();
-        const popoverWidth = $popover.outerWidth();
+            // Positionner à gauche de l'élément cliqué
+            const offset = $(this).offset();
+            const elementHeight = $(this).outerHeight();
+            const popoverWidth = $popover.outerWidth();
 
-        $popover.css({
-            top: offset.top + elementHeight / 2 - $popover.outerHeight() / 2 -50,
-            left: offset.left - popoverWidth - 20
+            $popover.css({
+                top: offset.top + elementHeight / 2 - $popover.outerHeight() / 2 - 50,
+                left: offset.left - popoverWidth - 20
+            });
+
+            $currentPopover = $popover;
         });
 
-        $currentPopover = $popover;
+        // Fermer si on clique ailleurs
+        $(document).on('click', function () {
+            if ($currentPopover) {
+                $currentPopover.remove();
+                $currentPopover = null;
+            }
+        });
     });
-
-    // Fermer si on clique ailleurs
-    $(document).on('click', function () {
-        if ($currentPopover) {
-            $currentPopover.remove();
-            $currentPopover = null;
-        }
-    });
-});
 
 </script>
 
