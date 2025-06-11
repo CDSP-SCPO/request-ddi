@@ -19,7 +19,7 @@
             <div class="container-custom-font">
                 <p class="custom-large-title">{% trans "Découvrez, comparez et réutilisez des questions d'enquêtes en sciences humaines et sociales" %}</p>
             </div>
-            <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
+            <form method="GET" action="{% url 'app:search_results' %}" class="search-bar homepage-search-form">
                 <div class="search-input-wrapper">
                     <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
                     <input type="text" name="q" placeholder="mots clés..." value="{{ request.GET.q }}"
@@ -31,8 +31,6 @@
                 <input type="hidden" name="search_location[]" value="variable_name">
                 <input type="hidden" name="search_location[]" value="internal_label">
             </form>
-
-
         </section>
 
     </div>
