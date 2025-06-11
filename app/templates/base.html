@@ -53,8 +53,7 @@
                 <form method="GET" action="{% url 'app:search_results' %}" id="header-form" class="search-bar">
                     <div class="search-input-wrapper">
                         <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" name="q" placeholder="mots clés..." value="{{ request.GET.q }}"
-                               id="autocomplete-input">
+                        <input type="text" name="q" placeholder="mots clés..." value="{{ request.GET.q }}">
                         <button type="submit" class="search-button">Rechercher</button>
                     </div>
                     <input type="hidden" name="search_location[]" value="questions">
