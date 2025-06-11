@@ -13,6 +13,23 @@ body {
     color: #536254;
 }
 
+.custom-large-title {
+    font-size: 2.2rem;
+}
+
+.container-custom-font {
+    max-width: 750px;
+    margin: 0 auto;
+}
+
+.container-homepage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 50vh;
+}
+
+
 /* Header */
 header {
     background-color: #00466b;
@@ -66,7 +83,6 @@ section.hero h2 {
 }
 
 section.hero p {
-    font-size: 1.2rem;
     color: #666;
 }
 
@@ -79,7 +95,6 @@ section.hero p {
     width: 300px;
     border: 1px solid #ddd;
     border-radius: 50px; /* Bordures arrondies */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Ombre douce */
 }
 
 .search-bar select {
@@ -91,11 +106,60 @@ section.hero p {
 
 .search-bar button {
     padding: 12px 20px;
-    border-radius: 50px;
+    border-radius: 16px;
     cursor: pointer;
     transition: background-color 0.3s ease;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
+
+
+
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 750px;
+    margin: 0 auto;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    overflow: hidden;
+    padding: 3px;
+}
+
+.search-icon {
+    padding: 0 15px;
+    color: #888;
+    font-size: 1rem;
+}
+
+.search-input-wrapper input[type="text"] {
+    flex: 1;
+    border: none;
+    padding: 12px 10px;
+    outline: none;
+    font-size: 1rem;
+    border-radius: 0; /* pas de bordure interne */
+}
+
+
+.search-button {
+    background-color: #536254; /* ta couleur personnalisée */
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 0 50px 50px 0; /* arrondi à droite uniquement */
+    height: 100%; /* pour qu’il épouse la hauteur du champ */
+    transition: background-color 0.3s ease;
+}
+
+
+
+
 
 
 /* Section Features */
