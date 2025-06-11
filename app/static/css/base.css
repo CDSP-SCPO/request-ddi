@@ -167,7 +167,6 @@ header{
     width: 100%;
     text-align: center;
     padding: 1rem 0;
-    height: 6%;
     background-color: #F9FFFA;
 }
 
@@ -285,4 +284,53 @@ header{
 
 .ft-600{
     font-weight: 600;
+}
+
+
+.ui-tooltip  {
+    background-color: #EFF7F0 !important;
+    color: #1F1F1F !important;
+    border-radius: 16px !important;
+    border: 1px solid #D3DFD5 !important;
+    padding: 16px !important;
+    max-width: 500px !important;
+    text-align: left !important;
+    box-shadow: none!important;
+    max-width:300px!important;
+}
+
+/* TOOLTIP MENTIONS LÉGALES */
+.custom-popover-box::after {
+    content: "";
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px;
+    border-style: solid;
+    border-color: #EFF7F0 transparent transparent transparent;
+}
+.popover-link {
+    color: #1F1F1F;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.popover-link:hover {
+    text-decoration: underline;
+}
+
+.popover-divider {
+    width: 90%;
+    border-top: 1px solid #D3DFD5;
+}
+
+.popover-meta {
+    color: #6c757d; /* gris doux */
+    font-size: 0.85rem;
+    margin: 4px 0;
+}
+
+.custom-popover-box a {
+    font-size: 0.9em;
 }
