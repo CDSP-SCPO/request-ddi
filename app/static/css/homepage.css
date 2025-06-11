@@ -6,7 +6,7 @@ body {
     background-color: #ffffff; /* Couleur beige douce */
 }
 
-.homepage-title{
+.homepage-title {
     font-family: 'Redaction10', sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
@@ -68,11 +68,11 @@ nav a:hover {
 
 /* Section Hero */
 section.hero {
-    width:80%;
+    width: 80%;
     color: #333;
     padding: 100px 20px;
     text-align: center;
-    margin : 0 auto;
+    margin: 0 auto;
 }
 
 
@@ -86,80 +86,10 @@ section.hero p {
     color: #666;
 }
 
-.search-bar {
+
+.homepage-search-form {
     margin-top: 30px;
 }
-
-.search-bar input[type="text"] {
-    padding: 12px 20px;
-    width: 300px;
-    border: 1px solid #ddd;
-    border-radius: 50px; /* Bordures arrondies */
-}
-
-.search-bar select {
-    padding: 12px;
-    border-radius: 50px;
-    margin-left: 10px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.search-bar button {
-    padding: 12px 20px;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-
-
-
-.search-input-wrapper {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    max-width: 750px;
-    margin: 0 auto;
-    border: 1px solid #ddd;
-    border-radius: 16px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    background-color: white;
-    overflow: hidden;
-    padding: 3px;
-}
-
-.search-icon {
-    padding: 0 15px;
-    color: #888;
-    font-size: 1rem;
-}
-
-.search-input-wrapper input[type="text"] {
-    flex: 1;
-    border: none;
-    padding: 12px 10px;
-    outline: none;
-    font-size: 1rem;
-    border-radius: 0; /* pas de bordure interne */
-}
-
-
-.search-button {
-    background-color: #536254; /* ta couleur personnalisée */
-    color: white;
-    border: none;
-    padding: 12px 25px;
-    font-size: 1rem;
-    cursor: pointer;
-    border-radius: 0 50px 50px 0; /* arrondi à droite uniquement */
-    height: 100%; /* pour qu’il épouse la hauteur du champ */
-    transition: background-color 0.3s ease;
-}
-
-
-
-
 
 
 /* Section Features */
@@ -205,7 +135,7 @@ footer {
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.study-card-link{
+.study-card-link {
     width: 100%;
 }
 
@@ -252,7 +182,7 @@ footer {
     background-color: #666666;
 }
 
-.dropdown-item.active{
+.dropdown-item.active {
     background-color: #6c757d;;
 }
 

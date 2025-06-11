@@ -3,7 +3,7 @@
     src: url('../fonts/redaction/Redaction_10-Regular.woff2') format('opentype');
     font-weight: normal;
     font-style: normal;
-  }
+}
 
 html, body {
     height: 100%;
@@ -12,57 +12,58 @@ html, body {
     flex-direction: column;
 }
 
-header{
-    height: 10%; 
-    max-height: 80px; 
+header {
+    height: 10%;
+    max-height: 80px;
 }
 
-.bg-color-principal{
-    background-color : #F9FFFA
+.bg-color-principal {
+    background-color: #F9FFFA
 }
 
-.bg-color-container{
-    background-color : white;
+.bg-color-container {
+    background-color: white;
 }
 
-.custom-large-title{
+.custom-large-title {
     font-family: 'Redaction10', sans-serif;
-    letter-spacing:0.2px;
+    letter-spacing: 0.2px;
     line-height: 40px;
     font-weight: 400;
-    font-size:32px;
+    font-size: 32px;
 
 }
 
-.custom-title-1{
+.custom-title-1 {
     font-family: "Inter Tight", sans-serif;
     font-weight: 600;
-    letter-spacing:0.5px;
+    letter-spacing: 0.5px;
     font-size: 24px;
     line-height: 24px;
 }
 
-.custom-title-2{
-    letter-spacing:0.1px;
+.custom-title-2 {
+    letter-spacing: 0.1px;
     line-height: 32px;
     font-family: "Inter Tight", sans-serif;
     font-weight: 400;
     font-size: 20px;
 }
-.custom-title-2-bold{
+
+.custom-title-2-bold {
     font-weight: 600;
 }
 
-.custom-headline{
-    letter-spacing:0.5px;
+.custom-headline {
+    letter-spacing: 0.5px;
     line-height: 24px;
     font-family: "Inter Tight", sans-serif;
     font-weight: 500;
     font-size: 16px;
 }
 
-.custom-body{
-    letter-spacing:0.1px;
+.custom-body {
+    letter-spacing: 0.1px;
     line-height: 32px;
     font-family: "Inter Tight", sans-serif;
     font-weight: 400;
@@ -70,29 +71,29 @@ header{
     vertical-align: middle;
 }
 
-.custom-body-bold{
+.custom-body-bold {
     font-weight: 500;
 }
 
-.color-grey-1{
+.color-grey-1 {
     color: #4F4F4F;
 }
 
-.color-black-1{
+.color-black-1 {
     color: #1F1F1F;
 
 }
 
-.border-bottom-custom{
+.border-bottom-custom {
     border-bottom: 1px solid #D3DFD5
 }
 
-.border-right-custom{
+.border-right-custom {
     border-right: 1px solid #D3DFD5
 }
 
-.custom-text-white-buttons{
-    font-family:  "Inter Tight", sans-serif;
+.custom-text-white-buttons {
+    font-family: "Inter Tight", sans-serif;
     font-weight: 500;
     font-size: 14px;
     line-height: 20px;
@@ -102,41 +103,37 @@ header{
     border-radius: 16px;
 
 }
-.custom-text-white-buttons:hover{
+
+.custom-text-white-buttons:hover {
     background-color: #F2FAF2;
 }
 
-.custom-text-white-buttons:active{
+.custom-text-white-buttons:active {
     background-color: #E9FCE9;
 }
 
 
-
-
-
-.custom-color-red{
+.custom-color-red {
     background-color: #e6142d;
 }
 
 
-.modality-button-base{
+.modality-button-base {
     min-width: 80px;
     border-radius: 16px;
     gap: 10px;
     border: 1px solid #D3DFD5
 }
 
-.load-more-button{
-
+.load-more-button {
     border-radius: 16px;
     gap: 10px;
     border-width: 1px;
     border: 1px solid #D3DFD5;
     background-color: #FFFFFF;
-
 }
 
-.container-custom-font{
+.container-custom-font {
     font-family: 'Source Sans Pro';
     font-style: normal;
     font-weight: 600;
@@ -146,7 +143,7 @@ header{
     color: #231F20;
 }
 
-.global-container-custom{
+.global-container-custom {
     overflow-y: auto;
     height: 84%;
     padding-top: 24px;
@@ -154,23 +151,22 @@ header{
     padding-left: 40px;
 }
 
-.inner-container-custom{
-    border : 1px solid #D3DFD5;
-    border-radius : 8px;
-    background-color : #ffffff;
+.inner-container-custom {
+    border: 1px solid #D3DFD5;
+    border-radius: 8px;
+    background-color: #ffffff;
     flex-grow: 1;
     height: 100%;
-
 }
 
-.footer-custom{
+.footer-custom {
     width: 100%;
     text-align: center;
     padding: 1rem 0;
     background-color: #F9FFFA;
 }
 
-.body-custom{
+.body-custom {
     height: 100%;
     margin: 0;
     display: flex;
@@ -194,25 +190,24 @@ header{
     border-color: #e6142d
 }
 
-.btn-outline-primary:focus,.btn-outline-primary.focus {
+.btn-outline-primary:focus, .btn-outline-primary.focus {
     box-shadow: 0 0 0 .2rem #e6142d80
 }
 
-.btn-outline-primary.disabled,.btn-outline-primary:disabled {
+.btn-outline-primary.disabled, .btn-outline-primary:disabled {
     color: #e6142d;
     background-color: transparent
 }
 
-.btn-outline-primary:not(:disabled):not(.disabled):active,.btn-outline-primary:not(:disabled):not(.disabled).active,.show>.btn-outline-primary.dropdown-toggle {
+.btn-outline-primary:not(:disabled):not(.disabled):active, .btn-outline-primary:not(:disabled):not(.disabled).active, .show > .btn-outline-primary.dropdown-toggle {
     color: #fff;
     background-color: #e6142d;
     border-color: #e6142d
 }
 
-.btn-outline-primary:not(:disabled):not(.disabled):active:focus,.btn-outline-primary:not(:disabled):not(.disabled).active:focus,.show>.btn-outline-primary.dropdown-toggle:focus {
+.btn-outline-primary:not(:disabled):not(.disabled):active:focus, .btn-outline-primary:not(:disabled):not(.disabled).active:focus, .show > .btn-outline-primary.dropdown-toggle:focus {
     box-shadow: 0 0 0 .2rem #e6142d80
 }
-
 
 .bootstrap-select .dropdown-toggle:focus {
     outline: none !important;
@@ -226,68 +221,66 @@ header{
     margin-left: 5px;
 }
 
-.logo{
+.logo {
     width: 200px; /* c'est 108 dans le figma */
 }
 
-.button-card{
+.button-card {
     border: 1px solid #D3DFD5;
     min-width: 80px;
     border-radius: 16px;
     gap: 10px;
     border-width: 1px;
-    display:inline-flex;
-    padding:12px;
+    display: inline-flex;
+    padding: 12px;
     align-items: center;
-
 }
 
-.icon-access-data{
+.icon-access-data {
     width: 30px;
     height: 15px;
 }
 
-.button-access-data{
+.button-access-data {
     background-color: #E3FFE8;
-
 }
 
 .white-button {
-    min-width:80px;
-    display:flex;
-    gap:10px;
-    padding:16px;
+    min-width: 80px;
+    display: flex;
+    gap: 10px;
+    padding: 16px;
 }
 
-.button-access-data-card{
-    background-color:transparent;
+.button-access-data-card {
+    background-color: transparent;
 }
 
-.button-access-data-card-hover:hover{
-    background-color: #E9F3EA;
-    color:#2E6831;
-}
-.button-access-data-card-hover:active{
-    background-color: #D6E9D9;
-    color:#2E6831;
-}
-
-.button-modalities-card:hover{
+.button-access-data-card-hover:hover {
     background-color: #E9F3EA;
     color: #2E6831;
 }
 
-.button-modalities-card:active{
+.button-access-data-card-hover:active {
     background-color: #D6E9D9;
     color: #2E6831;
 }
 
-.ft-600{
+.button-modalities-card:hover {
+    background-color: #E9F3EA;
+    color: #2E6831;
+}
+
+.button-modalities-card:active {
+    background-color: #D6E9D9;
+    color: #2E6831;
+}
+
+.ft-600 {
     font-weight: 600;
 }
 
-
-.ui-tooltip  {
+.ui-tooltip {
     background-color: #EFF7F0 !important;
     color: #1F1F1F !important;
     border-radius: 16px !important;
@@ -295,8 +288,8 @@ header{
     padding: 16px !important;
     max-width: 500px !important;
     text-align: left !important;
-    box-shadow: none!important;
-    max-width:300px!important;
+    box-shadow: none !important;
+    max-width: 300px !important;
 }
 
 /* TOOLTIP MENTIONS LÉGALES */
@@ -310,6 +303,7 @@ header{
     border-style: solid;
     border-color: #EFF7F0 transparent transparent transparent;
 }
+
 .popover-link {
     color: #1F1F1F;
     font-weight: bold;
@@ -334,3 +328,59 @@ header{
 .custom-popover-box a {
     font-size: 0.9em;
 }
+
+
+#header-form {
+    width: 100%;
+}
+
+/* Formulaire général */
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 750px;
+    margin: 0 auto;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    overflow: hidden;
+    padding: 3px;
+}
+
+.search-icon {
+    padding: 0 15px;
+    color: #888;
+    font-size: 1rem;
+}
+
+.search-input-wrapper input[type="text"] {
+    flex: 1;
+    border: none;
+    padding: 12px 10px;
+    outline: none;
+    font-size: 1rem;
+    border-radius: 0;
+}
+
+.search-button {
+    background-color: #536254;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 16px;
+    height: 100%;
+    transition: background-color 0.3s ease;
+}
+
+.search-bar input[type="text"] {
+    padding: 12px 20px;
+    width: 100%;
+    border-radius: 50px;
+}
+
+
+
