@@ -224,18 +224,6 @@
     display: flex;
     flex-direction: column;
 }
-.button-access-data-card{
-    background-color:transparent;
-}
-
-.button-access-data-card-hover:hover{
-    background-color: #E9F3EA;
-    color:#2E6831;
-}
-.button-access-data-card-hover:active{
-    background-color: #D6E9D9;
-    color:#2E6831;
-}
 
 .information-icon{
     width:24px;
@@ -301,9 +289,6 @@
 }
 
 
-.ft-600{
-    font-weight: 600;
-}
 
 .custom-headline{
     color:#536254;
@@ -360,29 +345,7 @@
     text-decoration: underline;
 }
 
-.button-modalities-card:hover{
-    background-color: #E9F3EA;
-    color: #2E6831;
-}
-
-.button-modalities-card:active{
-    background-color: #D6E9D9;
-    color: #2E6831;
-}
-
 .container-button-card{
     display:flex;
     gap:16px;
-}
-
-.custom-text-white-buttons:hover{
-    background-color: #F2FAF2;
-}
-
-.custom-text-white-buttons:active{
-    background-color: #E9FCE9;
-}
-
-.custom-text-white-buttons{
-    border-radius: 16px;
 }

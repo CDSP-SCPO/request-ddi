@@ -8,11 +8,11 @@
                 <div class="export-container custom-body d-flex justify-content-between align-items-center">
                     <span id="results-count">0 résultats</span>
                     <div class="d-flex align-items-center container-buttons-export">
-                        <div id="export-selected" class="button-custom" type="button">
+                        <div id="export-selected" class="white-button custom-text-white-buttons" type="button">
                             <img src="{% static 'svg/icons/export.svg' %}">
                             <span>Exporter la sélection</span>
                         </div>
-                        <div id="export-all" class="button-custom" type="button">
+                        <div id="export-all" class="white-button custom-text-white-buttons" type="button">
                             <img src="{% static 'svg/icons/export.svg' %}">
                             <span>Tout exporter</span>
                         </div>
@@ -30,7 +30,9 @@
                     </tr>
                     </thead>
                 </table>
-                <div type="button" id="load-more" class="load-more-button">Charger plus</div>
+                <div class="container-button-load-more">
+                    <div type="button" id="load-more" class="load-more-button white-button custom-text-white-buttons">Charger plus</div>
+                </div>
             </div>
         </div>
         <div class="filters-container w-30">
@@ -158,7 +160,7 @@
             </div>
             <div class="reset-filters-container padding-filters-container">
                 <div class="container-reset-button">
-                    <div type="button" id="reset-filters" class="reset-button">
+                    <div type="button" id="reset-filters" class="white-button custom-text-white-buttons">
                         <img src="{% static 'svg/icons/reset.svg' %}" class="reset-icon" alt="reset-icon">
                         <span>Réinitialiser</span>
                     </div>
@@ -171,7 +173,10 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
     <style>
-
+        
+        :root {
+            --selected-filters-container-height: 0px;
+        }
         .inner-container-custom{
             --topbar-height : 64px;
             --resetbar-height : 64px;
@@ -279,9 +284,13 @@
         }
 
         function updateTableContainerHeight() {
-            const height = $('#selected-filters-container').is(':visible') ?
-                $('#selected-filters-container').outerHeight(true) : 0;
-            document.documentElement.style.setProperty('--selected-filters-container-height', height + 'px');
+            const selectedFiltersContainer = $('#selected-filters-container');
+            if (selectedFiltersContainer.is(':visible') && selectedFiltersContainer.children().length > 0) {
+                const height = selectedFiltersContainer.outerHeight(true);
+                document.documentElement.style.setProperty('--selected-filters-container-height', height + 'px');
+            } else {
+                document.documentElement.style.setProperty('--selected-filters-container-height', '0px');
+            }
         }
 
         function updateDecadeCheckboxes(data) {
@@ -384,6 +393,7 @@
             } else {
                 filterContainer.hide();
             }
+            updateTableContainerHeight();
         }
 
         function updateFilterCounts() {
@@ -816,31 +826,32 @@
                                                     </div>
                                                 </div>
                                                 <div class="custom-metadatas">
-                                                    <div class="flex-grow-1 d-flex flex-column inner-container-metadatas">
-                                                        <div class="card-subtitle text-muted">Enquête : ${row.survey_name}</div>
-                                                        <div class="card-subtitle text-muted">Nom de la variable : ${row.variable_name}</div>
-                                                        <div class="card-subtitle text-muted">Libellé de la variable : ${row.internal_label}</div>
+                                                    <div class="flex-grow-1 d-flex flex-column inner-container-metadatas custom-body">
+                                                        <div class="card-subtitle">Enquête : <span class="ft-600"> ${row.survey_name} </span> </div>
+                                                        <div class="card-subtitle">Nom de la variable : <span class="ft-600">${row.variable_name}</span></div>
+                                                        <div class="card-subtitle">Libellé de la variable : <span class="ft-600">${row.internal_label}</span></div>
                                                     </div>
                                                 </div>
-                                                <div class="custom-card-second-part">
-                                                    <div class="container-buttons-card">
-                                                        <span type="button" id="toggle-categories" onclick="toggleCategories('categories-${row.id}')" class="button-card">
-                                                            <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
-                                                            <span>Modalités</span>
-                                                            ${caretIcon}
-                                                        </span>
+                                            </div>
+                                            <div class="custom-card-second-part">
+                                                <div class="container-buttons-card">
+                                                    <span type="button" id="toggle-categories" onclick="toggleCategories('categories-${row.id}')" class="button-card button-modalities-card">
+                                                        <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
+                                                        <span>Modalités</span>
+                                                        ${caretIcon}
+                                                    </span>
 
-                                                        <span type="button" onclick="window.location.href='${doiUrl}'" class="button-card button-access-data">
-                                                            <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
-                                                            <span>Accéder aux données</span>
-                                                        </span>
-                                                    </div>
-
-
-                                                    <div id="categories-` + row.id + `" class="categories-list mt-3" style="display: none;">
-                                                        ` + categoriesDisplay + `
-                                                    </div>
+                                                    <span type="button" onclick="window.location.href='${doiUrl}'" class="button-card button-access-data button-access-data-card-hover">
+                                                        <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
+                                                        <span>Accéder aux données</span>
+                                                    </span>
                                                 </div>
+
+
+                                                <div id="categories-` + row.id + `" class="categories-list mt-3" style="display: none;">
+                                                    ` + categoriesDisplay + `
+                                                </div>
+                                            </div>
 
                                         </div>
                                     </div>`;
@@ -965,6 +976,7 @@
         // 7. Ready: lancement initial
         // ---------------------------
         $(document).ready(async function () {
+            document.documentElement.style.setProperty('--selected-filters-container-height', '0px');
             updateTableContainerHeight();
             initializeDataTable();
             attachStaticEventListeners();
@@ -977,13 +989,13 @@
             const targetNode = document.getElementById('selected-filters-container');
             if (targetNode) {
                 const observer = new MutationObserver(function (mutations) {
-                    mutations.forEach(function (mutation) {
-                        if (mutation.attributeName === "style") {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.attributeName === "style" || mutation.type === "childList") {
                             updateTableContainerHeight();
                         }
                     });
                 });
-                observer.observe(targetNode, {attributes: true, attributeFilter: ['style']});
+                observer.observe(targetNode, { attributes: true, attributeFilter: ['style'], childList: true });
             }
         });
     </script>

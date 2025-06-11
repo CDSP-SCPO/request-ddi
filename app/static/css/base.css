@@ -21,6 +21,9 @@ header{
     background-color : #F9FFFA
 }
 
+.bg-color-container{
+    background-color : white;
+}
 
 .custom-large-title{
     font-family: 'Redaction10', sans-serif;
@@ -96,8 +99,17 @@ header{
     letter-spacing: 0.5px;
     text-align: center;
     vertical-align: middle;
+    border-radius: 16px;
 
 }
+.custom-text-white-buttons:hover{
+    background-color: #F2FAF2;
+}
+
+.custom-text-white-buttons:active{
+    background-color: #E9FCE9;
+}
+
 
 
 
@@ -116,7 +128,6 @@ header{
 
 .load-more-button{
 
-    min-width: 80px;
     border-radius: 16px;
     gap: 10px;
     border-width: 1px;
@@ -246,6 +257,33 @@ header{
     display:flex;
     gap:10px;
     padding:16px;
+}
+
+.button-access-data-card{
+    background-color:transparent;
+}
+
+.button-access-data-card-hover:hover{
+    background-color: #E9F3EA;
+    color:#2E6831;
+}
+.button-access-data-card-hover:active{
+    background-color: #D6E9D9;
+    color:#2E6831;
+}
+
+.button-modalities-card:hover{
+    background-color: #E9F3EA;
+    color: #2E6831;
+}
+
+.button-modalities-card:active{
+    background-color: #D6E9D9;
+    color: #2E6831;
+}
+
+.ft-600{
+    font-weight: 600;
 }
 
 
