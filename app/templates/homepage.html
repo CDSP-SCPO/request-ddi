@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load i18n %} 
+{% load i18n %}
 
 
 {% block content %}
@@ -20,16 +20,19 @@
                 <p class="custom-large-title">{% trans "Découvrez, comparez et réutilisez des questions d'enquêtes en sciences humaines et sociales" %}</p>
             </div>
             <form method="GET" action="{% url 'app:search_results' %}" class="search-bar">
-                <input type="text" name="q" placeholder="Rechercher une question..." value="{{ request.GET.q }}"
-                       id="autocomplete-input">
+                <div class="search-input-wrapper">
+                    <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" name="q" placeholder="mots clés..." value="{{ request.GET.q }}"
+                           id="autocomplete-input">
+                    <button type="submit" class="search-button">Rechercher</button>
+                </div>
                 <input type="hidden" name="search_location[]" value="questions">
                 <input type="hidden" name="search_location[]" value="categories">
                 <input type="hidden" name="search_location[]" value="variable_name">
                 <input type="hidden" name="search_location[]" value="internal_label">
-                <button type="submit" class="btn btn-outline-primary mx-2"><i
-                        class="fa-solid fa-magnifying-glass pr-2"></i>Rechercher
-                </button>
             </form>
+
+
         </section>
 
     </div>
@@ -40,6 +43,5 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/homepage.js' %}"></script>
 {% endblock %}
 
