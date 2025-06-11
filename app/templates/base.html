@@ -34,79 +34,79 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap"
           rel="stylesheet">
 
-    </head>
-    <body class=" bg-color-principal body-custom flex-column min-vh-100">
-        <!-- Header -->
-        <header class="bg-color-principal">
-            <div class="d-flex align-items-center justify-content-between w-100">
-                <!-- Colonne gauche : Logo -->
-                <div class="flex-grow-1 d-flex justify-content-start">
-                    <a href="{% url 'app:representedvariable_search' %}">
-                        <img class="img-fluid mb-3 logo" src="{% static 'svg/logo/REQUEST_LOGO-03.svg' %}" alt="Logo CDSP">
-                    </a>
-                </div>
-            
-                <!-- Colonne centrale : Barre de recherche -->
-                <div class="flex-grow-1 d-flex justify-content-center">
-                    {% if show_search_bar %}
-                        <form class="w-75" action="{% url 'app:search_results' %}" method="get">
-                            <div class="input-group">
-                                <input type="text" class="form-control" name="q" placeholder="Rechercher..."
-                                       aria-label="Rechercher" aria-describedby="search-button" value="{{ request.GET.q }}">
-                                <div class="input-group-append">
-                                    <button class="btn btn-secondary" type="submit" id="search-button">
-                                        <i class="fas fa-search"></i>
+</head>
+<body class=" bg-color-principal body-custom flex-column min-vh-100">
+
+<!-- Header -->
+<header class="bg-color-principal">
+    <div class="d-flex align-items-center justify-content-between w-100">
+        <!-- Colonne gauche : Logo -->
+        <div class="flex-grow-1 d-flex justify-content-start">
+            <a href="{% url 'app:representedvariable_search' %}">
+                <img class="img-fluid mb-3 logo" src="{% static 'svg/logo/REQUEST_LOGO-03.svg' %}" alt="Logo CDSP">
+            </a>
+        </div>
+
+        <!-- Colonne centrale : Barre de recherche -->
+        <div class="flex-grow-1 d-flex justify-content-center">
+            {% if show_search_bar %}
+                <form class="w-75" action="{% url 'app:search_results' %}" method="get">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" placeholder="Rechercher..."
+                               aria-label="Rechercher" aria-describedby="search-button" value="{{ request.GET.q }}">
+                        <div class="input-group-append">
+                            <button class="btn btn-secondary" type="submit" id="search-button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Colonne droite : Boutons utilisateur -->
+        <div class="flex-grow-1 d-flex justify-content-end">
+            {% if user.is_authenticated %}
+                <div class="d-flex align-items-center">
+                    <!-- CSV Buttons -->
+                    <div class="csv-buttons me-3">
+                        {% if user.is_staff %}
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-secondary dropdown-toggle"
+                                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Importer
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="{% url 'app:upload_csv' %}">Import de CSV</a>
+                                    <a class="dropdown-item" href="{% url 'app:upload_xml' %}">Import de XML</a>
+                                </div>
+                            </div>
+                        {% endif %}
+                        <a href="{% url 'app:export_page' %}" class="btn btn-secondary mx-2">Exporter CSV</a>
+                    </div>
+
+                    <!-- User Profile -->
+                    <div class="user-profile">
+                        <div class="dropdown">
+                            <a class="btn dropdown-toggle" href="#" role="button" id="userDropdown"
+                               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-user"></i> {{ user.username }}
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                                <form action="{% url 'app:logout' %}" method="post" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-sign-out-alt"></i> Déconnexion
                                     </button>
-                                </div>
-                            </div>
-                        </form>
-                    {% endif %}
-                </div>
-            
-                <!-- Colonne droite : Boutons utilisateur -->
-                <div class="flex-grow-1 d-flex justify-content-end">
-                    {% if user.is_authenticated %}
-                        <div class="d-flex align-items-center">
-                            <!-- CSV Buttons -->
-                            <div class="csv-buttons me-3">
-                                {% if user.is_staff %}
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-secondary dropdown-toggle"
-                                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            Importer
-                                        </button>
-                                        <div class="dropdown-menu">
-                                            <a class="dropdown-item" href="{% url 'app:upload_csv' %}">Import de CSV</a>
-                                            <a class="dropdown-item" href="{% url 'app:upload_xml' %}">Import de XML</a>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                                <a href="{% url 'app:export_page' %}" class="btn btn-secondary mx-2">Exporter CSV</a>
-                            </div>
-            
-                            <!-- User Profile -->
-                            <div class="user-profile">
-                                <div class="dropdown">
-                                    <a class="btn dropdown-toggle" href="#" role="button" id="userDropdown"
-                                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <i class="fas fa-user"></i> {{ user.username }}
-                                    </a>
-                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
-                                        <form action="{% url 'app:logout' %}" method="post" style="display:inline;">
-                                            {% csrf_token %}
-                                            <button type="submit" class="dropdown-item">
-                                                <i class="fas fa-sign-out-alt"></i> Déconnexion
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
+                                </form>
                             </div>
                         </div>
-                    {% endif %}
+                    </div>
                 </div>
-            </div>
-        </header>
-        
+            {% endif %}
+        </div>
+    </div>
+</header>
 
 <!-- Main content -->
 <div class="global-container-custom">
@@ -116,17 +116,88 @@
 </div>
 
 <!-- Footer -->
-<footer class="footer-custom">
-    <div class="container text-center">
-        <p>&copy; 2024 ReQuest. Tous droits réservés.</p>
+<footer class="footer-custom py-3">
+    <div class="d-flex justify-content-between align-items-center" style="padding-left: 30px; padding-right: 40px">
+        <!-- Partie gauche : deux images -->
+        <div class="footer-left d-flex align-items-center">
+            <a href="https://www.sciencespo.fr/cdsp/fr/" target="_blank" rel="noopener noreferrer">
+                <img src="{% static 'svg/logo/logo_cdsp.svg' %}" alt="Logo 1" class="me-2" style="height: 3.5rem;">
+            </a>
+            <a href="https://www.cnrs.fr/fr" target="_blank" rel="noopener noreferrer">
+                <img src="{% static 'svg/logo/logo_cnrs_bleu.svg' %}" alt="Logo 2" style="height: 2rem;">
+            </a>
+        </div>
+
+        <!-- Partie droite : bulle d'aide -->
+        <div class="footer-right">
+            <span class="custom-info-icon" data-toggle="custom-popover">
+                <img src="{% static 'svg/icons/help.svg' %}" alt="info" class="information-icon" />
+            </span>
+
+            <div class="custom-popover-content" style="display: none;">
+                <a href="https://www.sciencespo.fr/fr/termes-legaux/" target="_blank" class="popover-link">Mentions légales</a>
+                <hr class="popover-divider" />
+                <p class="popover-meta">Mis à jour le 10/06/2025</p>
+                <p class="popover-meta">Copyright © 2025,<br> Sciences Po</p>
+            </div>
+        </div>
     </div>
 </footer>
+
+
 
 {% block extra_js %}
 {% endblock %}
 
+<script>
+$(document).ready(function () {
+    let $currentPopover = null;
+
+    $('[data-toggle="custom-popover"]').on('click', function (e) {
+        e.stopPropagation();
+
+        // Fermer le popover actuel s'il existe
+        if ($currentPopover) {
+            $currentPopover.remove();
+            $currentPopover = null;
+            return;
+        }
+
+        // Créer le popover
+        const content = $(this).next('.custom-popover-content').html();
+        const $popover = $('<div class="custom-popover-box ui-tooltip"></div>').html(content);
+
+        $('body').append($popover);
+
+        // Positionner à gauche de l'élément cliqué
+        const offset = $(this).offset();
+        const elementHeight = $(this).outerHeight();
+        const popoverWidth = $popover.outerWidth();
+
+        $popover.css({
+            top: offset.top + elementHeight / 2 - $popover.outerHeight() / 2 -50,
+            left: offset.left - popoverWidth - 20
+        });
+
+        $currentPopover = $popover;
+    });
+
+    // Fermer si on clique ailleurs
+    $(document).on('click', function () {
+        if ($currentPopover) {
+            $currentPopover.remove();
+            $currentPopover = null;
+        }
+    });
+});
+
+</script>
+
+
 <link rel="stylesheet" href="{% static 'css/base.css' %}">
+
 {% block extra_css %}
 {% endblock %}
+
 </body>
 </html>
