@@ -155,6 +155,7 @@ ELASTICSEARCH_DSL = {
     'default': {
         'hosts': ELASTICSEARCH_HOST,
     },
+    'auto_sync': False
 }
 
 # Sécurités en production
