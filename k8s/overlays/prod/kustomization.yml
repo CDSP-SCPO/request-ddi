@@ -23,5 +23,9 @@ images:
     newTag: 'prod'
 
 
-patchesStrategicMerge:
-  - elasticsearch-patch.yml
+patches:
+  - path: elasticsearch-patch.yml
+    target:
+      kind: Deployment
+      name: elasticsearch
+
