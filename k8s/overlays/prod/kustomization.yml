@@ -23,3 +23,5 @@ images:
     newTag: 'prod'
 
 
+patchesStrategicMerge:
+  - elasticsearch-patch.yml
