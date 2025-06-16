@@ -8,5 +8,3 @@ spec:
       containers:
         - name: elasticsearch
           env:
-            - name: xpack.security.enabled
-              value: 'true'

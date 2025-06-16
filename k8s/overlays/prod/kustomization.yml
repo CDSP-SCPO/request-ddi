@@ -28,4 +28,9 @@ patches:
     target:
       kind: Deployment
       name: elasticsearch
+  - path: elasticsearch-configmap-patch.yml
+    target:
+      kind: ConfigMap
+      name: elasticsearch-config
+
 
