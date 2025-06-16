@@ -31,6 +31,9 @@ spec:
               value: 'true'
             - name: ES_JAVA_OPTS
               value: '-Xms1g -Xmx1g'
+            - name: xpack.security.enabled
+              value: 'false' # Valeur par défaut (préprod)
+
           ports:
             - containerPort: 9200
           volumeMounts:

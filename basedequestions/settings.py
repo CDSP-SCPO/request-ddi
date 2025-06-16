@@ -153,10 +153,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Elasticsearch configuration
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': ELASTICSEARCH_HOST,
+        'hosts': os.getenv('ELASTICSEARCH_HOST'),
+        'http_auth': (
+            os.getenv('ES_ADMIN_USER'),
+            os.getenv('ES_ADMIN_PASS')
+        )
     },
     'auto_sync': False
 }
+
 
 # Sécurités en production
 if ENVIRONMENT == 'production':
