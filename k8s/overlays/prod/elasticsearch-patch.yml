@@ -8,11 +8,13 @@ spec:
       containers:
         - name: elasticsearch
           env:
+            - name: xpack.security.enabled
+              value: "true"
             - name: ELASTIC_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-secret
-                  key: password
+                  key: ES_ADMIN_PASS
           livenessProbe:
             $patch: delete
           readinessProbe:
