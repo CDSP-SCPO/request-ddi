@@ -27,9 +27,9 @@ def delete_related_data_on_survey_delete(sender, instance, **kwargs):
     categories_without_variables = Category.objects.filter(variables__isnull=True)
     categories_without_variables.delete()
 
-# @receiver(post_save, sender=BindingSurveyRepresentedVariable)
-# def update_index(sender, instance, **kwargs):
-#     BindingSurveyDocument().update(instance)
+@receiver(post_save, sender=BindingSurveyRepresentedVariable)
+def update_index(sender, instance, **kwargs):
+    BindingSurveyDocument().update(instance)
 
 @receiver(post_delete, sender=BindingSurveyRepresentedVariable)
 def delete_index(sender, instance, **kwargs):
