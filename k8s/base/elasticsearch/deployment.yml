@@ -38,7 +38,7 @@ spec:
             - containerPort: 9200
           volumeMounts:
             - name: elasticsearch-data
-              mountPath: /var/lib/elasticsearch
+              mountPath: /usr/share/elasticsearch/data
             - name: elasticsearch-config
               mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
               subPath: elasticsearch.yml
