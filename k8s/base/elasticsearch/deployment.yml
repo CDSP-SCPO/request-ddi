@@ -28,7 +28,7 @@ spec:
             - name: cluster.name
               value: 'elasticsearch'
             - name: bootstrap.memory_lock
-              value: 'true'
+              value: 'false'
             - name: ES_JAVA_OPTS
               value: '-Xms1g -Xmx1g'
             - name: xpack.security.enabled
