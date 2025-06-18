@@ -23,3 +23,8 @@ images:
     newTag: pprd
 
 
+patches:
+  - path: patch-elasticsearch-ipclock.yaml
+    target:
+      kind: Deployment
+      name: elasticsearch
