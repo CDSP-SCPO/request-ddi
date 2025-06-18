@@ -31,11 +31,14 @@ spec:
               value: 'true'
             - name: ES_JAVA_OPTS
               value: '-Xms1g -Xmx1g'
+            - name: xpack.security.enabled
+              value: 'false' # Valeur par défaut (préprod)
+
           ports:
             - containerPort: 9200
           volumeMounts:
             - name: elasticsearch-data
-              mountPath: /var/lib/elasticsearch
+              mountPath: /usr/share/elasticsearch/data
             - name: elasticsearch-config
               mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
               subPath: elasticsearch.yml
