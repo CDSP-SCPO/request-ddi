@@ -24,7 +24,11 @@ images:
 
 
 patches:
-  - path: patch-elasticsearch-ipclock.yaml
+  - path: elasticsearch-patch.yml
     target:
       kind: Deployment
       name: elasticsearch
+  - path: elasticsearch-configmap-patch.yml
+    target:
+      kind: ConfigMap
+      name: elasticsearch-config
