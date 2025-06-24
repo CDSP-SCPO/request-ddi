@@ -45,8 +45,10 @@
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingOne">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                            <span>Types de métadonnées</span>
-                            <span class="filter-count"></span>
+                            <div class="collapse-title">
+                                <span>Types de métadonnées</span>
+                                <span class="filter-count"></span>
+                            </div>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
@@ -76,8 +78,10 @@
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingTwo">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                            <span>Collections</span>
-                            <span class="filter-count"></span>
+                            <div class="collapse-title">
+                                <span>Collections</span>
+                                <span class="filter-count"></span>
+                            </div>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
@@ -99,8 +103,10 @@
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingThree">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                            <span>Sous-Collections</span>
-                            <span class="filter-count"></span>
+                            <div class="collapse-title">
+                                <span>Sous-Collections</span>
+                                <span class="filter-count"></span>
+                            </div>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
@@ -122,8 +128,10 @@
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingFour">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
-                            <span>Enquêtes</span>
-                            <span class="filter-count"></span>
+                            <div class="collapse-title">
+                                <span>Enquêtes</span>
+                                <span class="filter-count"></span>
+                            </div>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
@@ -145,8 +153,10 @@
                 <div class="accordion-item accordion-item-custom padding-filters-container">
                     <div class="accordion-header" id="headingFive">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
-                            <span>Années</span>
-                            <span class="filter-count"></span>
+                            <div class="collapse-title">
+                                <span>Années</span>
+                                <span class="filter-count"></span>
+                            </div>
                             <i class="fas fa-caret-down"></i>
                         </div>
                     </div>
@@ -220,7 +230,7 @@
             font-size: 0.75em; /* Réduit la taille du texte dans les catégories */
         }
         .highlight-category {
-            background-color: yellow;
+            background-color: rgba(255, 70, 78, 0.15);
             font-weight: bold;
         }
         .category-dropdown a {
@@ -339,7 +349,26 @@
         }
 
 
+        function resetDependentFilters() {
+            // Réinitialiser les sous-collections
+            $('.subcollection-checkbox').prop('checked', false);
+            // Réinitialiser les enquêtes
+            $('.survey-checkbox').prop('checked', false);
+            // Réinitialiser les filtres sélectionnés
+            selectedFilters['subcollection'] = [];
+            selectedFilters['survey'] = [];
+            updateFiltersDisplay();
+            updateFilterCounts();
+        }
 
+        function resetDependentSurveyFilters() {
+            // Réinitialiser les enquêtes
+            $('.survey-checkbox').prop('checked', false);
+            // Réinitialiser les filtres sélectionnés pour les enquêtes
+            selectedFilters['survey'] = [];
+            updateFiltersDisplay();
+            updateFilterCounts();
+        }
 
         // ---------------------------
         // 3. Filtres : affichage, comptage, reset
@@ -362,7 +391,8 @@
                 if (validFilters.length > 0) {
                     hasFilters = true;
                     validFilters.forEach(function (filter) {
-                        var card = $('<div class="selected-filter-card"> <span>' + filter.label + '</span> <span class="remove-filter">✖</span></div>');
+                        const crossIconPath = '{% static "svg/icons/cross.svg" %}';
+                        var card = $('<div class="selected-filter-card"> <span>' + filter.label + '</span><img type="button" class="remove-filter" src="' + crossIconPath + '"></div>');
                         card.find('.remove-filter').click(function () {
                             var index = selectedFilters[key].findIndex(f => f.value === filter.value);
                             if (index !== -1) {
@@ -404,7 +434,7 @@
                 var filterCountElement = accordionItem.find('.filter-count');
 
                 if (count > 0) {
-                    filterCountElement.text(count).show();
+                    filterCountElement.text(count).css('display', 'flex').show();
                 } else {
                     filterCountElement.hide();
                 }
@@ -636,6 +666,7 @@
         }
 
         function handleFilterChange(filterType, filterValue, filterLabel) {
+            selectedIds.clear();
             if (!selectedFilters[filterType]) {
                 selectedFilters[filterType] = [];
             }
@@ -652,6 +683,16 @@
             loadDecades(); //
             $('#survey-table').DataTable().ajax.reload(); // Reload based on new filters
         }
+
+        function updateCheckboxes() {
+                $('#survey-table tbody input[type="checkbox"]').each(function() {
+                    if (selectedIds.has(this.value)) {
+                        this.checked = true;
+                    } else {
+                        this.checked = false;
+                    }
+                });
+            }
 
         async function applyFiltersFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -753,6 +794,9 @@
         "dom": 'rt',
         "info": false,
         "ordering": false,
+        "drawCallback": function(settings) {
+            updateCheckboxes();
+        },
 
         "ajax": {
             "url": "{% url 'app:search_results_data' %}",
@@ -877,6 +921,8 @@
 
                 handleFilterChange(filterType, filterValue, filterLabel);
                 updateFilterCounts();
+                // Réinitialiser les filtres dépendants pour les enquêtes
+                resetDependentSurveyFilters();
                 if (filterType === 'subcollection') {
                     const selectedSubcollections = $('.subcollection-checkbox:checked').map(function () {
                         return this.value;
@@ -914,6 +960,9 @@
                 handleFilterChange(filterType, filterValue, filterLabel);
                 updateFilterCounts();
 
+                // Réinitialiser les filtres dépendants
+                resetDependentFilters();
+
                 if (filterType === 'collection') {
                     const selectedCollections = $('.collection-checkbox:checked').map(function () {
                         return this.value;
@@ -940,10 +989,9 @@
                 table.ajax.reload();
             });
 
-
             $('#load-more').on('click', function () {
                 currentLimit += 10;
-                table.ajax.reload(null, false);
+                table.ajax.reload(updateCheckboxes, false);
             });
 
             $('#export-all').on('click', function () {
@@ -952,7 +1000,22 @@
 
             $('#export-selected').on('click', function () {
                 if (selectedIds.size === 0) {
-                    alert('Veuillez sélectionner au moins une question à exporter.');
+                    Swal.fire({
+                        html: `
+                            <div style="text-align: center;">
+                                <img src="{% static 'svg/icons/checkbox_checked_swal.svg' %}" alt="Checked Box" style="width: 32px; height: 32px;">
+                            </div>
+                            <div>
+                                Veuillez sélectionner au moins une question à exporter.
+                            </div>
+                        `,
+                        confirmButtonText: 'Fermer',
+                        confirmButtonColor: '#536254',
+                        customClass: {
+                            popup: 'custom-swal-popup custom-title-2',
+                            confirmButton: 'custom-swal-button '
+                        }
+                    });
                     return;
                 }
                 const query = Array.from(selectedIds).map(id => `ids=${id}`).join('&');
@@ -960,8 +1023,11 @@
             });
 
             $('#survey-table tbody').on('change', 'input[type="checkbox"]', function () {
-                if (this.checked) selectedIds.add(this.value);
-                else selectedIds.delete(this.value);
+                if (this.checked) {
+                    selectedIds.add(this.value);
+                } else {
+                    selectedIds.delete(this.value);
+                }
 
                 const all = $('#survey-table tbody input[type="checkbox"]');
                 const checked = $('#survey-table tbody input[type="checkbox"]:checked');

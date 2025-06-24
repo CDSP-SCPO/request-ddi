@@ -24,6 +24,8 @@
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.14/css/bootstrap-select.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.14/js/bootstrap-select.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@600&display=swap" rel="stylesheet">
@@ -130,7 +132,7 @@
 
         <!-- Partie droite : bulle d'aide -->
         <div class="footer-right">
-            <span class="custom-info-icon" data-toggle="custom-popover">
+            <span type="button" class="custom-info-icon" data-toggle="custom-popover">
                 <img src="{% static 'svg/icons/help.svg' %}" alt="info" class="information-icon"/>
             </span>
 

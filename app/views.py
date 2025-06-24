@@ -637,7 +637,7 @@ class SearchResultsDataView(ListView):
                     label = getattr(cat, 'category_label', 'N/A')
                     if category_matched and label == remove_html_tags(category_matched):
                         all_clean_categories.append(
-                            f"<tr><td class='code-cell'><mark style='background-color: yellow;'>{code}</mark></td><td class='text-cell'><mark style='background-color: yellow;'>{label}</mark></td></tr>"
+                            f"<tr><td class='code-cell'><mark style='background-color: rgba(255, 70, 78, 0.15);'>{code}</mark></td><td class='text-cell'><mark style='background-color: rgba(255, 70, 78, 0.15);'>{label}</mark></td></tr>"
                         )
                     else:
                         all_clean_categories.append(
