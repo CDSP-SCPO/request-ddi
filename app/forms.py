@@ -1,80 +1,17 @@
 # forms.py
 # -- STDLIB
 import csv
-import io
 
 # -- DJANGO
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
-from django.core.exceptions import ValidationError
 from django.forms import ModelForm
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .models import (
-    BindingSurveyRepresentedVariable, Collection, Distributor, Subcollection,
-    Survey,
-)
-
-
-class CSVUploadForm(forms.Form):
-    csv_file = forms.FileField(label='Select a CSV file')
-    required_columns = ['doi', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes']
-    validate_duplicates = True
-
-    def clean_csv_file(self):
-        csv_file = self.cleaned_data['csv_file']
-        if not csv_file.name.endswith('.csv'):
-            raise forms.ValidationError("Le fichier doit être au format CSV.")
-        try:
-            decoded_file = csv_file.read().decode('utf-8').splitlines()
-            sample = '\n'.join(decoded_file[:2])
-            sniffer = csv.Sniffer()
-            delimiter = sniffer.sniff(sample).delimiter
-            reader = csv.DictReader(decoded_file, delimiter=delimiter)
-
-            # Validation des colonnes manquantes
-            self.validate_columns(reader.fieldnames)
-
-            self.cleaned_data['decoded_csv'] = decoded_file
-
-            return decoded_file
-        except csv.Error as e:
-            raise forms.ValidationError(f"Erreur lors de la lecture du fichier CSV : {str(e)}")
-        except UnicodeDecodeError:
-            raise forms.ValidationError("Erreur de décodage du fichier CSV. Assurez-vous qu'il est encodé en UTF-8.")
-        except forms.ValidationError as ve:
-            raise ve
-        except Exception as e:
-            raise forms.ValidationError(f"Erreur inattendue : {str(e)}")
-
-    def validate_columns(self, fieldnames):
-        """Valide les colonnes manquantes dans le fichier CSV."""
-        missing_columns = [col for col in self.required_columns if col not in fieldnames]
-        if missing_columns:
-            raise forms.ValidationError(f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}")
-
-    def validate_duplicates_check(self):
-        """Check des doublons après validation des colonnes."""
-        if not self.cleaned_data.get('decoded_csv') or not self.validate_duplicates:
-            return  # Évite de répéter le check si une erreur a été trouvée précédemment
-
-        decoded_file = self.cleaned_data['decoded_csv']
-        reader = csv.DictReader(decoded_file)
-        duplicate_variables = []
-
-        for row in reader:
-            variable_name = row.get('variable_name')
-            if variable_name and BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name).exists():
-                duplicate_variables.append(variable_name)
-
-        if duplicate_variables:
-            raise forms.ValidationError({
-                'csv_file': f"Les variables suivantes existent déjà : {', '.join(duplicate_variables)}"
-            })
-
+from .models import Collection, Distributor
 
 
 class XMLUploadForm(forms.Form):

@@ -6,21 +6,16 @@ from django.urls import path
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .views import (
-    CSVUploadView, CSVUploadViewCollection, CustomLoginView,
-    QuestionDetailView, RepresentedVariableSearchView, SearchResultsDataView,
-    XMLUploadView, check_duplicates, check_media_root, create_distributor,
-    export_page, get_distributor, get_subcollections_by_collections,
-    get_surveys_by_collections, get_surveys_by_subcollections, search_results,
-    similar_conceptual_variable_questions,
-    similar_representative_variable_questions,
-    get_years_by_decade,
-    get_decades
+    CSVUploadViewCollection, CustomLoginView, QuestionDetailView,
+    RepresentedVariableSearchView, SearchResultsDataView, XMLUploadView,
+    export_page, search_results,
 )
+
+from.views_ajax import check_duplicates, check_media_root, create_distributor, get_distributor, get_surveys_by_subcollections, get_surveys_by_collections, get_subcollections_by_collections, similar_conceptual_variable_questions, similar_representative_variable_questions, get_years_by_decade, get_decades
 
 app_name = 'app'
 
 urlpatterns = [
-    path('upload-csv/', CSVUploadView.as_view(), name='upload_csv'),
     path('upload-xml/', XMLUploadView.as_view(), name='upload_xml'),
     path('', RepresentedVariableSearchView.as_view(), name='representedvariable_search'),
     path('search-results/', search_results, name='search_results'),  
