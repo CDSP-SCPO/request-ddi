@@ -1,13 +1,10 @@
 # -- STDLIB
 import csv
-import os
-import re
 from datetime import datetime
 from html import unescape
 
 # -- DJANGO
 from django import forms
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.views import LoginView
 from django.db import IntegrityError, transaction
@@ -21,15 +18,13 @@ from django.views.generic import ListView
 from django.views.generic.edit import FormView
 
 # -- THIRDPARTY
-import requests
 from bs4 import BeautifulSoup
 from elasticsearch_dsl import Q
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
 from .forms import (
-    CSVUploadForm, CSVUploadFormCollection, CustomAuthenticationForm,
-    XMLUploadForm,
+    CSVUploadFormCollection, CustomAuthenticationForm, XMLUploadForm,
 )
 from .models import (
     BindingSurveyRepresentedVariable, Category, Collection, ConceptualVariable,
@@ -39,10 +34,10 @@ from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
 
-from .utils.sort import alphanum_key
 
-
-class BaseUploadView(FormView):
+class XMLUploadView(FormView):
+    template_name = 'upload_xml.html'
+    form_class = XMLUploadForm
     success_url = reverse_lazy('app:representedvariable_search')
 
     def handle_error(self, message, form=None):
@@ -90,7 +85,6 @@ class BaseUploadView(FormView):
         # Ajouter les erreurs du formulaire à la liste des messages
         for field, field_errors in errors.items():
             for error in field_errors:
-                # Nettoyer le message d'erreur pour enlever les crochets
                 cleaned_error = str(error).strip("[]").strip("'")
                 error_messages.append(cleaned_error)
 
@@ -115,23 +109,132 @@ class BaseUploadView(FormView):
         return context
 
     def add_form_to_context(self, context):
-        """Ajouter le formulaire spécifique au contexte."""
-        raise NotImplementedError("Cette méthode doit être implémentée dans les sous-classes.")
+        context['xml_form'] = XMLUploadForm()
 
     def get_data(self, form):
-        """Méthode pour obtenir les données du formulaire."""
-        pass
+        files = self.request.FILES.getlist('xml_file')
+        self.errors = []
+        return files
 
-    def convert_data(self, content):
-        """Méthode pour extraire les données."""
-        pass
+    def convert_data(self, files):
+        results = []
+        seen_invalid_dois = set()
+        for file in files:
+            print(f"\n📂 Début du traitement du fichier : {file.name}")
+            try:
+                result = self.parse_xml_file(file, seen_invalid_dois)
+                if result:
+                    print(f"✅ {len(result)} variables extraites du fichier {file.name}")
+                    results.extend(result)
+            except Exception as e:
+                self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
+                print(f"❌ Erreur lors de la lecture du fichier {file.name}: {str(e)}")
+        return results
 
+    def parse_xml_file(self, file, seen_invalid_dois):
+        start_time = datetime.now()
+        try:
+            file.seek(0)
+            content = file.read().decode('utf-8')
+            soup = BeautifulSoup(content, "xml")
+
+            doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={
+                "agency": "DataCite"}) else soup.find("IDNo").text.strip()
+            if not doi.startswith("doi:"):
+                if doi not in seen_invalid_dois:
+                    seen_invalid_dois.add(doi)
+                    self.errors.append(
+                        f"<strong>{file.name}</strong> : DOI invalide '<strong>{doi}</strong>' (doit commencer par 'doi:').")
+                return None
+
+            data = []
+            for line in soup.find_all("var"):
+                categories = " | ".join([
+                    ','.join([cat.find("catValu").text.strip() if cat.find("catValu") else '',
+                              cat.find("labl").text.strip() if cat.find("labl") else ''])
+                    for cat in line.find_all("catgry")
+                ])
+
+                data.append([
+                    doi,
+                    line["name"].strip(),
+                    line.find("labl").text.strip() if line.find("labl") else "",
+                    line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
+                    categories,
+                    line.find("universe").text.strip() if line.find("universe") else "",
+                    line.find("notes").text.strip() if line.find("notes") else "",
+                ])
+
+            end_time = datetime.now()
+            return data
+
+        except Exception as e:
+            print(f"Erreur lors du parsing du fichier {file.name}: {str(e)}")
+            return None
+
+    @transaction.atomic
     def process_data(self, question_datas):
-        """Méthode pour traiter les données."""
-        pass
+        num_records = 0
+        num_new_surveys = 0
+        num_new_variables = 0
+        num_new_bindings = 0
+        error_files = []
 
-    def get_or_create_survey(self):
-        pass
+        data_by_doi = {}
+        for question_data in question_datas:
+            doi = question_data[0]
+            if doi not in data_by_doi:
+                data_by_doi[doi] = []
+            data_by_doi[doi].append(question_data)
+
+        bindings_to_index = []
+
+        for doi, questions in data_by_doi.items():
+            try:
+                survey = Survey.objects.get(external_ref=doi)
+
+                for question_data in questions:
+                    variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
+
+                    represented_variable, created_variable = self.get_or_create_represented_variable(
+                        variable_name, question_text, category_label, variable_label
+                    )
+
+                    if created_variable:
+                        num_new_variables += 1
+
+                    binding, created_binding = self.get_or_create_binding(
+                        survey, represented_variable, variable_name, universe, notes
+                    )
+
+                    if created_binding:
+                        num_new_bindings += 1
+                        bindings_to_index.append(binding)
+
+                    num_records += 1
+
+            except Survey.DoesNotExist:
+                error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
+                error_files.append(error_message)
+                print(error_message)
+            except ValueError as ve:
+                error_message = f"DOI '{doi}': Erreur de valeur : {ve}"
+                error_files.append(error_message)
+                print(error_message)
+            except Exception as e:
+                error_message = f"DOI '{doi}': Erreur inattendue : {e}"
+                error_files.append(error_message)
+                print(error_message)
+
+        if error_files:
+            self.errors = error_files
+            error_summary = "<br/>".join(error_files)
+            raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
+
+        for binding in bindings_to_index:
+            BindingSurveyDocument().update(binding)
+
+        return num_records, num_new_surveys, num_new_variables, num_new_bindings
 
     @transaction.atomic
     def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
@@ -139,7 +242,7 @@ class BaseUploadView(FormView):
             binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
                 variable_name=variable_name,
                 survey=survey,
-                variable = represented_variable,
+                variable=represented_variable,
                 defaults={
                     'survey': survey,
                     'variable': represented_variable,
@@ -157,7 +260,6 @@ class BaseUploadView(FormView):
                     "Multiple bindings found with the same variable_name but different represented_variable.")
 
         if not created:
-            # Mise à jour des champs de la liaison si elle existe déjà
             binding.survey = survey
             binding.variable = represented_variable
             binding.universe = universe
@@ -167,7 +269,6 @@ class BaseUploadView(FormView):
         return binding, created
 
     def check_category(self, category_string, existing_categories):
-
         csv_categories = [(code, normalize_string_for_comparison(normalize_string_for_database(label))) for code, label
                           in self.parse_categories(category_string)] if category_string else []
         existing_categories_list = [(category.code, normalize_string_for_comparison(category.category_label)) for
@@ -209,13 +310,12 @@ class BaseUploadView(FormView):
 
     @transaction.atomic
     def get_or_create_represented_variable(self, variable_name, question_text, category_label, variable_label):
-        """Gérer la création ou la mise à jour d'une variable représentée."""
         name_question_for_database = normalize_string_for_database(question_text)
         name_question_for_comparison = normalize_string_for_comparison(name_question_for_database)
 
         cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
 
-        if name_question_for_comparison :
+        if name_question_for_comparison:
             if name_question_for_comparison in cleaned_questions:
                 var_represented = RepresentedVariable.objects.filter(
                     question_text=cleaned_questions[name_question_for_comparison].question_text
@@ -237,209 +337,6 @@ class BaseUploadView(FormView):
                                                         category_label,
                                                         variable_label), True
 
-
-class CSVUploadView(BaseUploadView):
-    template_name = 'upload_csv.html'
-    form_class = CSVUploadForm
-
-    def add_form_to_context(self, context):
-        context['csv_form'] = CSVUploadForm()
-
-    def get_data(self, form):
-        return form.cleaned_data['csv_file']
-
-    def convert_data(self, content):
-        return csv.DictReader(content)
-
-    @transaction.atomic
-    def process_data(self, question_datas):
-        num_records = 0
-        num_new_surveys = 0
-        num_new_variables = 0
-        num_new_bindings = 0
-        error_lines = []
-
-        for line_number, row in enumerate(question_datas, start=1):
-            try:
-                with transaction.atomic():
-                    survey = Survey.objects.get(external_ref=row["doi"])
-
-                    represented_variable, created_variable = self.get_or_create_represented_variable(
-                        row["variable_name"], row["question_text"], row["category_label"], row["variable_label"])
-                    if created_variable:
-                        num_new_variables += 1
-
-                    binding, created_binding = self.get_or_create_binding(
-                        survey, represented_variable,
-                        row['variable_name'],
-                        row.get('univers', ''),
-                        row.get('notes', ''),
-                    )
-                    if created_binding:
-                        num_new_bindings += 1
-
-                    num_records += 1
-
-            except Survey.DoesNotExist:
-                error_message = f"Ligne {line_number}: DOI '{row['doi']}' non trouvé dans la base de données."
-                error_lines.append(error_message)
-            except ValueError as ve:
-                error_message = f"Ligne {line_number}: Erreur de format de date : {ve}"
-                error_lines.append(error_message)
-            except Exception as e:
-                error_message = f"Ligne {line_number}: Erreur inattendue : {e}"
-                error_lines.append(error_message)
-
-        if error_lines:
-            error_summary = "<br/>".join(error_lines)
-            raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
-
-        return num_records, num_new_surveys, num_new_variables, num_new_bindings
-
-
-class XMLUploadView(BaseUploadView):
-    template_name = 'upload_xml.html'
-    form_class = XMLUploadForm
-
-
-    def add_form_to_context(self, context):
-        context['xml_form'] = XMLUploadForm()
-
-    def get_data(self, form):
-        files = self.request.FILES.getlist('xml_file')
-        self.errors = []
-        return files
-
-    def convert_data(self, files):
-        results = []
-        seen_invalid_dois = set()
-        for file in files:
-            print(f"\n📂 Début du traitement du fichier : {file.name}")
-            try:
-                result = self.parse_xml_file(file, seen_invalid_dois)
-                if result:
-                    print(f"✅ {len(result)} variables extraites du fichier {file.name}")
-                    results.extend(result)
-            except Exception as e:
-                self.errors.append(f"Erreur lors de la lecture du fichier {file.name}: {str(e)}")
-                print(f"❌ Erreur lors de la lecture du fichier {file.name}: {str(e)}")
-        return results
-
-
-    def parse_xml_file(self, file, seen_invalid_dois):
-        """Parser un fichier XML et retourner ses données."""
-        start_time = datetime.now()  # Début du parsing
-        try:
-
-            file.seek(0)
-            content = file.read().decode('utf-8')
-            soup = BeautifulSoup(content, "xml")
-
-            # Récupérer DOI et titre
-            doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={
-                "agency": "DataCite"}) else soup.find("IDNo").text.strip()
-            if not doi.startswith("doi:"):
-                if doi not in seen_invalid_dois:
-                    seen_invalid_dois.add(doi)
-                    self.errors.append(
-                        f"<strong>{file.name}</strong> : DOI invalide '<strong>{doi}</strong>' (doit commencer par 'doi:').")
-                return None
-
-            data = []
-            for line in soup.find_all("var"):
-                categories = " | ".join([
-                    ','.join([cat.find("catValu").text.strip() if cat.find("catValu") else '',
-                              cat.find("labl").text.strip() if cat.find("labl") else ''])
-                    for cat in line.find_all("catgry")
-                ])
-
-                data.append([
-                    doi,
-                    line["name"].strip(),
-                    line.find("labl").text.strip() if line.find("labl") else "",
-                    line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
-                    categories,
-                    line.find("universe").text.strip() if line.find("universe") else "",
-                    line.find("notes").text.strip() if line.find("notes") else "",
-                ])
-
-            end_time = datetime.now()  # Fin du parsing
-            return data
-
-        except Exception as e:
-            print(f"Erreur lors du parsing du fichier {file.name}: {str(e)}")
-            return None
-
-    @transaction.atomic
-    def process_data(self, question_datas):
-        num_records = 0
-        num_new_surveys = 0
-        num_new_variables = 0
-        num_new_bindings = 0
-        error_files = []
-
-        # Utiliser un dictionnaire pour regrouper les données par DOI
-        data_by_doi = {}
-        for question_data in question_datas:
-            doi = question_data[0]
-            if doi not in data_by_doi:
-                data_by_doi[doi] = []
-            data_by_doi[doi].append(question_data)
-
-        # Liste temporaire des bindings à indexer après validation
-        bindings_to_index = []
-
-        for doi, questions in data_by_doi.items():
-            try:
-
-                survey = Survey.objects.get(external_ref=doi)
-
-                for question_data in questions:
-                    variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
-
-                    represented_variable, created_variable = self.get_or_create_represented_variable(
-                        variable_name, question_text, category_label, variable_label
-                    )
-
-                    if created_variable:
-                        num_new_variables += 1
-
-                    binding, created_binding = self.get_or_create_binding(
-                        survey, represented_variable, variable_name, universe, notes
-                    )
-
-                    if created_binding:
-                        num_new_bindings += 1
-                        bindings_to_index.append(binding)
-
-                    num_records += 1
-
-            except Survey.DoesNotExist:
-                error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
-                error_files.append(error_message)
-                print(error_message)
-            except ValueError as ve:
-                error_message = f"DOI '{doi}': Erreur de valeur : {ve}"
-                error_files.append(error_message)
-                print(error_message)
-            except Exception as e:
-                error_message = f"DOI '{doi}': Erreur inattendue : {e}"
-                error_files.append(error_message)
-                print(error_message)
-
-        # Si des erreurs ont été rencontrées, on les affiche
-        if error_files:
-            self.errors = error_files
-            error_summary = "<br/>".join(error_files)
-            raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
-
-        # Sinon, tout est OK, on peut indexer les bindings
-        for binding in bindings_to_index:
-            BindingSurveyDocument().update(binding)
-            
-        return num_records, num_new_surveys, num_new_variables, num_new_bindings
-
-
 class RepresentedVariableSearchView(ListView):
     model = RepresentedVariable
     template_name = 'homepage.html'  # Nom du template
@@ -451,7 +348,6 @@ class RepresentedVariableSearchView(ListView):
         context['success_message'] = self.request.GET.get('success_message', None)
         context['upload_stats'] = self.request.GET.get('upload_stats', None)
         return context
-
 
 class SearchResultsDataView(ListView):
     model = BindingSurveyDocument
@@ -695,6 +591,7 @@ class SearchResultsDataView(ListView):
 
         except Exception as e:
             print(f"❌ Erreur dans post(): {e}")
+            # -- STDLIB
             import traceback
             traceback.print_exc()
             return JsonResponse({"error": str(e)}, status=500)
@@ -961,60 +858,6 @@ def search_results(request):
     return render(request, 'search_results.html', context)
 
 
-def similar_representative_variable_questions(request, question_id):
-    question = get_object_or_404(BindingSurveyRepresentedVariable, id=question_id)
-
-    rep_variable = question.variable
-    questions_from_rep_variable = BindingSurveyRepresentedVariable.objects.filter(variable=rep_variable).exclude(
-        id=question_id)
-
-    data = []
-    for similar_question in questions_from_rep_variable:
-        data.append({
-            "id": similar_question.id,
-            "variable_name": similar_question.variable_name,
-            "question_text": similar_question.variable.question_text,
-            "internal_label": similar_question.variable.internal_label or "N/A",
-            "survey": similar_question.survey.name
-        })
-
-    return JsonResponse({
-        "recordsTotal": len(questions_from_rep_variable),
-        "recordsFiltered": len(questions_from_rep_variable),
-        "data": data
-    })
-
-
-def similar_conceptual_variable_questions(request, question_id):
-    question = get_object_or_404(BindingSurveyRepresentedVariable, id=question_id)
-    rep_variable = question.variable
-
-    conceptual_variable = rep_variable.conceptual_var
-
-    questions_from_conceptual_variable = BindingSurveyRepresentedVariable.objects.filter(
-        variable__conceptual_var=conceptual_variable).exclude(id=question_id)
-
-    data = []
-    for similar_question in questions_from_conceptual_variable:
-        data.append({
-            "id": similar_question.id,
-            "variable_name": similar_question.variable_name,
-            "question_text": similar_question.variable.question_text,
-            "internal_label": similar_question.variable.internal_label or "N/A",
-            "survey": similar_question.survey.name
-        })
-
-    return JsonResponse({
-        "recordsTotal": len(questions_from_conceptual_variable),
-        "recordsFiltered": len(questions_from_conceptual_variable),
-        "data": data
-    })
-
-
-def remove_html_tags(text):
-    """Supprime toutes les balises HTML d'une chaîne de caractères."""
-    return re.sub(r'<[^>]+>', '', text)
-
 
 def export_page(request):
     collections = Collection.objects.all()
@@ -1023,247 +866,4 @@ def export_page(request):
     return render(request, 'export_csv.html', context)
 
 
-def admin_required(user):
-    return user.is_authenticated and user.is_staff
 
-
-def check_media_root(request):
-    # Vérifier si le répertoire MEDIA_ROOT existe
-    if not os.path.exists(settings.MEDIA_ROOT):
-        return JsonResponse({"error": "MEDIA_ROOT directory does not exist."})
-
-    # Parcourir les fichiers et dossiers dans MEDIA_ROOT
-    media_files_info = []
-    for root, dirs, files in os.walk(settings.MEDIA_ROOT):
-        for name in files:
-            file_path = os.path.join(root, name)
-            relative_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
-
-            # Tenter de construire l'URL de l'image et vérifier si l'URL est accessible
-            file_url = os.path.join(settings.MEDIA_URL, relative_path).replace("\\", "/")
-            file_exists = check_file_access(file_url)
-
-            # Obtenir les informations sur le fichier
-            file_info = {
-                "name": name,
-                "relative_path": relative_path,
-                "size": os.path.getsize(file_path),  # Taille en octets
-                "last_modified": datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat(),
-                "url": file_url,
-                "accessible": file_exists,
-            }
-            media_files_info.append(file_info)
-
-    return JsonResponse({
-        "MEDIA_ROOT": str(settings.MEDIA_ROOT),
-        "MEDIA_URL": settings.MEDIA_URL,
-        "file_count": len(media_files_info),
-        "files": media_files_info,
-    })
-
-
-def check_file_access(file_url):
-    """
-    Fonction qui essaie de faire une requête HTTP GET pour vérifier si l'URL du fichier est accessible.
-    Retourne True si le fichier est accessible, sinon False.
-    """
-
-    # Construire l'URL complète (en prenant en compte la configuration du domaine et du path)
-    # Ici, on assume que l'URL du fichier est accessible via un domaine public
-    full_url = f"http://{settings.ALLOWED_HOSTS[0]}{file_url}"
-
-    try:
-        response = requests.get(full_url)
-        # Si le code de réponse est 200, cela signifie que le fichier est accessible
-        return response.status_code == 200
-    except requests.exceptions.RequestException:
-        # Si une exception se produit, on considère que le fichier n'est pas accessible
-        return False
-
-
-@csrf_exempt
-def check_duplicates(request):
-    if request.method == 'POST':
-        # Récupérer soit le fichier CSV, soit le fichier XML
-        file = request.FILES.get('csv_file') or request.FILES.get('xml_file')
-
-        if not file:
-            return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
-        decoded_file = file.read().decode('utf-8', errors='replace').splitlines()
-
-        # Vérifier si c'est un fichier XML
-        if file.name.endswith('.xml'):
-            soup = BeautifulSoup("\n".join(decoded_file), 'xml')
-            existing_variables = []
-            variable_survey_id = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo",
-                                                                                                           attrs={
-                                                                                                               "agency": "DataCite"}) else soup.find(
-                "IDNo").text.strip()
-            for var in soup.find_all('var'):
-                variable_name = var.get('name', '').strip()
-                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name,
-                                                                                    survey__external_ref=variable_survey_id)
-                if existing_bindings.exists():
-                    existing_variables.append(variable_name)
-
-        # Vérifier si c'est un fichier CSV
-        elif file.name.endswith('.csv'):
-            reader = csv.DictReader(decoded_file)
-            existing_variables = []
-            for row in reader:
-                variable_name = row['variable_name']
-                variable_survey_id = row['doi']
-                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name,
-                                                                                    survey__external_ref=variable_survey_id)
-                if existing_bindings.exists():
-                    existing_variables.append(variable_name)
-
-        else:
-            return JsonResponse({'error': 'Format de fichier non supporté'}, status=400)
-        if existing_variables:
-            return JsonResponse({'status': 'exists', 'existing_variables': existing_variables})
-        else:
-            return JsonResponse({'status': 'no_duplicates'})
-
-    return JsonResponse({'error': 'Requête invalide'}, status=400)
-
-
-def get_surveys_by_collections(request):
-    collections_ids = request.GET.get('collections_ids')
-    if collections_ids:
-        collections_ids = [int(id) for id in collections_ids.split(',')]
-        surveys = Survey.objects.filter(subcollection__collection__id__in=collections_ids).order_by('name')
-    else:
-        surveys = Survey.objects.all().order_by('name')
-
-    surveys_data = [{'id': survey.id, 'name': survey.name} for survey in surveys]
-    return JsonResponse({'surveys': surveys_data})
-
-
-def create_distributor(request):
-    if request.method == "POST":
-        name = request.POST.get('name')
-        if name:
-            Distributor.objects.get_or_create(name=name)
-            return JsonResponse({"success": True, "message": "Diffuseur ajouté avec succès."})
-        return JsonResponse({"success": False, "message": "Le nom du diffeuseur est requis."})
-    return JsonResponse({"success": False, "message": "Requête invalide."})
-
-
-def get_distributor(request):
-    distributors = Distributor.objects.all().values("id", "name")
-    return JsonResponse({"distributors": list(distributors)})
-
-
-
-
-def get_subcollections_by_collections(request):
-    collection_ids = request.GET.get('collections_ids', '').split(',')
-    collection_ids = [id for id in collection_ids if id]
-
-    if not collection_ids:
-        subcollections = Subcollection.objects.all().order_by('name')
-        surveys = Survey.objects.all().order_by('name')
-    else:
-        subcollections = Subcollection.objects.filter(collection_id__in=collection_ids).order_by('name')
-        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
-
-    surveys = list(surveys)
-    subcollections = list(subcollections)
-    subcollections.sort(key=lambda sc: alphanum_key(sc.name))
-    surveys.sort(key=lambda s: alphanum_key(s.name))
-
-    data = {
-        'subcollections': [{'id': sc.id, 'name': sc.name} for sc in subcollections],
-        'surveys': [{'id': s.id, 'name': s.name} for s in surveys],
-    }
-
-    return JsonResponse(data)
-
-
-def get_surveys_by_subcollections(request):
-    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
-    subcollection_ids = [id for id in subcollection_ids if id]
-
-    if not subcollection_ids:
-        collection_ids = request.GET.get('collections_ids', '').split(',')
-        collection_ids = [id for id in collection_ids if id]
-
-        if collection_ids:
-            surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids).order_by('name')
-        else:
-            surveys = Survey.objects.all().order_by('name')
-    else:
-        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids).order_by('name')
-
-    surveys = list(surveys)
-    surveys.sort(key=lambda s: alphanum_key(s.name))
-
-    data = {'surveys': [{'id': s.id, 'name': s.name} for s in surveys]}
-    return JsonResponse(data)
-
-def get_decades(request):
-    collection_ids = request.GET.get('collections_ids', '').split(',')
-    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
-    survey_ids = request.GET.get('survey_ids', '').split(',')
-
-    collection_ids = [id for id in collection_ids if id]
-    subcollection_ids = [id for id in subcollection_ids if id]
-    survey_ids = [id for id in survey_ids if id]
-
-    if survey_ids:
-        surveys = Survey.objects.filter(id__in=survey_ids)
-    elif subcollection_ids:
-        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids)
-    elif collection_ids:
-        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
-    else:
-        surveys = Survey.objects.all()
-
-    years = surveys.values_list('start_date', flat=True).distinct()
-
-    years = [year.year for year in years if year is not None]
-    years = list(set(years))
-    years.sort(reverse=True)
-
-    decades = {}
-    for year in years:
-        decade = (year // 10) * 10
-        if decade not in decades:
-            decades[decade] = []
-        decades[decade].append(year)
-    return JsonResponse({'decades': decades})
-
-
-def get_years_by_decade(request):
-    try:
-        decade = int(request.GET.get('decade', 0))
-    except ValueError:
-        return JsonResponse({'error': 'Invalid decade value'}, status=400)
-    start_year = decade
-    end_year = decade + 9
-    collection_ids = request.GET.get('collections_ids', '').split(',')
-    subcollection_ids = request.GET.get('subcollections_ids', '').split(',')
-    survey_ids = request.GET.get('survey_ids', '').split(',')
-
-    collection_ids = [id for id in collection_ids if id]
-    subcollection_ids = [id for id in subcollection_ids if id]
-    survey_ids = [id for id in survey_ids if id]
-
-    if survey_ids:
-        surveys = Survey.objects.filter(id__in=survey_ids)
-    elif subcollection_ids:
-        surveys = Survey.objects.filter(subcollection_id__in=subcollection_ids)
-    elif collection_ids:
-        surveys = Survey.objects.filter(subcollection__collection_id__in=collection_ids)
-    else:
-        surveys = Survey.objects.all()
-
-    years = surveys.filter(start_date__year__range=(start_year, end_year)) \
-        .values_list('start_date__year', flat=True) \
-        .distinct()
-    years = list(set(years))
-
-    years.sort()
-
-    return JsonResponse({'years': years})
