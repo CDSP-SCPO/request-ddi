@@ -441,3 +441,20 @@ table.dataTable {
     flex-direction: column;
     gap:16px;
 }
+
+.background-red-caret {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: #FFE3E4;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+  }
+
+  .background-red-caret.rotate {
+    transform: rotate(180deg);
+    background-color: transparent; /* Retire le fond rouge */
+  }
+  

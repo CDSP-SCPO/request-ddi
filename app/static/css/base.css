@@ -399,4 +399,11 @@ header {
 }
 
 
+.icon-caret {
+    transition: transform 0.3s ease;
+  }
+  
+.icon-caret.rotated {
+    transform: rotate(180deg);
+}
 

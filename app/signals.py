@@ -12,6 +12,7 @@ from .models import (
     RepresentedVariable, Survey,
 )
 
+
 @receiver(pre_delete, sender=Survey)
 def delete_related_data_on_survey_delete(sender, instance, **kwargs):
     # Récupérer toutes les liaisons (bindings) associées à l'enquête avant suppression
