@@ -714,27 +714,38 @@ class CSVUploadViewCollection(FormView):
 class ExportQuestionsCSVView(View):
     def get(self, request, *args, **kwargs):
         selected_ids = request.GET.getlist('ids')
+        survey_ids = request.GET.getlist('survey')
+        collection_ids = request.GET.getlist('collections')
+        sub_collection_ids = request.GET.getlist('sub_collections')
+        years = request.GET.getlist('years')
+        search_locations = request.GET.getlist('search_location')
+
         # Créer la réponse CSV
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="questions_export.csv"'
 
         # Définir les colonnes du CSV
         writer = csv.writer(response)
-        writer.writerow(
-            ['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes'])
+        writer.writerow(['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes'])
 
-        # Récupérer toutes les questions et les informations associées
+        # Récupérer toutes les questions et appliquer les filtres
         questions = BindingSurveyRepresentedVariable.objects.all()
 
-        if selected_ids:
+        if selected_ids and any(selected_ids):
             questions = questions.filter(id__in=selected_ids)
+        if survey_ids and any(survey_ids):
+            questions = questions.filter(survey__id__in=survey_ids)
+        if collection_ids and any(collection_ids):
+            questions = questions.filter(survey__subcollection__collection__id__in=collection_ids)
+        if sub_collection_ids and any(sub_collection_ids):
+            questions = questions.filter(survey__subcollection__id__in=sub_collection_ids)
+        if years and any(years):
+            questions = questions.filter(survey__start_date__year__in=years)
 
         for question in questions.distinct():
-            # Récupérer les liaisons entre les surveys et les variables représentées
             represented_var = question.variable
-
             if question:
-                survey = question.survey  # Récupérer le survey associé à cette variable représentée
+                survey = question.survey
                 variable_name = question.variable_name
                 universe = question.universe
                 notes = question.notes
@@ -744,18 +755,17 @@ class ExportQuestionsCSVView(View):
                 universe = ''
                 notes = ''
 
-            # Récupérer les catégories associées
             categories = " | ".join([f"{cat.code},{cat.category_label}" for cat in represented_var.categories.all()])
 
             writer.writerow([
-                survey.external_ref if survey else '',  # DOI
-                survey.name if survey else '',  # Title
-                variable_name,  # Variable Name
-                represented_var.internal_label or '',  # Variable Label
-                represented_var.question_text or '',  # Question Text
-                categories,  # Category Label
-                universe,  # Univers
-                notes  # Notes
+                survey.external_ref if survey else '',
+                survey.name if survey else '',
+                variable_name,
+                represented_var.internal_label or '',
+                represented_var.question_text or '',
+                categories,
+                universe,
+                notes
             ])
 
         return response
