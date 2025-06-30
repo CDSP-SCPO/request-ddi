@@ -461,7 +461,7 @@
                 const surveys = getFilterValues('survey-checkbox');
 
                 $.ajax({
-                    url: '/get-decades/',
+                    url: '/api/get-decades/',
                     type: 'GET',
                     data: {
                         collections_ids: collections.join(','),
@@ -550,7 +550,7 @@
             const subcollections = getFilterValues('subcollection-checkbox');
             const surveys = getFilterValues('survey-checkbox');
             $.ajax({
-                url: '/get-years-by-decade/',
+                url: '/api/get-years-by-decade/',
                 type: 'GET',
                 data: {
                     decade: decade,

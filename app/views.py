@@ -18,7 +18,6 @@ from django.views.generic import ListView
 from django.views.generic.edit import FormView
 
 # -- THIRDPARTY
-from bs4 import BeautifulSoup
 from elasticsearch_dsl import Q
 
 # -- BASEDEQUESTIONS (LOCAL)
@@ -26,13 +25,15 @@ from .documents import BindingSurveyDocument
 from .forms import (
     CSVUploadFormCollection, CustomAuthenticationForm, XMLUploadForm,
 )
+from .views_utils import remove_html_tags
 from .models import (
     BindingSurveyRepresentedVariable, Category, Collection, ConceptualVariable,
     Distributor, RepresentedVariable, Subcollection, Survey,
 )
-from .utils.normalize_string import (
-    normalize_string_for_comparison, normalize_string_for_database,
-)
+from .utils.timing import timed
+
+from .parser import XMLParser
+from .dataImporter import DataImporter
 
 
 class XMLUploadView(FormView):
@@ -41,35 +42,44 @@ class XMLUploadView(FormView):
     success_url = reverse_lazy('app:representedvariable_search')
 
     def handle_error(self, message, form=None):
+        self.errors = getattr(self, 'errors', [])
+        self.errors.append(message)
         messages.error(self.request, message, extra_tags="safe")
         if form:
             return self.form_invalid(form)
         return None
 
+    @timed
     @transaction.atomic
     def form_valid(self, form):
-        self.errors = []  # Initialiser self.errors comme une liste vide
+        self.errors = []  # Initialiser la liste des erreurs
         data = self.get_data(form)
         question_datas = list(self.convert_data(data))
 
         if self.errors:
             return self.form_invalid(form)
 
-        try:
-            num_records, num_new_surveys, num_new_variables, num_new_bindings = self.process_data(question_datas)
+        importer = DataImporter()
 
-            # Vérifier s'il y a des erreurs après l'appel à process_data
-            if self.errors:
+        try:
+            num_records, num_new_surveys, num_new_variables, num_new_bindings = importer.import_data(question_datas)
+
+            # Récupérer les erreurs éventuelles après l'import
+            if importer.errors:
+                self.errors.extend(importer.errors)
                 return self.form_invalid(form)
 
-            messages.success(self.request,
-                             "Le fichier a été traité avec succès :<br/>"
-                             "<ul>"
-                             f"<li>{num_records} lignes ont été analysées.</li>"
-                             f"<li>{num_new_surveys} nouvelles enquêtes créées.</li>"
-                             f"<li>{num_new_variables} nouvelles variables représentées créées.</li>"
-                             "</ul>",
-                             extra_tags='safe')
+            messages.success(
+                self.request,
+                "Le fichier a été traité avec succès :<br/>"
+                "<ul>"
+                f"<li>{num_records} lignes ont été analysées.</li>"
+                f"<li>{num_new_surveys} nouvelles enquêtes créées.</li>"
+                f"<li>{num_new_variables} nouvelles variables représentées créées.</li>"
+                f"<li>{num_new_bindings} nouveaux bindings créés.</li>"
+                "</ul>",
+                extra_tags='safe'
+            )
             return super().form_valid(form)
 
         except ValueError as ve:
@@ -79,24 +89,21 @@ class XMLUploadView(FormView):
             return self.handle_error(f"Erreur inattendue : {str(e)}", form)
 
     def form_invalid(self, form):
-        errors = form.errors.as_data()  # Récupérer les erreurs au format Django
         error_messages = []
 
-        # Ajouter les erreurs du formulaire à la liste des messages
-        for field, field_errors in errors.items():
+        # 1. Erreurs Django du formulaire
+        for field, field_errors in form.errors.items():
             for error in field_errors:
-                cleaned_error = str(error).strip("[]").strip("'")
+                cleaned_error = str(error)
                 error_messages.append(cleaned_error)
 
-        storage = messages.get_messages(self.request)
-        for message in storage:
-            if message.level_tag == "error":
-                error_messages.append(message.message)
+        # 2. Erreurs collectées par self.errors (parser, import, etc.)
+        error_messages.extend(getattr(self, 'errors', []))
 
         if error_messages:
             messages.error(
                 self.request,
-                f"{'<br/>'.join(error_messages)}",
+                "<br/>".join(error_messages),
                 extra_tags="safe"
             )
 
@@ -104,7 +111,6 @@ class XMLUploadView(FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['errors'] = getattr(self, 'errors', [])
         self.add_form_to_context(context)
         return context
 
@@ -122,7 +128,9 @@ class XMLUploadView(FormView):
         for file in files:
             print(f"\n📂 Début du traitement du fichier : {file.name}")
             try:
-                result = self.parse_xml_file(file, seen_invalid_dois)
+                parser = XMLParser()
+                result = parser.parse_file(file, seen_invalid_dois)
+                self.errors.extend(parser.errors)
                 if result:
                     print(f"✅ {len(result)} variables extraites du fichier {file.name}")
                     results.extend(result)
@@ -131,211 +139,7 @@ class XMLUploadView(FormView):
                 print(f"❌ Erreur lors de la lecture du fichier {file.name}: {str(e)}")
         return results
 
-    def parse_xml_file(self, file, seen_invalid_dois):
-        start_time = datetime.now()
-        try:
-            file.seek(0)
-            content = file.read().decode('utf-8')
-            soup = BeautifulSoup(content, "xml")
 
-            doi = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo", attrs={
-                "agency": "DataCite"}) else soup.find("IDNo").text.strip()
-            if not doi.startswith("doi:"):
-                if doi not in seen_invalid_dois:
-                    seen_invalid_dois.add(doi)
-                    self.errors.append(
-                        f"<strong>{file.name}</strong> : DOI invalide '<strong>{doi}</strong>' (doit commencer par 'doi:').")
-                return None
-
-            data = []
-            for line in soup.find_all("var"):
-                categories = " | ".join([
-                    ','.join([cat.find("catValu").text.strip() if cat.find("catValu") else '',
-                              cat.find("labl").text.strip() if cat.find("labl") else ''])
-                    for cat in line.find_all("catgry")
-                ])
-
-                data.append([
-                    doi,
-                    line["name"].strip(),
-                    line.find("labl").text.strip() if line.find("labl") else "",
-                    line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
-                    categories,
-                    line.find("universe").text.strip() if line.find("universe") else "",
-                    line.find("notes").text.strip() if line.find("notes") else "",
-                ])
-
-            end_time = datetime.now()
-            return data
-
-        except Exception as e:
-            print(f"Erreur lors du parsing du fichier {file.name}: {str(e)}")
-            return None
-
-    @transaction.atomic
-    def process_data(self, question_datas):
-        num_records = 0
-        num_new_surveys = 0
-        num_new_variables = 0
-        num_new_bindings = 0
-        error_files = []
-
-        data_by_doi = {}
-        for question_data in question_datas:
-            doi = question_data[0]
-            if doi not in data_by_doi:
-                data_by_doi[doi] = []
-            data_by_doi[doi].append(question_data)
-
-        bindings_to_index = []
-
-        for doi, questions in data_by_doi.items():
-            try:
-                survey = Survey.objects.get(external_ref=doi)
-
-                for question_data in questions:
-                    variable_name, variable_label, question_text, category_label, universe, notes = question_data[1:]
-
-                    represented_variable, created_variable = self.get_or_create_represented_variable(
-                        variable_name, question_text, category_label, variable_label
-                    )
-
-                    if created_variable:
-                        num_new_variables += 1
-
-                    binding, created_binding = self.get_or_create_binding(
-                        survey, represented_variable, variable_name, universe, notes
-                    )
-
-                    if created_binding:
-                        num_new_bindings += 1
-                        bindings_to_index.append(binding)
-
-                    num_records += 1
-
-            except Survey.DoesNotExist:
-                error_message = f"DOI '{doi}' non trouvé dans la base de données pour le fichier."
-                error_files.append(error_message)
-                print(error_message)
-            except ValueError as ve:
-                error_message = f"DOI '{doi}': Erreur de valeur : {ve}"
-                error_files.append(error_message)
-                print(error_message)
-            except Exception as e:
-                error_message = f"DOI '{doi}': Erreur inattendue : {e}"
-                error_files.append(error_message)
-                print(error_message)
-
-        if error_files:
-            self.errors = error_files
-            error_summary = "<br/>".join(error_files)
-            raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
-
-        for binding in bindings_to_index:
-            BindingSurveyDocument().update(binding)
-
-        return num_records, num_new_surveys, num_new_variables, num_new_bindings
-
-    @transaction.atomic
-    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
-        try:
-            binding, created = BindingSurveyRepresentedVariable.objects.get_or_create(
-                variable_name=variable_name,
-                survey=survey,
-                variable=represented_variable,
-                defaults={
-                    'survey': survey,
-                    'variable': represented_variable,
-                    'universe': universe,
-                    'notes': notes,
-                }
-            )
-        except BindingSurveyRepresentedVariable.MultipleObjectsReturned:
-            bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name)
-            if all(binding.variable == represented_variable for binding in bindings):
-                binding = bindings.first()
-                created = False
-            else:
-                raise ValueError(
-                    "Multiple bindings found with the same variable_name but different represented_variable.")
-
-        if not created:
-            binding.survey = survey
-            binding.variable = represented_variable
-            binding.universe = universe
-            binding.notes = notes
-            binding.save()
-
-        return binding, created
-
-    def check_category(self, category_string, existing_categories):
-        csv_categories = [(code, normalize_string_for_comparison(normalize_string_for_database(label))) for code, label
-                          in self.parse_categories(category_string)] if category_string else []
-        existing_categories_list = [(category.code, normalize_string_for_comparison(category.category_label)) for
-                                    category in existing_categories.all()]
-
-        return set(csv_categories) == set(existing_categories_list)
-
-    def parse_categories(self, category_string):
-        categories = []
-        csv_category_pairs = category_string.split(" | ")
-        for pair in csv_category_pairs:
-            code, label = pair.split(",", 1)
-            categories.append((code.strip(), label.strip()))
-        return categories
-
-    @transaction.atomic
-    def create_new_categories(self, category_string):
-        categories = []
-        if category_string:
-            parsed_categories = self.parse_categories(category_string)
-            for code, label in parsed_categories:
-                category, _ = Category.objects.get_or_create(code=code,
-                                                             category_label=normalize_string_for_database(label))
-                categories.append(category)
-        return categories
-
-    @transaction.atomic
-    def create_new_represented_variable(self, conceptual_var, name_question_normalized, category_label,
-                                        variable_label, is_unique: bool = False):
-        new_represented_var = RepresentedVariable.objects.create(
-            conceptual_var=conceptual_var,
-            question_text=name_question_normalized,
-            internal_label=variable_label,
-            is_unique=is_unique,
-        )
-        new_categories = self.create_new_categories(category_label)
-        new_represented_var.categories.set(new_categories)
-        return new_represented_var
-
-    @transaction.atomic
-    def get_or_create_represented_variable(self, variable_name, question_text, category_label, variable_label):
-        name_question_for_database = normalize_string_for_database(question_text)
-        name_question_for_comparison = normalize_string_for_comparison(name_question_for_database)
-
-        cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
-
-        if name_question_for_comparison:
-            if name_question_for_comparison in cleaned_questions:
-                var_represented = RepresentedVariable.objects.filter(
-                    question_text=cleaned_questions[name_question_for_comparison].question_text
-                )
-                for var in var_represented:
-                    if self.check_category(category_label, var.categories):
-                        return var, False
-                return self.create_new_represented_variable(var_represented[0].conceptual_var,
-                                                            name_question_for_database, category_label,
-                                                            variable_label), True
-            else:
-                conceptual_var = ConceptualVariable.objects.create()
-                return self.create_new_represented_variable(conceptual_var, name_question_for_database,
-                                                            category_label,
-                                                            variable_label), True
-        else:
-            conceptual_var = ConceptualVariable.objects.create(is_unique=True)
-            return self.create_new_represented_variable(conceptual_var, name_question_for_database,
-                                                        category_label,
-                                                        variable_label), True
 
 class RepresentedVariableSearchView(ListView):
     model = RepresentedVariable
