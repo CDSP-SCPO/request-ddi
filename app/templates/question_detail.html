@@ -89,7 +89,7 @@
                                 <span class="badge badge-custom {% if similar_representative_questions|length == 0 %}d-none{% endif %}">
                                     {{ similar_representative_questions|length }}
                                 </span>
-                                <i class="fas fa-caret-down"></i>
+                                <i class="fas fa-caret-down icon-caret"></i>
                             </div>
                             <span class="info-icon" 
                                 onmouseover="this.querySelector('img').src='{% static 'svg/icons/information_hover.svg' %}'"
@@ -150,7 +150,7 @@
                                 <span class="badge badge-custom {% if similar_conceptual_questions|length == 0 %}d-none{% endif %}">
                                     {{ similar_conceptual_questions|length }}
                                 </span>
-                                <i class="fas fa-caret-down"></i>
+                                <i class="fas fa-caret-down icon-caret"></i>
                             </div>
                             <span class="info-icon" 
                                 data-toggle="tooltip" 
@@ -236,14 +236,19 @@
 
 {% block extra_js %}
 <script>
+
     function toggleCategories(categoryId) {
-        var categoriesDiv = document.getElementById(categoryId);
-        if (categoriesDiv.style.display === "none") {
-            categoriesDiv.style.display = "block";
-        } else {
-            categoriesDiv.style.display = "none";
+            var categoriesDiv = document.getElementById(categoryId);
+            var caretIcon = event.currentTarget.querySelector('.icon-caret');
+
+            if (categoriesDiv.style.display === "none" || !categoriesDiv.style.display) {
+                categoriesDiv.style.display = "block";
+                caretIcon.classList.add('rotated');
+            } else {
+                categoriesDiv.style.display = "none";
+                caretIcon.classList.remove('rotated');
+            }
         }
-    }
     $(document).ready(function() {
         // Initialiser les tooltips
         $('[data-toggle="tooltip"]').tooltip({
@@ -256,7 +261,7 @@
         });
 
         // Ajouter un gestionnaire d'événement pour les boutons d'accordéon
-        $('.accordion-button').on('click', function() {
+        $('.header-container-questions').on('click', function() {
             // Changer l'icône de basculement
             var caretIcon = $(this).find('i.fas');
             if (caretIcon.length) {

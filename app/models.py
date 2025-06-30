@@ -48,7 +48,7 @@ class Survey(models.Model):
     citation = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return f"Survey: {self.name} ({self.external_ref})"
+        return f"{self.name}"
 
 
 class ConceptualVariable(models.Model):

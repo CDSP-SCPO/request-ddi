@@ -49,7 +49,7 @@
                                 <span>Types de métadonnées</span>
                                 <span class="filter-count"></span>
                             </div>
-                            <i class="fas fa-caret-down"></i>
+                            <i class="fas fa-caret-down icon-caret"></i>
                         </div>
                     </div>
                     <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" >
@@ -82,7 +82,7 @@
                                 <span>Collections</span>
                                 <span class="filter-count"></span>
                             </div>
-                            <i class="fas fa-caret-down"></i>
+                            <i class="fas fa-caret-down icon-caret"></i>
                         </div>
                     </div>
                     <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" >
@@ -107,7 +107,7 @@
                                 <span>Sous-Collections</span>
                                 <span class="filter-count"></span>
                             </div>
-                            <i class="fas fa-caret-down"></i>
+                            <i class="fas fa-caret-down icon-caret"></i>
                         </div>
                     </div>
                     <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree">
@@ -132,7 +132,7 @@
                                 <span>Enquêtes</span>
                                 <span class="filter-count"></span>
                             </div>
-                            <i class="fas fa-caret-down"></i>
+                            <i class="fas fa-caret-down icon-caret"></i>
                         </div>
                     </div>
                     <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" >
@@ -157,7 +157,7 @@
                                 <span>Années</span>
                                 <span class="filter-count"></span>
                             </div>
-                            <i class="fas fa-caret-down"></i>
+                            <i class="fas fa-caret-down icon-caret"></i>
                         </div>
                     </div>
                     <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive">
@@ -290,7 +290,15 @@
 
         function toggleCategories(categoryId) {
             var categoriesDiv = document.getElementById(categoryId);
-            categoriesDiv.style.display = (categoriesDiv.style.display === "none") ? "block" : "none";
+            var caretIcon = event.currentTarget.querySelector('.icon-caret');
+
+            if (categoriesDiv.style.display === "none" || !categoriesDiv.style.display) {
+                categoriesDiv.style.display = "block";
+                caretIcon.classList.add('rotated');
+            } else {
+                categoriesDiv.style.display = "none";
+                caretIcon.classList.remove('rotated');
+            }
         }
 
         function updateTableContainerHeight() {
@@ -855,7 +863,7 @@
                     var doiUrl = 'https://doi.org/' + survey_doi;
                     var hasHighlightedModalities = row.is_category_search && row.categories && row.categories.includes('<mark style=');
                     var caretIcon = hasHighlightedModalities ?
-                        '<img src="{% static "svg/buttons/caret_down_modality.svg" %}" alt="Caret Down" class="icon-caret">' :
+                        '<span class="background-red-caret"><img src="{% static "svg/buttons/caret_down.svg" %}" alt="Caret Down" class="icon-caret"></span>' :
                         '<img src="{% static "svg/buttons/caret_down.svg" %}" alt="Caret Down" class="icon-caret">'
 
                     return `
@@ -995,7 +1003,17 @@
             });
 
             $('#export-all').on('click', function () {
-                window.location.href = '/export/questions/';
+                const params = {};
+                params.q = "{{ request.GET.q }}";
+                params.survey = getFilterValues('survey-checkbox');
+                params.collections = getFilterValues('collection-checkbox');
+                params.sub_collections = getFilterValues('subcollection-checkbox');
+                params.search_location = getSearchLocation();
+                params.years = getYearsFilter();
+
+                const searchParams = new URLSearchParams(params).toString();
+
+                window.location.href = `/export/questions/?${searchParams}`;
             });
 
             $('#export-selected').on('click', function () {
@@ -1063,6 +1081,12 @@
                 });
                 observer.observe(targetNode, { attributes: true, attributeFilter: ['style'], childList: true });
             }
+        });
+        document.querySelectorAll('.accordion-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const caretIcon = this.querySelector('.icon-caret');
+                caretIcon.classList.toggle('rotated');
+            });
         });
     </script>
 {% endblock %}
