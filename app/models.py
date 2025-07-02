@@ -1,3 +1,6 @@
+# -- STDLIB
+from collections import defaultdict
+
 # -- DJANGO
 from django.db import models
 
@@ -106,11 +109,15 @@ class RepresentedVariable(models.Model):
 
     @classmethod
     def get_cleaned_question_texts(cls):
-        """Retourne un dictionnaire des question_text normalisés en clé et les instances associées en valeur."""
-        return {
-            normalize_string_for_comparison(var.question_text): var
-            for var in cls.objects.all()
-        }
+        """
+        Retourne un dictionnaire : texte nettoyé → liste des variables ayant ce texte.
+        Utile pour identifier toutes les variables représentées ayant la même question.
+        """
+        cleaned = defaultdict(list)
+        for var in cls.objects.all():
+            key = normalize_string_for_comparison(var.question_text)
+            cleaned[key].append(var)
+        return dict(cleaned)
 
 
 class BindingSurveyRepresentedVariable(models.Model):

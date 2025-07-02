@@ -21,19 +21,18 @@ from django.views.generic.edit import FormView
 from elasticsearch_dsl import Q
 
 # -- BASEDEQUESTIONS (LOCAL)
+from .dataImporter import DataImporter
 from .documents import BindingSurveyDocument
 from .forms import (
     CSVUploadFormCollection, CustomAuthenticationForm, XMLUploadForm,
 )
-from .views_utils import remove_html_tags
 from .models import (
-    BindingSurveyRepresentedVariable, Category, Collection, ConceptualVariable,
-    Distributor, RepresentedVariable, Subcollection, Survey,
+    BindingSurveyRepresentedVariable, Collection, Distributor,
+    RepresentedVariable, Subcollection, Survey,
 )
-from .utils.timing import timed
-
 from .parser import XMLParser
-from .dataImporter import DataImporter
+from .utils.timing import timed
+from .views_utils import remove_html_tags
 
 
 class XMLUploadView(FormView):
@@ -62,7 +61,7 @@ class XMLUploadView(FormView):
         importer = DataImporter()
 
         try:
-            num_records, num_new_surveys, num_new_variables, num_new_bindings = importer.import_data(question_datas)
+            num_records, num_new_variables, num_new_bindings = importer.import_data(question_datas)
 
             # Récupérer les erreurs éventuelles après l'import
             if importer.errors:
@@ -74,7 +73,6 @@ class XMLUploadView(FormView):
                 "Le fichier a été traité avec succès :<br/>"
                 "<ul>"
                 f"<li>{num_records} lignes ont été analysées.</li>"
-                f"<li>{num_new_surveys} nouvelles enquêtes créées.</li>"
                 f"<li>{num_new_variables} nouvelles variables représentées créées.</li>"
                 f"<li>{num_new_bindings} nouveaux bindings créés.</li>"
                 "</ul>",

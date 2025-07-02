@@ -1,5 +1,9 @@
-from bs4 import BeautifulSoup
+# -- STDLIB
 from datetime import datetime
+
+# -- THIRDPARTY
+from bs4 import BeautifulSoup
+
 
 class XMLParser:
     def __init__(self):

@@ -1,5 +1,7 @@
-import time
+# -- STDLIB
 import functools
+import time
+
 
 def timed(func):
     @functools.wraps(func)
