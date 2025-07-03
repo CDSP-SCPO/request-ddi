@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% load static %}
 
 {% block content %}
@@ -9,24 +10,24 @@
                     <div type="button" class="white-button custom-text-white-buttons"
                             onclick="window.location.href='{% url 'app:search_results' %}?{{ search_params }}'">
                         <img src="{% static 'svg/icons/return.svg' %}">
-                        <span>Retour à la recherche</span>
+                        <span>{% trans "Retour à la recherche" %}</span>
                     </div>
                 {% else %}
                     <div type="button" class="white-button custom-text-white-buttons"
                             onclick="window.location.href='{% url 'app:search_results' %}'">
                         <img src="{% static 'svg/icons/return.svg' %}">
-                        <span>Retour à la recherche</span>
+                        <span>{% trans "Retour à la recherche" %}</span>
                     </div>
                 {% endif %}
         </div>
         <div class="export-access-container">
             <div class="white-button custom-text-white-buttons" type="button" onclick="exportMetadata()">
                 <img src="{% static 'svg/icons/export.svg' %}">
-                <span>Exporter les métadonnées</span>
+                <span>{% trans "Exporter les métadonnées" %}</span>
             </div>
             <span type="button" onclick="window.location.href='https://doi.org/{{ question_survey.external_ref }}'" class="button-card button-access-data button-access-data-card-hover">
                 <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
-                <span>Accéder aux données</span>
+                <span>{% trans "Accéder aux données" %}</span>
             </span>
         </div>
     </div>
@@ -35,28 +36,28 @@
             <div class="custom-title-1">{{ question_represented_var.question_text|default:"N/A" }}</div>
             <div class="custom-title-2">
                 <div class="">
-                    Enquête : <span class="ft-600">{{ question_survey.name }}</span>
+                    {% trans "Enquête" %} : <span class="ft-600">{{ question_survey.name }}</span>
                     {% if question_survey.dist_date %}
                         (Date : {{ question_survey.dist_date|date:"d-m-Y" }})
                     {% endif %}
                 </div>
                 <div class="">
-                    Nom de la variable : <span class="ft-600">{{ question.variable_name }}</span>
+                    {% trans "Nom de la variable" %} : <span class="ft-600">{{ question.variable_name }}</span>
                 </div>
                 <div class="">
-                    Libellé de la variable : <span class="ft-600">{{ question_represented_var.internal_label }}</span>
+                    {% trans "Libellé de la variable" %} : <span class="ft-600">{{ question_represented_var.internal_label }}</span>
                 </div>
             </div>
 
 
             <div class="modalities-container">
-                <div class="custom-headline">Modalités</div>
+                <div class="custom-headline">{% trans "Modalités" %}</div>
                 {% if categories %}
                 <table class="styled-table">
                     <thead>
                         <tr class="title-modalities-table">
-                            <th class="code-cell">Code</th>
-                            <th class="text-cell">Label</th>
+                            <th class="code-cell">{% trans "Code" %}</th>
+                            <th class="text-cell">{% trans "Label" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -69,7 +70,7 @@
                     </tbody>
                 </table>
                 {% else %}
-                <p>Aucune catégorie associée.</p>
+                <p>{% trans "Aucune catégorie associée." %}</p>
                 {% endif %}
             </div>  
         </div>
@@ -85,7 +86,7 @@
                                  data-target="#collapseIdentiques"
                                  aria-expanded="{% if similar_representative_questions|length <= 5 %}true{% else %}false{% endif %}"
                                  aria-controls="collapseIdentiques">
-                                <span class="custom-title-1">Questions identiques</span>
+                                <span class="custom-title-1">{% trans "Questions identiques" %}</span>
                                 <span class="badge badge-custom {% if similar_representative_questions|length == 0 %}d-none{% endif %}">
                                     {{ similar_representative_questions|length }}
                                 </span>
@@ -96,7 +97,7 @@
                                 onmouseout="this.querySelector('img').src='{% static 'svg/icons/information.svg' %}'"
                                 data-toggle="tooltip" 
                                 data-placement="top"
-                                title="Questions avec les mêmes intitulés de questions, codes et modalités.">
+                                title="{% trans 'Questions avec les mêmes intitulés de questions, codes et modalités.' %}">
                                 <img src="{% static 'svg/icons/information.svg' %}" alt="info" class="information-icon" />
                             </span>
                         </div>
@@ -112,15 +113,15 @@
                                         <div class="card-question-detail h-100">
                                             <div class="custom-title-2">
                                                 <div class="title-question" type="button" onclick="window.location.href='{% url 'app:question_detail' question.id %}'">
-                                                    Enquête : <span class="ft-600">{{ question.survey }}</span>
+                                                    {% trans "Enquête" %} : <span class="ft-600">{{ question.survey }}</span>
                                                 </div>
-                                                <div class="">Nom de la variable : <span class="ft-600">{{ question.variable_name }}</span></div>
+                                                <div class="">{% trans "Nom de la variable" %} : <span class="ft-600">{{ question.variable_name }}</span></div>
                                             </div>
                                             <span type="button"
                                                     onclick="window.location.href='https://doi.org/{{ question.survey.external_ref }}'"
                                                     class="button-card button-access-data-card button-access-data-card-hover">
                                                 <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
-                                                <span>Accéder aux données</span>
+                                                <span>{% trans "Accéder aux données" %}</span>
                                             </span>
                                         </div>
                                     </div>
@@ -128,7 +129,7 @@
                                 {% endfor %}
                                 {% if not similar_representative_questions %}
                                 <div class="col">
-                                    <span>Aucune question identique trouvée.</span>
+                                    <span>{% trans "Aucune question identique trouvée." %}</span>
                                 </div>
                                 {% endif %}
                             </div>
@@ -146,7 +147,7 @@
                                  data-target="#collapseSimilaires"
                                  aria-expanded="{% if similar_conceptual_questions|length <= 5 %}true{% else %}false{% endif %}"
                                  aria-controls="collapseSimilaires">
-                                <span class="custom-title-1">Questions similaires</span>
+                                <span class="custom-title-1">{% trans "Questions similaires" %}</span>
                                 <span class="badge badge-custom {% if similar_conceptual_questions|length == 0 %}d-none{% endif %}">
                                     {{ similar_conceptual_questions|length }}
                                 </span>
@@ -157,7 +158,7 @@
                                 data-placement="top"
                                 onmouseover="this.querySelector('img').src='{% static 'svg/icons/information_hover.svg' %}'"
                                 onmouseout="this.querySelector('img').src='{% static 'svg/icons/information.svg' %}'"
-                                title="Questions avec les mêmes intitulés de questions, mais dont les codes et/ou modalités peuvent différer.">
+                                title="{% trans 'Questions avec les mêmes intitulés de questions, mais dont les codes et/ou modalités peuvent différer.' %}">
                                 <img src="{% static 'svg/icons/information.svg' %}" alt="info" class="information-icon" />
                             </span>
                         </div>
@@ -173,8 +174,8 @@
                                     <div class="text-decoration-none card-link">
                                         <div class="card-question-detail h-100">
                                             <div class="custom-title-2">
-                                                <div class="title-question" type="button" onclick="window.location.href='{% url 'app:question_detail' question.id %}'">Enquête : <span class="ft-600">{{ question.survey }}</span></div>
-                                                <div>Nom de la variable : <span class="ft-600">{{ question.variable_name }}</span></div>
+                                                <div class="title-question" type="button" onclick="window.location.href='{% url 'app:question_detail' question.id %}'">{% trans "Enquête" %}: <span class="ft-600">{{ question.survey }}</span></div>
+                                                <div>{% trans "Nom de la variable" %}: <span class="ft-600">{{ question.variable_name }}</span></div>
                                             </div>
                                             <div class="container-button-card">
                                                 <span type="button" id="toggle-categories"
@@ -184,14 +185,14 @@
                                                     onmouseout="this.querySelector('.icon-modalites').src='{% static 'svg/icons/modalites.svg' %}'; this.querySelector('.icon-caret').src='{% static 'svg/buttons/caret_down.svg' %}'">
                                                     
                                                     <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
-                                                    <span>Modalités</span>
+                                                    <span>{% trans "Modalités" %}</span>
                                                     <img src="{% static 'svg/buttons/caret_down.svg' %}" alt="Caret Down" class="icon-caret">
                                                 </span>
                                                 <span type="button"
                                                       onclick="window.location.href='https://doi.org/{{ question.survey.external_ref }}'"
                                                       class="button-card button-access-data-card button-access-data-card-hover">
                                                     <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
-                                                    <span>Accéder aux données</span>
+                                                    <span>{% trans "Accéder aux données" %}</span>
                                                 </span>
                                             </div>
                                             <div id="categories-{{ question.id }}" class="categories-list mt-3" style="display: none;">
@@ -207,7 +208,7 @@
                                                     </tbody>
                                                 </table>
                                                 {% else %}
-                                                <p>Aucune catégorie associée.</p>
+                                                <p>{% trans "Aucune catégorie associée." %}</p>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -216,7 +217,7 @@
                                 {% endfor %}
                                 {% if not similar_conceptual_questions %}
                                 <div class="col">
-                                    <span>Aucune question similaire trouvée.</span>
+                                    <span>{% trans "Aucune question similaire trouvée." %}</span>
                                 </div>
                                 {% endif %}
                             </div>

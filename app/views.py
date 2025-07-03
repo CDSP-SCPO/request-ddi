@@ -34,6 +34,8 @@ from .utils.normalize_string import (
     normalize_string_for_comparison, normalize_string_for_database,
 )
 
+from .views_utils import remove_html_tags
+
 
 class XMLUploadView(FormView):
     template_name = 'upload_xml.html'
