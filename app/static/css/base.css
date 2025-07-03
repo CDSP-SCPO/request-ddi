@@ -407,3 +407,23 @@ header {
     transform: rotate(180deg);
 }
 
+
+
+.btn_language{
+    border:none;
+    background:transparent;
+    outline:none;
+    display:flex;
+}
+
+.padding-custom-navbar{
+    padding-right:40px;
+}
+
+.btn_language:hover{
+    color:#2E6831;
+}
+
+.btn_language:focus{
+    outline:none;
+}
