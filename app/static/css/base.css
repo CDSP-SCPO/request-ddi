@@ -15,6 +15,7 @@ html, body {
 header {
     height: 10%;
     max-height: 80px;
+    padding : 16px 40px;
 }
 
 .bg-color-principal {
@@ -414,10 +415,6 @@ header {
     background:transparent;
     outline:none;
     display:flex;
-}
-
-.padding-custom-navbar{
-    padding-right:40px;
 }
 
 .btn_language:hover{
