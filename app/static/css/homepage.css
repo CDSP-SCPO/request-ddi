@@ -29,20 +29,6 @@ body {
     min-height: 50vh;
 }
 
-
-/* Header */
-header {
-    background-color: #00466b;
-    color: white;
-    padding: 20px 0;
-    text-align: center;
-}
-
-header h1 {
-    margin: 0;
-    font-size: 2.5rem;
-}
-
 /* Navigation */
 nav {
     display: flex;

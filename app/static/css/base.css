@@ -15,6 +15,7 @@ html, body {
 header {
     height: 10%;
     max-height: 80px;
+    padding : 16px 40px;
 }
 
 .bg-color-principal {
@@ -407,3 +408,19 @@ header {
     transform: rotate(180deg);
 }
 
+
+
+.btn_language{
+    border:none;
+    background:transparent;
+    outline:none;
+    display:flex;
+}
+
+.btn_language:hover{
+    color:#2E6831;
+}
+
+.btn_language:focus{
+    outline:none;
+}

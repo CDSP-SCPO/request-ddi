@@ -1,4 +1,6 @@
 {% load static %}
+{% load language_tags %}
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -45,7 +47,7 @@
         <!-- Colonne gauche : Logo -->
         <div class="flex-grow-1 d-flex justify-content-start">
             <a href="{% url 'app:representedvariable_search' %}">
-                <img class="img-fluid logo" src="{% static 'svg/logo/REQUEST_LOGO-03.svg' %}" alt="Logo Request">
+                <img class="img-fluid" src="{% static 'svg/logo/logo_request.svg' %}" alt="Logo Request">
             </a>
         </div>
 
@@ -55,8 +57,8 @@
                 <form method="GET" action="{% url 'app:search_results' %}" id="header-form" class="search-bar">
                     <div class="search-input-wrapper">
                         <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" name="q" placeholder="mots clés..." value="{{ request.GET.q }}">
-                        <button type="submit" class="search-button">Rechercher</button>
+                        <input type="text" name="q" placeholder="{% trans 'mot(s)-clé(s)...' %}" value="{{ request.GET.q }}">
+                        <button type="submit" class="search-button">{% trans "Rechercher" %}</button>
                     </div>
                     <input type="hidden" name="search_location[]" value="questions">
                     <input type="hidden" name="search_location[]" value="categories">
@@ -68,6 +70,25 @@
 
         <!-- Colonne droite : Boutons utilisateur -->
         <div class="flex-grow-1 d-flex justify-content-end">
+            <div class="language-selector">
+                <form id="languageForm" action="{% url 'set_language' %}" method="post">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ redirect_to }}">
+                    {% get_current_language as LANGUAGE_CODE %}
+                    {% if LANGUAGE_CODE == 'fr' %}
+                        <button type="submit" name="language" value="en" class="btn_language white-button custom-text-white-buttons">
+                            <img src="{% static 'svg/icons/language.svg' %}" alt="Language icon">
+                            Anglais
+                        </button>
+                    {% else %}
+                        <button type="submit" name="language" value="fr" class="btn_language white-button custom-text-white-buttons">
+                            <img src="{% static 'svg/icons/language.svg' %}" alt="Language icon">
+                            French
+                        </button>
+                    {% endif %}
+                </form>
+            </div>
+                 
             {% if user.is_authenticated %}
                 <div class="d-flex align-items-center">
                     <!-- CSV Buttons -->
@@ -128,10 +149,9 @@
             </span>
 
             <div class="custom-popover-content" style="display: none;">
-                <a href="https://www.sciencespo.fr/fr/termes-legaux/" target="_blank" class="popover-link">Mentions
-                    légales</a>
+                <a href="https://www.sciencespo.fr/fr/termes-legaux/" target="_blank" class="popover-link">{% trans "Mentions légales" %}</a>
                 <hr class="popover-divider"/>
-                <p class="popover-meta">Mis à jour le 10/06/2025</p>
+                <p class="popover-meta"> {% trans "Mis à jour le" %} 10/06/2025</p>
                 <p class="popover-meta">Copyright © 2025,<br> Sciences Po</p>
             </div>
         </div>
@@ -144,6 +164,7 @@
 {% endblock %}
 
 <script>
+
     $(document).ready(function () {
         let $currentPopover = null;
 
