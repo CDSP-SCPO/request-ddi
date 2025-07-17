@@ -489,7 +489,7 @@
                             const checkboxAndLabelDiv = $('<div class="checkbox-and-label"></div>');
 
                             const decadeCheckbox = $('<input type="checkbox" class="form-check-input decade-checkbox checkbox-custom" value="' + decade + '" id="decade-' + decade + '">');
-                            const decadeLabel = $('<label class="form-check-label" for="decade-' + decade + '">Années ' + decade + '</label>');
+                            const decadeLabel = $('<label class="form-check-label" for="decade-' + decade + '">{% trans "Années" %} ' + decade + '</label>');
 
                             checkboxAndLabelDiv.append(decadeCheckbox).append(decadeLabel);
 
