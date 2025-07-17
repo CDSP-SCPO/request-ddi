@@ -3,6 +3,7 @@ import time
 
 # -- DJANGO
 from django.core.management.base import BaseCommand
+from django.db.models.signals import post_save, post_delete
 
 # -- BASEDEQUESTIONS
 from app.models import (
@@ -10,6 +11,7 @@ from app.models import (
     Concept, ConceptualVariable, Distributor, RepresentedVariable,
     Subcollection, Survey,
 )
+from app.signals import update_index, delete_index  # Import des handlers signals
 
 
 class Command(BaseCommand):
@@ -18,6 +20,10 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         start_time = time.time()  # Début de la mesure du temps global
         print("Démarrage de la suppression des données...")
+
+        # --- Désactivation des signaux pour BindingSurveyRepresentedVariable ---
+        post_save.disconnect(update_index, sender=BindingSurveyRepresentedVariable)
+        post_delete.disconnect(delete_index, sender=BindingSurveyRepresentedVariable)
 
         # Supprimer les données dans l'ordre correct pour éviter les problèmes de dépendances
         models_to_delete = [
@@ -40,6 +46,10 @@ class Command(BaseCommand):
 
             print(f"{name} supprimé avec succès en {model_end_time - model_start_time:.4f} secondes.")
             self.stdout.write(self.style.SUCCESS(f'Deleted {name}'))
+
+        # --- Réactivation des signaux ---
+        post_save.connect(update_index, sender=BindingSurveyRepresentedVariable)
+        post_delete.connect(delete_index, sender=BindingSurveyRepresentedVariable)
 
         end_time = time.time()  # Fin de la mesure du temps global
         print(f"Toutes les données ont été supprimées avec succès en {end_time - start_time:.4f} secondes.")
