@@ -19,7 +19,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #: app/templates/base.html:60 app/templates/homepage.html:25
-msgid "mot(s) clé(s)..."
+msgid "mot(s)-clé(s)..."
 msgstr "keyword(s)..."
 
 #: app/templates/base.html:61 app/templates/homepage.html:26

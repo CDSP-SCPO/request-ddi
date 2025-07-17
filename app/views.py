@@ -728,7 +728,6 @@ class ExportQuestionsCSVView(View):
 
         # Définir les colonnes du CSV
         writer = csv.writer(response)
-        writer.writerow(['doi', 'title', 'variable_name', 'variable_label', 'question_text', 'category_label', 'univers', 'notes'])
 
         # Récupérer toutes les questions et appliquer les filtres
         questions = BindingSurveyRepresentedVariable.objects.all()
@@ -744,31 +743,40 @@ class ExportQuestionsCSVView(View):
         if years and any(years):
             questions = questions.filter(survey__start_date__year__in=years)
 
-        for question in questions.distinct():
+        questions = questions.distinct()
+        max_vars = 0
+        questions_data = []
+
+        for question in questions:
             represented_var = question.variable
-            if question:
-                survey = question.survey
-                variable_name = question.variable_name
-                universe = question.universe
-                notes = question.notes
-            else:
-                survey = None
-                variable_name = ''
-                universe = ''
-                notes = ''
-
             categories = " | ".join([f"{cat.code},{cat.category_label}" for cat in represented_var.categories.all()])
+            associated_bindings = represented_var.bindingsurveyrepresentedvariable_set.all()
+            dataset_vars = [
+                f"unr:ddi.cdsp:{binding.survey.external_ref}:{binding.variable_name}"
+                for binding in associated_bindings
+            ]
+            max_vars = max(max_vars, len(dataset_vars))
+            questions_data.append({
+                'question_text': represented_var.question_text,
+                'categories': categories,
+                'variable_label': represented_var.internal_label,
+                'dataset_vars': dataset_vars
+            })
 
-            writer.writerow([
-                survey.external_ref if survey else '',
-                survey.name if survey else '',
-                variable_name,
-                represented_var.internal_label or '',
-                represented_var.question_text or '',
-                categories,
-                universe,
-                notes
-            ])
+        dataset_var_headers = [f"dataset_var{i+1}" for i in range(max_vars)]
+
+        writer.writerow(['question_text', 'categories', 'variable_label'] + dataset_var_headers)
+
+        # Écrire les lignes
+        for data in questions_data:
+            row = [
+                data['question_text'],
+                data['categories'],
+                data['variable_label']
+            ]
+            # Compléter avec des colonnes vides si nécessaire
+            row += data['dataset_vars'] + [''] * (max_vars - len(data['dataset_vars']))
+            writer.writerow(row)
 
         return response
 

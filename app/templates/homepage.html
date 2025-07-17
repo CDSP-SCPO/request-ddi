@@ -22,7 +22,7 @@
             <form method="GET" action="{% url 'app:search_results' %}" class="search-bar homepage-search-form">
                 <div class="search-input-wrapper">
                     <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                    <input type="text" name="q" placeholder="{% trans 'mot(s) clé(s)...' %}" value="{{ request.GET.q }}">
+                    <input type="text" name="q" placeholder="{% trans 'mot(s)-clé(s)...' %}" value="{{ request.GET.q }}">
                     <button type="submit" class="search-button">{% trans "Rechercher" %}</button>
                 </div>
                 <input type="hidden" name="search_location[]" value="questions">
