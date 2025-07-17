@@ -5,7 +5,8 @@
     <div class="container-custom mt-4">
         <div class="text-center mb-3">
             <h1 class="mb-2">Import de fichier XML</h1>
-            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Créer une nouvelle série</a>
+            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Créer une nouvelle
+                série</a>
         </div>
 
         <!-- Section XML -->
@@ -26,17 +27,18 @@
                     <li>IDNo</li>
                     <li>titl</li>
                 </ul>
-                <p>Assurez-vous que ces balises sont présentes dans votre fichier XML pour garantir une structure valide.</p>
+                <p>Assurez-vous que ces balises sont présentes dans votre fichier XML pour garantir une structure
+                    valide.</p>
             </div>
 
             <h2>Uploader un fichier XML</h2>
             <form method="POST" enctype="multipart/form-data" id="xmlUploadForm" action="{% url 'app:upload_xml' %}">
                 {% csrf_token %}
                 <div class="mb-3">
-                    {{ xml_form.collection.label_tag }} 
+                    {{ xml_form.collection.label_tag }}
                     {{ xml_form.collection }}
                 </div>
-                
+
                 <div class="mb-3">
 
                     <label for="xml_file">Sélectionnez un fichier XML :</label>
@@ -70,7 +72,8 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form method="POST" enctype="multipart/form-data" id="csvUploadFormCollection" action="{% url 'app:upload_csv_collection' %}">
+                    <form method="POST" enctype="multipart/form-data" id="csvUploadFormCollection"
+                          action="{% url 'app:upload_csv_collection' %}">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="csv_file">Sélectionnez un fichier CSV :</label>
@@ -88,7 +91,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{% static 'js/upload_csv_collection.js' %}"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             const fileInput = document.getElementById("xml_file");
             const fileList = document.getElementById("file-list");
             const uploadForm = document.getElementById("xmlUploadForm");
@@ -96,7 +99,7 @@
             // Stocke les fichiers sélectionnés
             let selectedFiles = [];
 
-            fileInput.addEventListener("change", function(event) {
+            fileInput.addEventListener("change", function (event) {
                 // Ajoute les nouveaux fichiers à la liste
                 for (let file of event.target.files) {
                     dataTransfer.items.add(file);
@@ -122,7 +125,7 @@
             }
 
             // Supprimer un fichier de la liste
-            fileList.addEventListener("click", function(event) {
+            fileList.addEventListener("click", function (event) {
                 if (event.target.classList.contains("delete-file")) {
                     const index = event.target.getAttribute("data-index");
                     dataTransfer.items.remove(index);
@@ -130,94 +133,83 @@
                     fileInput.files = dataTransfer.files;
                 }
             });
-        uploadForm.addEventListener('submit', function(event) {
-            event.preventDefault();  // Empêche l'envoi immédiat du formulaire
+            uploadForm.addEventListener('submit', function (event) {
+                event.preventDefault();  // Empêche l'envoi immédiat du formulaire
 
-            if (dataTransfer.files.length === 0) {
-                Swal.fire({
-                    icon: "warning",
-                    title: "Aucun fichier sélectionné",
-                    text: "Veuillez sélectionner au moins un fichier avant d'envoyer."
-                });
-                return;
-            }
-            var formData = new FormData(this);
-            for (let file of dataTransfer.files) {
-                formData.append("xml_file", file);
-            }
-
-            // Affiche l'overlay de chargement
-            document.getElementById('overlay').classList.add('show');
-
-            // Vérification des doublons
-            fetch("{% url 'app:check_duplicates' %}", {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'exists') {
+                if (dataTransfer.files.length === 0) {
                     Swal.fire({
-                        title: 'Doublons détectés',
-                        text: 'Certaines variables de ce document existent déjà. Voulez-vous les mettre à jour ?',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Oui, mettre à jour',
-                        cancelButtonText: 'Annuler',
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // Confirme l'envoi final du formulaire
-                            document.getElementById('xmlUploadForm').submit();
+                        icon: "warning",
+                        title: "Aucun fichier sélectionné",
+                        text: "Veuillez sélectionner au moins un fichier avant d'envoyer."
+                    });
+                    return;
+                }
+                var formData = new FormData(this);
+                for (let file of dataTransfer.files) {
+                    formData.append("xml_file", file);
+                }
+
+                // Affiche l'overlay de chargement
+                document.getElementById('overlay').classList.add('show');
+
+                // Vérification des doublons
+                fetch("{% url 'app:check_duplicates' %}", {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'exists') {
+                            Swal.fire({
+                                title: 'Doublons détectés',
+                                text: 'Certaines variables de ce document existent déjà. Voulez-vous les mettre à jour ?',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Oui, mettre à jour',
+                                cancelButtonText: 'Annuler',
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // Confirme l'envoi final du formulaire
+                                    document.getElementById('xmlUploadForm').submit();
+                                } else {
+                                    document.getElementById('overlay').classList.remove('show');
+                                }
+                            });
                         } else {
-                            document.getElementById('overlay').classList.remove('show');
+                            document.getElementById('xmlUploadForm').submit();
                         }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: 'Une erreur s\'est produite lors de la vérification des doublons.'
+                        });
+                        document.getElementById('overlay').classList.remove('show');
                     });
-                } else {
-                    document.getElementById('xmlUploadForm').submit();
-                }
-            })
-            .catch(error => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur',
-                    text: 'Une erreur s\'est produite lors de la vérification des doublons.'
-                });
-                document.getElementById('overlay').classList.remove('show');
             });
+
+
+            // Gestion des erreurs passées via les messages Django
+            {% if messages %}
+                {% for message in messages %}
+                    {% if 'error' in message.tags %}
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur lors de l\'import',
+                            html: "{{ message|escapejs }}"
+                        });
+                    {% else %}
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Succès',
+                            html: "{{ message|escapejs }}"
+                        });
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
         });
-        
-        {% if errors %}
-            let errorMessages = "";
-            {% for error in errors %}
-                errorMessages += "{{ error|escapejs }}<br>";
-            {% endfor %}
-            Swal.fire({
-                icon: 'error',
-                title: 'Erreur lors de l\'import', // Titre commun pour les erreurs
-                html: errorMessages
-            });
-        {% endif %}
-
-        // Gestion des erreurs passées via les messages Django
-        {% if messages %}
-            {% for message in messages %}
-                if ('{{ message.tags }}' === 'error') {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Erreur lors de l\'import', // Titre commun pour les erreurs
-                        html: "{{ message|escapejs }}"
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Succès',
-                        html: "{{ message|escapejs }}"
-                    });
-                }
-            {% endfor %}
-        {% endif %}
-
-});
 
     </script>
 {% endblock %}
@@ -225,9 +217,10 @@
 
 {% block extra_css %}
     <style>
-        .form-control{
-          border: none;
+        .form-control {
+            border: none;
         }
+
         /* Styles similaires à ceux utilisés dans `upload_csv.html` */
         .help-box {
             background-color: #e9ecef;
@@ -236,6 +229,7 @@
             margin-bottom: 20px;
             color: #333;
         }
+
         /* Superposition et spinner */
         .overlay {
             position: fixed;
@@ -249,12 +243,15 @@
             justify-content: center;
             z-index: 999;
         }
+
         .overlay.show {
             display: flex;
         }
+
         .spinner-container {
             text-align: center;
         }
+
         .spinner {
             width: 60px;
             height: 60px;
@@ -264,9 +261,14 @@
             border-radius: 50%;
             margin: 0 auto;
         }
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 {% endblock %}
