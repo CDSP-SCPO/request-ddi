@@ -73,42 +73,39 @@ def similar_conceptual_variable_questions(request, question_id):
 @csrf_exempt
 def check_duplicates(request):
     if request.method == 'POST':
-        # Récupérer soit le fichier CSV, soit le fichier XML
-        file = request.FILES.get('csv_file') or request.FILES.get('xml_file')
+        # Récupérer uniquement le fichier XML
+        file = request.FILES.get('xml_file')
 
         if not file:
-            return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+            return JsonResponse({'error': 'Aucun fichier XML fourni'}, status=400)
+
+        if not file.name.endswith('.xml'):
+            return JsonResponse({'error': 'Format de fichier non supporté (seul le XML est accepté)'}, status=400)
+
+        # Lecture et parsing du fichier XML
         decoded_file = file.read().decode('utf-8', errors='replace').splitlines()
+        soup = BeautifulSoup("\n".join(decoded_file), 'xml')
+        existing_variables = []
 
-        # Vérifier si c'est un fichier XML
-        if file.name.endswith('.xml'):
-            soup = BeautifulSoup("\n".join(decoded_file), 'xml')
-            existing_variables = []
-            variable_survey_id = soup.find("IDNo", attrs={"agency": "DataCite"}).text.strip() if soup.find("IDNo",
-                                                                                                           attrs={
-                                                                                                               "agency": "DataCite"}) else soup.find(
-                "IDNo").text.strip()
-            for var in soup.find_all('var'):
-                variable_name = var.get('name', '').strip()
-                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name,
-                                                                                    survey__external_ref=variable_survey_id)
-                if existing_bindings.exists():
-                    existing_variables.append(variable_name)
+        # Récupération du DOI / ID de l’enquête
+        id_tag = soup.find("IDNo", attrs={"agency": "DataCite"}) or soup.find("IDNo")
+        if not id_tag or not id_tag.text.strip():
+            return JsonResponse({'error': 'IDNo manquant dans le fichier XML'}, status=400)
 
-        # Vérifier si c'est un fichier CSV
-        elif file.name.endswith('.csv'):
-            reader = csv.DictReader(decoded_file)
-            existing_variables = []
-            for row in reader:
-                variable_name = row['variable_name']
-                variable_survey_id = row['doi']
-                existing_bindings = BindingSurveyRepresentedVariable.objects.filter(variable_name=variable_name,
-                                                                                    survey__external_ref=variable_survey_id)
-                if existing_bindings.exists():
-                    existing_variables.append(variable_name)
+        variable_survey_id = id_tag.text.strip()
 
-        else:
-            return JsonResponse({'error': 'Format de fichier non supporté'}, status=400)
+        # Recherche des doublons
+        for var in soup.find_all('var'):
+            variable_name = var.get('name', '').strip()
+            if not variable_name:
+                continue
+            existing_bindings = BindingSurveyRepresentedVariable.objects.filter(
+                variable_name=variable_name,
+                survey__external_ref=variable_survey_id
+            )
+            if existing_bindings.exists():
+                existing_variables.append(variable_name)
+
         if existing_variables:
             return JsonResponse({'status': 'exists', 'existing_variables': existing_variables})
         else:

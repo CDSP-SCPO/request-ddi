@@ -1,6 +1,6 @@
 # -- DJANGO
-from django.db.models.signals import post_delete, post_save, pre_delete
-from django.dispatch import Signal, receiver
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 # -- THIRDPARTY
 from elasticsearch import NotFoundError
@@ -9,57 +9,34 @@ from elasticsearch import NotFoundError
 from .documents import BindingSurveyDocument
 from .models import (
     BindingSurveyRepresentedVariable, Category, ConceptualVariable,
-    RepresentedVariable, Survey,
+    RepresentedVariable,
 )
 
 
-@receiver(pre_delete, sender=Survey)
-def delete_related_data_on_survey_delete(sender, instance, **kwargs):
-    # Récupérer toutes les liaisons (bindings) associées à l'enquête avant suppression
-    bindings = BindingSurveyRepresentedVariable.objects.filter(survey=instance)
-    bindings.delete()  # Supprime toutes les liaisons associées à l'enquête
-
-    unlinked_represented_variables = RepresentedVariable.objects.filter(bindingsurveyrepresentedvariable__isnull=True)
-    unlinked_represented_variables.delete()
-    unlinked_conceptual_variables = ConceptualVariable.objects.filter(representedvariable__isnull=True)
-    unlinked_conceptual_variables.delete()
-
-    # Lister les catégories qui ne sont liées à aucune variable représentée
-    categories_without_variables = Category.objects.filter(variables__isnull=True)
-    categories_without_variables.delete()
-
 @receiver(post_save, sender=BindingSurveyRepresentedVariable)
 def update_index(sender, instance, **kwargs):
+    """Met à jour Elasticsearch à chaque sauvegarde d’un binding."""
     BindingSurveyDocument().update(instance)
+
 
 @receiver(post_delete, sender=BindingSurveyRepresentedVariable)
 def delete_index(sender, instance, **kwargs):
-    BindingSurveyDocument().delete(instance)
-
-
+    """Supprime le document Elasticsearch correspondant à un binding supprimé."""
+    try:
+        BindingSurveyDocument().delete(instance)
+    except NotFoundError:
+        pass
 def delete_represented_variable_if_unused(represented_variable):
+    """Supprime une variable représentée et ses dépendances si elles ne sont plus utilisées."""
     categories = represented_variable.categories.all()
-
     represented_variable.delete()
 
-    # Supprimer les catégories si elles ne sont plus utilisées
     for category in categories:
         if not category.variables.exists():
             print(f"Deleting category: {category.category_label}")
             category.delete()
 
-    # Supprimer la variable conceptuelle si elle n'est plus utilisée
     conceptual_var = represented_variable.conceptual_var
     if not RepresentedVariable.objects.filter(conceptual_var=conceptual_var).exists():
         print(f"Deleting conceptual variable: {conceptual_var.internal_label}")
         conceptual_var.delete()
-
-# Désindéxation lors de la suppression
-@receiver(post_delete, sender=RepresentedVariable)
-def delete_represented_variable_index(sender, instance, **kwargs):
-    try:
-        BindingSurveyDocument().delete(instance)
-    except NotFoundError:
-        # Le document n'était pas présent dans l'index, donc rien à faire
-        pass
-
