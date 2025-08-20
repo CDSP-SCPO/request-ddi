@@ -250,6 +250,12 @@
                 caretIcon.classList.remove('rotated');
             }
         }
+    function exportMetadata() {
+        const questionId = "{{ question.id }}";
+        const query = `ids=${questionId}`;
+        window.location.href = "{% url 'export_questions_csv' %}?" + query;
+    }
+    
     $(document).ready(function() {
         // Initialiser les tooltips
         $('[data-toggle="tooltip"]').tooltip({
