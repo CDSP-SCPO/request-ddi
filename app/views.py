@@ -141,6 +141,7 @@ class XMLUploadView(FormView):
 
 
 
+
 class RepresentedVariableSearchView(ListView):
     model = RepresentedVariable
     template_name = 'homepage.html'  # Nom du template
