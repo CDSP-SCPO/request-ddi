@@ -39,7 +39,7 @@ msgid ""
 "Découvrez, comparez et réutilisez des questions d'enquêtes en sciences "
 "humaines et sociales"
 msgstr ""
-"Discover, compare and reuse questions from human and social science surveys"
+"Discover, compare and reuse questions from social sciences and humanities surveys"
 
 #: app/templates/question_detail.html:13 app/templates/question_detail.html:19
 msgid "Retour à la recherche"
