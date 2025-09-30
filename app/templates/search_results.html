@@ -312,21 +312,24 @@
             }
         }
 
-        function updateDecadeCheckboxes(data) {
+        function updateDecadeCheckboxes() {
+            const decades = {};
+            // Récupérer toutes les décennies disponibles dans le DOM
+            $('.decade-checkbox').each(function() {
+                const decade = parseInt($(this).val());
+                decades[decade] = Array.from({ length: 10 }, (_, i) => decade + i);
+            });
 
-            if (!data || !data.decades_by_year) {
-                return;
-            }
+            // Pour chaque décennie, vérifier l'état des années
+            Object.entries(decades).forEach(([decade, years]) => {
+                const decadeCheckbox = $(`#decade-${decade}`);
+                if (decadeCheckbox.length === 0) return;
 
-            Object.entries(data.decades_by_year).forEach(([decade, years]) => {
-                const allSelected = years.every(year => selectedYears.has(parseInt(year)));
-                const someSelected = years.some(year => selectedYears.has(parseInt(year)));
+                const allSelected = years.every(year => selectedYears.has(year));
+                const someSelected = years.some(year => selectedYears.has(year));
 
-                const checkbox = document.getElementById(`decade-${decade}`);
-                if (checkbox) {
-                    checkbox.checked = allSelected;
-                    checkbox.indeterminate = someSelected && !allSelected;
-                }
+                decadeCheckbox.prop('checked', allSelected);
+                decadeCheckbox[0].indeterminate = someSelected && !allSelected;
             });
         }
 
@@ -355,6 +358,8 @@
             if (!selectedFilters['year'].some(f => f.value === yearStr)) {
                 selectedFilters['year'].push({ value: yearStr, label: `Année ${yearStr}` });
             }
+            updateURLWithFilters();
+            updateDecadeCheckboxes();
         }
 
 
@@ -413,6 +418,7 @@
                                 // Supprime aussi l'année du Set
                                 if (key === 'year') {
                                     selectedYears.delete(parseInt(filter.value));
+                                    updateDecadeCheckboxes();
                                 }
 
                                 updateFiltersDisplay();
@@ -600,11 +606,11 @@
                                 if (selectedFilters['year']) {
                                     selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
                                 }
+                                updateDecadeCheckboxes();
                             }
 
 
                             updateFiltersDisplay();
-                            updateDecadeCheckboxes(data);
                             updateFilterCounts();
                             $('#survey-table').DataTable().ajax.reload();
                         });
@@ -949,6 +955,7 @@
                     }
                 }
                 $('#survey-table').DataTable().ajax.reload();
+                updateURLWithFilters();
             });
             $('.survey-checkbox').off('change').on('change', function () {
                 var checkbox = $(this);
@@ -958,6 +965,7 @@
 
                 handleFilterChange(filterType, filterValue, filterLabel);
                 updateFilterCounts();
+                updateURLWithFilters();
             });
         }
 
@@ -982,6 +990,7 @@
                 }
 
                 $('#survey-table').DataTable().ajax.reload();
+                updateURLWithFilters();
             });
 
 
@@ -991,7 +1000,7 @@
                 selectedYears.clear(); // 🔁 Vide les années sélectionnées
 
                 $('.form-check-input').prop('checked', false); // Décoche toutes les cases visibles
-
+                updateDecadeCheckboxes();
                 updateFiltersDisplay();
                 updateFilterCounts();
 
@@ -1058,6 +1067,39 @@
 
             $(window).resize(updateTableContainerHeight);
         }
+        function updateURLWithFilters() {
+            const url = new URL(window.location.href);
+            const params = new URLSearchParams();
+
+            const searchQuery = $('input[name="q"]').val();
+            if (searchQuery) {
+                params.set('q', searchQuery);
+            }
+
+            $('.search-location-checkbox:checked').each(function() {
+                params.append('search_location', $(this).val());
+            });
+
+            $('.collection-checkbox:checked').each(function() {
+                params.append('collections', $(this).val());
+            });
+
+            $('.subcollection-checkbox:checked').each(function() {
+                params.append('sub_collections', $(this).val());
+            });
+
+            $('.survey-checkbox:checked').each(function() {
+                params.append('survey', $(this).val());
+            });
+
+            Array.from(selectedYears).forEach(year => {
+                params.append('years', year);
+            });
+
+            url.search = params.toString();
+            window.history.pushState({}, '', url);
+        }
+
 
         // ---------------------------
         // 7. Ready: lancement initial
@@ -1072,6 +1114,7 @@
             await applyFiltersFromURL();
             updateFiltersDisplay();
             updateFilterCounts();
+            updateURLWithFilters();
 
             const targetNode = document.getElementById('selected-filters-container');
             if (targetNode) {
