@@ -53,7 +53,10 @@ class BindingSurveyDocument(Document):
                         },
                         'french_stop': {
                             'type': 'stop',
-                            'stopwords': '_french_'
+                            'stopwords': [
+                                '_french_',
+                                'a',
+                            ]
                         }
                     },
                     'analyzer': {
