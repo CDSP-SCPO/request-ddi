@@ -23,7 +23,7 @@ from django.conf.urls.i18n import i18n_patterns
 from django.views.i18n import set_language
 
 # -- BASEDEQUESTIONS
-from app.views import ExportQuestionsCSVView
+from app.views.export_views import ExportQuestionsCSVView
 
 urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
