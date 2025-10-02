@@ -5,13 +5,15 @@ from django.contrib.auth.views import LogoutView
 from django.urls import path
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .views import (
-    CSVUploadViewCollection, CustomLoginView, QuestionDetailView,
-    RepresentedVariableSearchView, SearchResultsDataView, XMLUploadView,
-    export_page, search_results,
-)
+from .views.upload_views import XMLUploadView, CSVUploadViewCollection, check_duplicates
+from .views.search_views import RepresentedVariableSearchView, SearchResultsDataView
+from .views.detail_views import QuestionDetailView
+from .views.export_views import ExportQuestionsCSVView
+from .views.auth_views import CustomLoginView
+from .views.filter_views import get_surveys_by_collections, get_subcollections_by_collections, get_surveys_by_subcollections, get_decades, get_years_by_decade
+from .views.export_views import export_page
 
-from.views_ajax import check_duplicates, check_media_root, create_distributor, get_distributor, get_surveys_by_subcollections, get_surveys_by_collections, get_subcollections_by_collections, similar_conceptual_variable_questions, similar_representative_variable_questions, get_years_by_decade, get_decades
+from .views.search_views import search_results
 
 app_name = 'app'
 
@@ -20,7 +22,6 @@ urlpatterns = [
     path('upload-xml/', XMLUploadView.as_view(), name='upload_xml'),
     path('upload-csv-collection/', CSVUploadViewCollection.as_view(), name='upload_csv_collection'),
     path('check-duplicates/', check_duplicates, name='check_duplicates'),
-    path('check-media-root/', check_media_root),
 
     # === Recherche de variables représentées ===
     path('', RepresentedVariableSearchView.as_view(), name='representedvariable_search'),
@@ -32,8 +33,6 @@ urlpatterns = [
 
     # === Détail des questions et similaires ===
     path('question/<int:id>/', QuestionDetailView.as_view(), name='question_detail'),
-    path('questions/similar_representative/<int:question_id>/', similar_representative_variable_questions, name='similar_representative'),
-    path('questions/similar_conceptual/<int:question_id>/', similar_conceptual_variable_questions, name='similar_conceptual'),
 
     # === Authentification ===
     path('login/', CustomLoginView.as_view(), name='login'),
@@ -44,10 +43,6 @@ urlpatterns = [
     path('api/get-subcollections-by-collections/', get_subcollections_by_collections,
          name='get_subcollections_by_collections'),
     path('api/get-surveys-by-subcollections/', get_surveys_by_subcollections, name='get_surveys_by_subcollections'),
-
-    # === API - Distributeurs ===
-    path('api/add-distributor/', create_distributor, name='create_distributor'),
-    path('api/get-distributors/', get_distributor, name='get_distributor'),
 
     # === API - Filtres temporels ===
     path('api/get-decades/', get_decades, name='get_decades'),
