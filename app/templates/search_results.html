@@ -420,7 +420,7 @@
                                     selectedYears.delete(parseInt(filter.value));
                                     updateDecadeCheckboxes();
                                 }
-
+                                updateURLWithFilters();
                                 updateFiltersDisplay();
                                 updateFilterCounts();
                                 $('#survey-table').DataTable().ajax.reload();
