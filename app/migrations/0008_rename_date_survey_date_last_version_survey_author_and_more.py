@@ -4,55 +4,54 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0007_remove_collection_serie_remove_survey_serie_and_more'),
+        ("app", "0007_remove_collection_serie_remove_survey_serie_and_more"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='survey',
-            old_name='date',
-            new_name='date_last_version',
+            model_name="survey",
+            old_name="date",
+            new_name="date_last_version",
         ),
         migrations.AddField(
-            model_name='survey',
-            name='author',
+            model_name="survey",
+            name="author",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='survey',
-            name='citation',
+            model_name="survey",
+            name="citation",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='survey',
-            name='contact',
+            model_name="survey",
+            name="contact",
             field=models.EmailField(blank=True, max_length=254, null=True),
         ),
         migrations.AddField(
-            model_name='survey',
-            name='geographic_coverage',
+            model_name="survey",
+            name="geographic_coverage",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='survey',
-            name='geographic_unit',
+            model_name="survey",
+            name="geographic_unit",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='survey',
-            name='producer',
+            model_name="survey",
+            name="producer",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='survey',
-            name='start_date',
+            model_name="survey",
+            name="start_date",
             field=models.DateField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='survey',
-            name='unit_of_analysis',
+            model_name="survey",
+            name="unit_of_analysis",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
     ]

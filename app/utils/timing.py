@@ -12,4 +12,5 @@ def timed(func):
         duration = end - start
         print(f"⏱ La fonction '{func.__name__}' a pris {duration:.3f} secondes.")
         return result
+
     return wrapper

@@ -8,7 +8,7 @@ from elasticsearch import NotFoundError
 # -- BASEDEQUESTIONS (LOCAL)
 from .documents import BindingSurveyDocument
 from .models import (
-    BindingSurveyRepresentedVariable, Category, ConceptualVariable,
+    BindingSurveyRepresentedVariable,
     RepresentedVariable,
 )
 
@@ -26,6 +26,8 @@ def delete_index(sender, instance, **kwargs):
         BindingSurveyDocument().delete(instance)
     except NotFoundError:
         pass
+
+
 def delete_represented_variable_if_unused(represented_variable):
     """Supprime une variable représentée et ses dépendances si elles ne sont plus utilisées."""
     categories = represented_variable.categories.all()

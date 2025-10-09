@@ -5,95 +5,245 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('code', models.CharField(max_length=255)),
-                ('category_label', models.TextField(null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("code", models.CharField(max_length=255)),
+                ("category_label", models.TextField(null=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Concept',
+            name="Concept",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('description', models.TextField()),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("description", models.TextField()),
             ],
         ),
         migrations.CreateModel(
-            name='Publisher',
+            name="Publisher",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
             ],
         ),
         migrations.CreateModel(
-            name='ConceptualVariable',
+            name="ConceptualVariable",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('internal_label', models.TextField()),
-                ('concepts', models.ManyToManyField(related_name='conceptual_variables', to='app.concept')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("internal_label", models.TextField()),
+                (
+                    "concepts",
+                    models.ManyToManyField(
+                        related_name="conceptual_variables", to="app.concept"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='RepresentedVariable',
+            name="RepresentedVariable",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('type', models.CharField(choices=[('question', 'question'), ('var_internal', 'variable interne'), ('var_recalc', 'variable calcule')], max_length=255)),
-                ('question_text', models.TextField(null=True)),
-                ('internal_label', models.CharField(max_length=255, null=True)),
-                ('type_categories', models.CharField(choices=[('code', 'code'), ('text', 'text'), ('numerical', 'numerical'), ('date', 'date')], max_length=255)),
-                ('categories', models.ManyToManyField(related_name='variables', to='app.category')),
-                ('conceptual_var', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='app.conceptualvariable')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[
+                            ("question", "question"),
+                            ("var_internal", "variable interne"),
+                            ("var_recalc", "variable calcule"),
+                        ],
+                        max_length=255,
+                    ),
+                ),
+                ("question_text", models.TextField(null=True)),
+                ("internal_label", models.CharField(max_length=255, null=True)),
+                (
+                    "type_categories",
+                    models.CharField(
+                        choices=[
+                            ("code", "code"),
+                            ("text", "text"),
+                            ("numerical", "numerical"),
+                            ("date", "date"),
+                        ],
+                        max_length=255,
+                    ),
+                ),
+                (
+                    "categories",
+                    models.ManyToManyField(related_name="variables", to="app.category"),
+                ),
+                (
+                    "conceptual_var",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="app.conceptualvariable",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Serie',
+            name="Serie",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField()),
-                ('abstract', models.TextField()),
-                ('photo', models.ImageField(blank=True, null=True, upload_to='series_photos/')),
-                ('publisher', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='app.publisher')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField()),
+                ("abstract", models.TextField()),
+                (
+                    "photo",
+                    models.ImageField(
+                        blank=True, null=True, upload_to="series_photos/"
+                    ),
+                ),
+                (
+                    "publisher",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="app.publisher",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Survey',
+            name="Survey",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('external_ref', models.CharField(max_length=255)),
-                ('name', models.TextField()),
-                ('serie', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='app.serie')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("external_ref", models.CharField(max_length=255)),
+                ("name", models.TextField()),
+                (
+                    "serie",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="app.serie",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='BindingSurveyRepresentedVariable',
+            name="BindingSurveyRepresentedVariable",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('notes', models.TextField()),
-                ('variable_name', models.TextField()),
-                ('universe', models.TextField()),
-                ('variable', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='app.representedvariable')),
-                ('survey', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='app.survey')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("notes", models.TextField()),
+                ("variable_name", models.TextField()),
+                ("universe", models.TextField()),
+                (
+                    "variable",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="app.representedvariable",
+                    ),
+                ),
+                (
+                    "survey",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="app.survey"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='BindingConcept',
+            name="BindingConcept",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('child', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='child_bindings', to='app.concept')),
-                ('parent', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='parent_bindings', to='app.concept')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "child",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="child_bindings",
+                        to="app.concept",
+                    ),
+                ),
+                (
+                    "parent",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="parent_bindings",
+                        to="app.concept",
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('parent', 'child')},
+                "unique_together": {("parent", "child")},
             },
         ),
     ]

@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0005_remove_collection_abstract_and_more'),
+        ("app", "0005_remove_collection_abstract_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='survey',
-            name='language',
-            field=models.CharField(default='', max_length=255),
+            model_name="survey",
+            name="language",
+            field=models.CharField(default="", max_length=255),
         ),
     ]

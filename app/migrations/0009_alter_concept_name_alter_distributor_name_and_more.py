@@ -4,60 +4,59 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0008_rename_date_survey_date_last_version_survey_author_and_more'),
+        ("app", "0008_rename_date_survey_date_last_version_survey_author_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='concept',
-            name='name',
+            model_name="concept",
+            name="name",
             field=models.CharField(max_length=510),
         ),
         migrations.AlterField(
-            model_name='distributor',
-            name='name',
+            model_name="distributor",
+            name="name",
             field=models.CharField(max_length=510),
         ),
         migrations.AlterField(
-            model_name='representedvariable',
-            name='internal_label',
+            model_name="representedvariable",
+            name="internal_label",
             field=models.CharField(max_length=510, null=True),
         ),
         migrations.AlterField(
-            model_name='survey',
-            name='author',
+            model_name="survey",
+            name="author",
             field=models.CharField(blank=True, max_length=510, null=True),
         ),
         migrations.AlterField(
-            model_name='survey',
-            name='external_ref',
+            model_name="survey",
+            name="external_ref",
             field=models.CharField(max_length=255, unique=True),
         ),
         migrations.AlterField(
-            model_name='survey',
-            name='geographic_coverage',
+            model_name="survey",
+            name="geographic_coverage",
             field=models.CharField(blank=True, max_length=510, null=True),
         ),
         migrations.AlterField(
-            model_name='survey',
-            name='geographic_unit',
+            model_name="survey",
+            name="geographic_unit",
             field=models.CharField(blank=True, max_length=510, null=True),
         ),
         migrations.AlterField(
-            model_name='survey',
-            name='language',
-            field=models.CharField(default='', max_length=510),
+            model_name="survey",
+            name="language",
+            field=models.CharField(default="", max_length=510),
         ),
         migrations.AlterField(
-            model_name='survey',
-            name='producer',
+            model_name="survey",
+            name="producer",
             field=models.CharField(blank=True, max_length=510, null=True),
         ),
         migrations.AlterField(
-            model_name='survey',
-            name='unit_of_analysis',
+            model_name="survey",
+            name="unit_of_analysis",
             field=models.CharField(blank=True, max_length=510, null=True),
         ),
     ]
