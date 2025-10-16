@@ -5,33 +5,58 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0003_rename_publisher_distributor_and_more'),
+        ("app", "0003_rename_publisher_distributor_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='serie',
-            name='abstract',
+            model_name="serie",
+            name="abstract",
         ),
         migrations.RemoveField(
-            model_name='serie',
-            name='distributor',
+            model_name="serie",
+            name="distributor",
         ),
         migrations.CreateModel(
-            name='Collection',
+            name="Collection",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField()),
-                ('abstract', models.TextField()),
-                ('photo', models.ImageField(blank=True, null=True, upload_to='series_photos/')),
-                ('distributor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='app.distributor')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField()),
+                ("abstract", models.TextField()),
+                (
+                    "photo",
+                    models.ImageField(
+                        blank=True, null=True, upload_to="series_photos/"
+                    ),
+                ),
+                (
+                    "distributor",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="app.distributor",
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='serie',
-            name='collection',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='app.collection'),
+            model_name="serie",
+            name="collection",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="app.collection",
+            ),
         ),
     ]

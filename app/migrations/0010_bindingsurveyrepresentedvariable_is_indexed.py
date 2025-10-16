@@ -4,19 +4,21 @@ from django.db import migrations, models
 
 
 def initialize_is_indexed(apps, schema_editor):
-    bindings_survey_represented_variable = apps.get_model('app', 'BindingSurveyRepresentedVariable')
+    bindings_survey_represented_variable = apps.get_model(
+        "app", "BindingSurveyRepresentedVariable"
+    )
     bindings_survey_represented_variable.objects.all().update(is_indexed=False)
 
-class Migration(migrations.Migration):
 
+class Migration(migrations.Migration):
     dependencies = [
-        ('app', '0009_alter_concept_name_alter_distributor_name_and_more'),
+        ("app", "0009_alter_concept_name_alter_distributor_name_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='bindingsurveyrepresentedvariable',
-            name='is_indexed',
+            model_name="bindingsurveyrepresentedvariable",
+            name="is_indexed",
             field=models.BooleanField(default=False),
         ),
         migrations.RunPython(initialize_is_indexed),

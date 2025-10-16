@@ -13,6 +13,6 @@ import os
 # -- DJANGO
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'basedequestions.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "basedequestions.settings")
 
 application = get_asgi_application()

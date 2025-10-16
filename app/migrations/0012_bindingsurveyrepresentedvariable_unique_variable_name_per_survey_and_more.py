@@ -4,18 +4,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0011_conceptualvariable_is_unique_and_more'),
+        ("app", "0011_conceptualvariable_is_unique_and_more"),
     ]
 
     operations = [
         migrations.AddConstraint(
-            model_name='bindingsurveyrepresentedvariable',
-            constraint=models.UniqueConstraint(fields=('survey', 'variable_name'), name='unique_variable_name_per_survey'),
+            model_name="bindingsurveyrepresentedvariable",
+            constraint=models.UniqueConstraint(
+                fields=("survey", "variable_name"),
+                name="unique_variable_name_per_survey",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='category',
-            constraint=models.UniqueConstraint(fields=('code', 'category_label'), name='unique_code_category_link'),
+            model_name="category",
+            constraint=models.UniqueConstraint(
+                fields=("code", "category_label"), name="unique_code_category_link"
+            ),
         ),
     ]

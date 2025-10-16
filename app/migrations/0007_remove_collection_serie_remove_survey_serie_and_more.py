@@ -5,50 +5,81 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0006_survey_language'),
+        ("app", "0006_survey_language"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='collection',
-            name='serie',
+            model_name="collection",
+            name="serie",
         ),
         migrations.RemoveField(
-            model_name='survey',
-            name='serie',
+            model_name="survey",
+            name="serie",
         ),
         migrations.AddField(
-            model_name='collection',
-            name='abstract',
-            field=models.TextField(default=''),
+            model_name="collection",
+            name="abstract",
+            field=models.TextField(default=""),
         ),
         migrations.AddField(
-            model_name='collection',
-            name='distributor',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='app.distributor'),
+            model_name="collection",
+            name="distributor",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="app.distributor",
+            ),
         ),
         migrations.AlterField(
-            model_name='collection',
-            name='photo',
-            field=models.ImageField(blank=True, null=True, upload_to='collections_photos/'),
+            model_name="collection",
+            name="photo",
+            field=models.ImageField(
+                blank=True, null=True, upload_to="collections_photos/"
+            ),
         ),
         migrations.CreateModel(
-            name='Subcollection',
+            name="Subcollection",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField()),
-                ('photo', models.ImageField(blank=True, null=True, upload_to='subcollections_photos/')),
-                ('collection', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='app.collection')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField()),
+                (
+                    "photo",
+                    models.ImageField(
+                        blank=True, null=True, upload_to="subcollections_photos/"
+                    ),
+                ),
+                (
+                    "collection",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="app.collection",
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='survey',
-            name='subcollection',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='app.subcollection'),
+            model_name="survey",
+            name="subcollection",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="app.subcollection",
+            ),
         ),
         migrations.DeleteModel(
-            name='Serie',
+            name="Serie",
         ),
     ]

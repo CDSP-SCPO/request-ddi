@@ -1,20 +1,21 @@
 # -- STDLIB
 import re
 
-# -- DJANGO
-from django.conf import settings
-
 # -- THIRDPARTY
 import requests
+
+# -- DJANGO
+from django.conf import settings
 
 
 def remove_html_tags(text):
     """Supprime toutes les balises HTML d'une chaîne de caractères."""
-    return re.sub(r'<[^>]+>', '', text)
+    return re.sub(r"<[^>]+>", "", text)
 
 
 def admin_required(user):
     return user.is_authenticated and user.is_staff
+
 
 def check_file_access(file_url):
     """
