@@ -5,37 +5,46 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0004_remove_serie_abstract_remove_serie_distributor_and_more'),
+        ("app", "0004_remove_serie_abstract_remove_serie_distributor_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='collection',
-            name='abstract',
+            model_name="collection",
+            name="abstract",
         ),
         migrations.RemoveField(
-            model_name='collection',
-            name='distributor',
+            model_name="collection",
+            name="distributor",
         ),
         migrations.RemoveField(
-            model_name='serie',
-            name='collection',
+            model_name="serie",
+            name="collection",
         ),
         migrations.AddField(
-            model_name='collection',
-            name='serie',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='app.serie'),
+            model_name="collection",
+            name="serie",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="app.serie",
+            ),
         ),
         migrations.AddField(
-            model_name='serie',
-            name='abstract',
-            field=models.TextField(default=''),
+            model_name="serie",
+            name="abstract",
+            field=models.TextField(default=""),
         ),
         migrations.AddField(
-            model_name='serie',
-            name='distributor',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='app.distributor'),
+            model_name="serie",
+            name="distributor",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="app.distributor",
+            ),
         ),
     ]

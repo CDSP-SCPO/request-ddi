@@ -4,19 +4,18 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0002_survey_date'),
+        ("app", "0002_survey_date"),
     ]
 
     operations = [
         migrations.RenameModel(
-            old_name='Publisher',
-            new_name='Distributor',
+            old_name="Publisher",
+            new_name="Distributor",
         ),
         migrations.RenameField(
-            model_name='serie',
-            old_name='publisher',
-            new_name='distributor',
+            model_name="serie",
+            old_name="publisher",
+            new_name="distributor",
         ),
     ]

@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0010_bindingsurveyrepresentedvariable_is_indexed'),
+        ("app", "0010_bindingsurveyrepresentedvariable_is_indexed"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='conceptualvariable',
-            name='is_unique',
+            model_name="conceptualvariable",
+            name="is_unique",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='representedvariable',
-            name='is_unique',
+            model_name="representedvariable",
+            name="is_unique",
             field=models.BooleanField(default=False),
         ),
     ]
