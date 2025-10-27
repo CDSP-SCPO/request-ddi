@@ -23,7 +23,7 @@ spec:
               mountPath: /app/media
       containers:
         - name: basedequestions
-          image: gitlab.sciences-po.fr:4567/cdspit/request/base-de-questions/basedequestions:latest
+          image: gitlab.sciences-po.fr:4567/cdspit/request/base-de-questions:latest
           command: ["./entrypoint.sh"]
           env:
             - name: DATABASE_URL
