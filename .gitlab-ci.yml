@@ -5,7 +5,7 @@ stages:
   - deploy
 
 variables:
-  IMAGE_NAME_TAG_BACK: $CI_REGISTRY_IMAGE/basedequestions:$CI_COMMIT_REF_SLUG
+  IMAGE_NAME_TAG_BACK: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
 
 build:
   stage: build
