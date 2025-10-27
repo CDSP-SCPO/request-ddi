@@ -14,7 +14,7 @@ Le namespace utilisé pour cet environnement est `request`.
 Ce fichier définit le déploiement de l'application Django. Voici les détails :
 - **Nom du déploiement** : `basedequestions`
 - **Réplicas** : `1`
-- **Image Docker** : `gitlab.sciences-po.fr:4567/cdspit/request/base-de-questions/basedequestions:latest`
+- **Image Docker** : `gitlab.sciences-po.fr:4567/cdspit/request/base-de-questions:latest`
 - **Entrypoint** : `./entrypoint.sh`
 - **Init container** : crée `/app/media`, change les permissions, ajoute un fichier test
 - **Secrets utilisés** :
