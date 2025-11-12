@@ -16,3 +16,5 @@ django-debug-toolbar
 requests
 vulture
 pyan3
+ruff
+django-extensions>=3.3

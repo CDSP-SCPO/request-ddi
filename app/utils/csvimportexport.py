@@ -4,7 +4,7 @@ from import_export import resources
 from import_export.fields import Field
 
 # -- BASEDEQUESTIONS (LOCAL)
-from ..models import BindingSurveyRepresentedVariable
+from app.models import BindingSurveyRepresentedVariable
 
 
 class BindingSurveyResource(resources.ModelResource):

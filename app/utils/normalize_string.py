@@ -26,7 +26,7 @@ def normalize_string_for_database(value):
     text = re.sub(r'(["])(?=\S)', r"\1 ", text)
 
     # Uniformisation des apostrophes et tirets
-    text = text.replace("’", "'").replace("–", "-")
+    text = text.replace("’", "'").replace("–", "-")  # noqa: RUF001
 
     # Remplacement des points de suspension et normalisation des espaces
     text = text.replace("…", "...")

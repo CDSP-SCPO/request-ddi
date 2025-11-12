@@ -7,9 +7,9 @@ from app.models import BindingSurveyRepresentedVariable
 
 
 class QuestionDetailView(View):
-    def get(self, request, id, *args, **kwargs):
+    def get(self, request, id_quest, *args, **kwargs):
         search_params = request.GET.urlencode()
-        question = get_object_or_404(BindingSurveyRepresentedVariable, id=id)
+        question = get_object_or_404(BindingSurveyRepresentedVariable, id=id_quest)
         question_represented_var = question.variable
         question_conceptual_var = question_represented_var.conceptual_var
         question_survey = question.survey
@@ -19,7 +19,6 @@ class QuestionDetailView(View):
             question.variable.categories.all(),
             key=lambda x: (int(x.code) if x.code.isdigit() else float("inf"), x.code),
         )
-
         similar_representative_questions = (
             BindingSurveyRepresentedVariable.objects.filter(
                 variable=question.variable, variable__is_unique=False

@@ -73,7 +73,8 @@ class ConceptualVariable(models.Model):
 
         # Si au moins une variable représentée existe, on l'affiche
         if represented_vars.exists():
-            return f"Conceptual Variable: {self.internal_label}, Linked Represented Variables: {', '.join([str(var.internal_label) for var in represented_vars])}"
+            return (f"Conceptual Variable: {self.internal_label}, Linked Represented Variables: "
+                  + f"{', '.join([str(var.internal_label) for var in represented_vars])}")
         else:
             return f"Conceptual Variable: {self.internal_label} (No linked represented variables)"
 
@@ -88,7 +89,7 @@ class Category(models.Model):
         return f"{self.code} : {self.category_label}"
 
     class Meta:
-        constraints = [
+        constraints = [  # noqa: RUF012
             models.UniqueConstraint(
                 fields=["code", "category_label"], name="unique_code_category_link"
             )
@@ -104,7 +105,8 @@ class RepresentedVariable(models.Model):
             ("var_recalc", "variable calcule"),
         ),
     )
-    # origin = models.ManyToManyField('self', symmetrical=False, related_name="children_variables")  # plutot faire une autre class ?
+    # plutot faire une autre class ?
+    # origin = models.ManyToManyField('self', symmetrical=False, related_name="children_variables")
 
     # hidden = models.BooleanField(default=True)  # probablement a changer pour avoir plus de niveau
 
@@ -131,7 +133,8 @@ class RepresentedVariable(models.Model):
     is_unique = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Represented Variable: {self.internal_label or 'N/A'} ({self.type}, {self.question_text})"
+        return (f"Represented Variable: {self.internal_label or 'N/A'} " +
+                f"({self.type}, {self.question_text})")
 
     @classmethod
     def get_cleaned_question_texts(cls):
@@ -155,7 +158,7 @@ class BindingSurveyRepresentedVariable(models.Model):
     is_indexed = models.BooleanField(default=False)
 
     class Meta:
-        constraints = [
+        constraints = [  # noqa: RUF012
             models.UniqueConstraint(
                 fields=["survey", "variable_name"],
                 name="unique_variable_name_per_survey",

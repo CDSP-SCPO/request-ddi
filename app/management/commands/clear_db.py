@@ -1,9 +1,10 @@
 # -- STDLIB
+import logging
 import time
 
 # -- DJANGO
 from django.core.management.base import BaseCommand
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_delete, post_save
 
 # -- BASEDEQUESTIONS
 from app.models import (
@@ -18,15 +19,16 @@ from app.models import (
     Subcollection,
     Survey,
 )
-from app.signals import update_index, delete_index  # Import des handlers signals
+from app.signals import delete_index, update_index  # Import des handlers signals
 
+logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = "Supprime toutes les données de la base de données dans un ordre spécifique"
 
     def handle(self, *args, **kwargs):
         start_time = time.time()  # Début de la mesure du temps global
-        print("Démarrage de la suppression des données...")
+        logger.info("Démarrage de la suppression des données...")
 
         # --- Désactivation des signaux pour BindingSurveyRepresentedVariable ---
         post_save.disconnect(update_index, sender=BindingSurveyRepresentedVariable)
@@ -52,10 +54,8 @@ class Command(BaseCommand):
             )  # Début de la mesure du temps pour chaque modèle
             model.objects.all().delete()
             model_end_time = time.time()  # Fin de la mesure du temps pour chaque modèle
-
-            print(
-                f"{name} supprimé avec succès en {model_end_time - model_start_time:.4f} secondes."
-            )
+            duration = model_end_time - model_start_time
+            logger.info("%s supprimé avec succès en %.4f secondes.", name, duration)
             self.stdout.write(self.style.SUCCESS(f"Deleted {name}"))
 
         # --- Réactivation des signaux ---
@@ -63,7 +63,8 @@ class Command(BaseCommand):
         post_delete.connect(delete_index, sender=BindingSurveyRepresentedVariable)
 
         end_time = time.time()  # Fin de la mesure du temps global
-        print(
-            f"Toutes les données ont été supprimées avec succès en {end_time - start_time:.4f} secondes."
+        total_duration = end_time - start_time
+        logger.info(
+            "Toutes les données ont été supprimées avec succès en %.4f secondes.", total_duration
         )
         self.stdout.write(self.style.SUCCESS("All data cleared successfully!"))

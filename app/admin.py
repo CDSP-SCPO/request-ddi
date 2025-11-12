@@ -2,7 +2,18 @@
 from django.contrib import admin
 
 # -- BASEDEQUESTIONS (LOCAL)
-from .models import *
+from .models import (
+    BindingConcept,
+    BindingSurveyRepresentedVariable,
+    Category,
+    Collection,
+    Concept,
+    ConceptualVariable,
+    Distributor,
+    RepresentedVariable,
+    Subcollection,
+    Survey,
+)
 
 admin.site.register(Survey)
 admin.site.register(ConceptualVariable)

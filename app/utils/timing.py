@@ -1,7 +1,9 @@
 # -- STDLIB
 import functools
+import logging
 import time
 
+logger = logging.getLogger(__name__)
 
 def timed(func):
     @functools.wraps(func)
@@ -10,7 +12,7 @@ def timed(func):
         result = func(*args, **kwargs)
         end = time.time()
         duration = end - start
-        print(f"⏱ La fonction '{func.__name__}' a pris {duration:.3f} secondes.")
+        logger.info("⏱ La fonction '%s' a pris %.3f secondes.", func.__name__, duration)
         return result
 
     return wrapper

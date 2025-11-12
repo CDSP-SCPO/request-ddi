@@ -47,7 +47,7 @@ urlpatterns = [
     # === Export ===
     path("export-csv/", export_page, name="export_page"),
     # === Détail des questions et similaires ===
-    path("question/<int:id>/", QuestionDetailView.as_view(), name="question_detail"),
+    path("question/<int:id_quest>/", QuestionDetailView.as_view(), name="question_detail"),
     # === Authentification ===
     path("login/", CustomLoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),

@@ -1,5 +1,7 @@
 # -- STDLIB
 import csv
+import logging
+import re
 from datetime import datetime
 
 # -- THIRDPARTY
@@ -28,6 +30,7 @@ from app.models import (
 from app.parser import XMLParser
 from app.utils.timing import timed
 
+logger = logging.getLogger(__name__)
 
 class XMLUploadView(FormView):
     template_name = "upload_xml.html"
@@ -80,13 +83,13 @@ class XMLUploadView(FormView):
             return self.handle_error(f"{ve}", form)
 
         except Exception as e:
-            return self.handle_error(f"Erreur inattendue : {str(e)}", form)
+            return self.handle_error(f"Erreur inattendue : {e!s}", form)
 
     def form_invalid(self, form):
         error_messages = []
 
         # 1. Erreurs Django du formulaire
-        for field, field_errors in form.errors.items():
+        for field, field_errors in form.errors.items():  # noqa: B007
             for error in field_errors:
                 cleaned_error = str(error)
                 error_messages.append(cleaned_error)
@@ -118,21 +121,21 @@ class XMLUploadView(FormView):
         results = []
         seen_invalid_dois = set()
         for file in files:
-            print(f"\n📂 Début du traitement du fichier : {file.name}")
+            logger.info(f"Début du traitement du fichier : {file.name}")
             try:
                 parser = XMLParser()
                 result = parser.parse_file(file, seen_invalid_dois)
                 self.errors.extend(parser.errors)
                 if result:
-                    print(
-                        f"✅ {len(result)} variables extraites du fichier {file.name}"
+                    logger.info(
+                        f"{len(result)} variables extraites du fichier {file.name}"
                     )
                     results.extend(result)
             except Exception as e:
-                self.errors.append(
-                    f"Erreur lors de la lecture du fichier {file.name}: {str(e)}"
-                )
-                print(f"❌ Erreur lors de la lecture du fichier {file.name}: {str(e)}")
+                error_msg = f"Erreur lors de la lecture du fichier {file.name}: {e!s}"
+                self.errors.append(error_msg)
+                logger.error(error_msg, exc_info=True)
+
         return results
 
 
@@ -153,15 +156,15 @@ class CSVUploadViewCollection(FormView):
                 }
             )
         except forms.ValidationError as ve:
-            print(ve.messages)
+            logger.error("Validation error: %s", ve.messages)
             return JsonResponse({"status": "error", "message": ve.messages})
         except IntegrityError as ie:
             doi = self.extract_doi_from_error(str(ie))
             if "unique constraint" in str(ie):
                 return JsonResponse(
                     {
-                        "status": "error",
-                        "message": f"Une enquête avec le DOI {doi} existe déjà dans la base de données.",
+                      "status": "error",
+                      "message": f"Une enquête avec le DOI {doi} existe déjà dans la base de données.",  # noqa: E501
                     }
                 )
         except ValueError as ve:
@@ -170,7 +173,7 @@ class CSVUploadViewCollection(FormView):
             return JsonResponse(
                 {
                     "status": "error",
-                    "message": f"Erreur lors de l'importation du fichier CSV : {str(e)}",
+                    "message": f"Erreur lors de l'importation du fichier CSV : {e!s}",
                 }
             )
 
@@ -178,9 +181,9 @@ class CSVUploadViewCollection(FormView):
         errors = form.errors.as_json()
         return JsonResponse(
             {
-                "status": "error",
-                "message": "Le formulaire est invalide.",
-                "errors": errors,
+              "status": "error",
+              "message": "Le formulaire est invalide.",
+              "errors": errors,
             }
         )
 
@@ -195,8 +198,6 @@ class CSVUploadViewCollection(FormView):
 
     def extract_doi_from_error(self, error_message):
         # Extraire le DOI du message d'erreur
-        # -- STDLIB
-        import re
 
         match = re.search(r"\(external_ref\)=\((.*?)\)", error_message)
         return match.group(1) if match else "inconnu"
@@ -215,15 +216,14 @@ class CSVUploadViewCollection(FormView):
             )
 
             subcollection_name = row["sous-collection"]
-            subcollection, created = Subcollection.objects.get_or_create(
+            subcollection, created = Subcollection.objects.get_or_create( # noqa: RUF059
                 name=subcollection_name, collection=collection
             )
 
             survey_doi = row["doi"]
             if not survey_doi.startswith("doi:"):
-                raise ValueError(
-                    f"Le DOI à la ligne {line_number} n'est pas dans le bon format : {survey_doi}"
-                )
+                msg = f"Le DOI à la ligne {line_number} n'est pas dans le bon format : {survey_doi}"
+                raise ValueError(msg)
 
             survey_name = row["title"]
             survey_language = row["xml_lang"]
@@ -240,34 +240,37 @@ class CSVUploadViewCollection(FormView):
             if survey_start_date:
                 try:
                     # Tente de convertir la date au format "YYYY"
-                    survey_start_date = datetime.strptime(
+                    survey_start_date = datetime.strptime(  # noqa: DTZ007
                         survey_start_date, "%Y"
                     ).date()
                 except ValueError:
                     try:
                         # Si ça échoue, tente de convertir la date au format "YYYY-MM-DD"
-                        survey_start_date = datetime.strptime(
+                        survey_start_date = datetime.strptime(  # noqa: DTZ007
                             survey_start_date, "%Y-%m-%d"
                         ).date()
                     except ValueError:
                         raise ValueError(
-                            f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}"
-                        )
+                            f"L'année de début à la ligne {line_number} n'est pas valide : "+
+                            f"{survey_start_date}"
+                        ) from None
             else:
                 survey_start_date = None
 
             # Vérification et formatage de survey_date_last_version
             if survey_date_last_version:
-                if len(survey_date_last_version) == 7:  # Format YYYY-MM
+                len_format_yyyy_mm = 7
+                if len(survey_date_last_version) == len_format_yyyy_mm:
                     survey_date_last_version += "-01"
                 try:
-                    survey_date_last_version = datetime.strptime(
+                    survey_date_last_version = datetime.strptime(  # noqa: DTZ007
                         survey_date_last_version, "%Y-%m-%d"
                     ).date()
                 except ValueError:
                     raise ValueError(
-                        f"La date de la dernière version à la ligne {line_number} n'est pas valide : {survey_date_last_version}"
-                    )
+                        f"La date de la dernière version à la ligne {line_number} n'est "+
+                        f"pas valide : {survey_date_last_version}"
+                    ) from None
             else:
                 survey_date_last_version = None
             Survey.objects.get_or_create(
@@ -306,7 +309,7 @@ def check_duplicates(request):
         soup = BeautifulSoup("\n".join(decoded_file), "xml")
         existing_variables = []
 
-        # Récupération du DOI / ID de l’enquête
+        # Récupération du DOI / ID de l’enquête # noqa: RUF003
         id_tag = soup.find("IDNo", attrs={"agency": "DataCite"}) or soup.find("IDNo")
         if not id_tag or not id_tag.text.strip():
             return JsonResponse(

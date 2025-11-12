@@ -8,4 +8,7 @@ class AppConfig(AppConfig):
 
     def ready(self):
         # -- BASEDEQUESTIONS
-        import app.signals
+        # IMPORTANT: This is need for instantiation of signals
+        # without which the changes to models in DB will not be
+        # automatically made on the elastic search
+        import app.signals  # noqa: PLC0415, F401

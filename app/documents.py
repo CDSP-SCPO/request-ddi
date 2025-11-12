@@ -1,4 +1,5 @@
 # -- STDLIB
+import logging
 import time
 
 # -- THIRDPARTY
@@ -9,6 +10,8 @@ from elasticsearch.helpers import bulk
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .models import BindingSurveyRepresentedVariable
+
+logger = logging.getLogger(__name__)
 
 
 @registry.register_document
@@ -42,7 +45,7 @@ class BindingSurveyDocument(Document):
 
     class Index:
         name = "binding_survey_variables"
-        settings = {
+        settings = {  # noqa: RUF012
             "index": {
                 "number_of_shards": 1,
                 "number_of_replicas": 0,
@@ -85,7 +88,7 @@ class BindingSurveyDocument(Document):
 
     class Django:
         model = BindingSurveyRepresentedVariable
-        fields = [
+        fields = [  # noqa: RUF012
             "variable_name",
             "notes",
             "universe",
@@ -119,8 +122,10 @@ class BindingSurveyDocument(Document):
             self._get_connection().delete(index=self._index._name, id=instance.pk)
 
         except Exception as ex:
-            print(
-                f"Erreur lors de la suppression du document avec l'ID {instance.pk}: {ex}"
+            logger.exception(
+                "Erreur lors de la suppression du document avec l'ID %s: %s",
+                instance.pk,
+                ex
             )
 
     def serialize(self, instance):
@@ -158,7 +163,7 @@ class BindingSurveyDocument(Document):
     def update_index(self):
         """Met à jour l'index Elasticsearch avec les documents non indexés."""
         start_time = time.time()
-        print("Démarrage de l'update de l'index pour les documents non indexés...")
+        logger.info("Démarrage de l'update de l'index pour les documents non indexés...")
 
         try:
             qs = self.get_queryset().filter(
@@ -180,16 +185,17 @@ class BindingSurveyDocument(Document):
             qs.update(is_indexed=True)
 
         except Exception as ex:
-            print(f"An unexpected error occurred: {ex}")
+            logger.exception("An unexpected error occurred: %s", ex)
 
         end_time = time.time()
-        print(
-            f"Temps total de l'update de l'index: {end_time - start_time:.4f} secondes."
+        logger.info(
+            "Temps total de l'update de l'index: %.4f secondes.",
+            end_time - start_time
         )
 
     def clean_orphaned_documents(self):
         """Supprime les documents Elasticsearch qui ne sont plus présents en base de données."""
-        print("🔍 Recherche des documents orphelins dans Elasticsearch...")
+        logger.info("🔍 Recherche des documents orphelins dans Elasticsearch...")
 
         # Obtenir tous les IDs en base
         db_ids = set(
@@ -220,14 +226,16 @@ class BindingSurveyDocument(Document):
 
             # Identifier les documents à supprimer
             orphan_ids = es_ids - db_ids
-            print(f"🧹 {len(orphan_ids)} documents orphelins trouvés à supprimer.")
+            logger.info("🧹 %d documents orphelins trouvés à supprimer.", len(orphan_ids))
 
             for orphan_id in orphan_ids:
                 try:
                     es.delete(index=index_name, id=orphan_id)
-                    print(f"❌ Document supprimé : ID {orphan_id}")
+                    logger.info("❌ Document supprimé : ID %s", orphan_id)
                 except NotFoundError:
-                    print(f"⚠️ Document déjà supprimé : ID {orphan_id}")
+                    logger.warning("⚠️ Document déjà supprimé : ID %s", orphan_id)
 
         except Exception as e:
-            print(f"Erreur lors du nettoyage de l'index : {e}")
+            logger.exception(
+                "Erreur lors du nettoyage de l'index pour le document ID %s : %s", orphan_id, e,
+            )

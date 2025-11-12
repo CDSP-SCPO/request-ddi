@@ -1,19 +1,18 @@
 # -- DJANGO
 from django.http import JsonResponse
 
-from app.utils.sort import alphanum_key
-
 # -- BASEDEQUESTIONS (LOCAL)
-from ..models import (
+from app.models import (
     Subcollection,
     Survey,
 )
+from app.utils.sort import alphanum_key
 
 
 def get_surveys_by_collections(request):
     collections_ids = request.GET.get("collections_ids")
     if collections_ids:
-        collections_ids = [int(id) for id in collections_ids.split(",")]
+        collections_ids = [int(id_coll) for id_coll in collections_ids.split(",")]
         surveys = Survey.objects.filter(
             subcollection__collection__id__in=collections_ids
         ).order_by("name")
@@ -26,7 +25,7 @@ def get_surveys_by_collections(request):
 
 def get_subcollections_by_collections(request):
     collection_ids = request.GET.get("collections_ids", "").split(",")
-    collection_ids = [id for id in collection_ids if id]
+    collection_ids = [id_coll for id_coll in collection_ids if id_coll]
 
     if not collection_ids:
         subcollections = Subcollection.objects.all().order_by("name")
@@ -54,11 +53,11 @@ def get_subcollections_by_collections(request):
 
 def get_surveys_by_subcollections(request):
     subcollection_ids = request.GET.get("subcollections_ids", "").split(",")
-    subcollection_ids = [id for id in subcollection_ids if id]
+    subcollection_ids = [id_sub for id_sub in subcollection_ids if id_sub]
 
     if not subcollection_ids:
         collection_ids = request.GET.get("collections_ids", "").split(",")
-        collection_ids = [id for id in collection_ids if id]
+        collection_ids = [id_coll for id_coll in collection_ids if id_coll]
 
         if collection_ids:
             surveys = Survey.objects.filter(
@@ -83,9 +82,9 @@ def get_decades(request):
     subcollection_ids = request.GET.get("subcollections_ids", "").split(",")
     survey_ids = request.GET.get("survey_ids", "").split(",")
 
-    collection_ids = [id for id in collection_ids if id]
-    subcollection_ids = [id for id in subcollection_ids if id]
-    survey_ids = [id for id in survey_ids if id]
+    collection_ids = [id_coll for id_coll in collection_ids if id_coll]
+    subcollection_ids = [id_sub for id_sub in subcollection_ids if id_sub]
+    survey_ids = [id_sur for id_sur in survey_ids if id_sur]
 
     if survey_ids:
         surveys = Survey.objects.filter(id__in=survey_ids)
@@ -122,9 +121,9 @@ def get_years_by_decade(request):
     subcollection_ids = request.GET.get("subcollections_ids", "").split(",")
     survey_ids = request.GET.get("survey_ids", "").split(",")
 
-    collection_ids = [id for id in collection_ids if id]
-    subcollection_ids = [id for id in subcollection_ids if id]
-    survey_ids = [id for id in survey_ids if id]
+    collection_ids = [id_coll for id_coll in collection_ids if id_coll]
+    subcollection_ids = [id_sub for id_sub in subcollection_ids if id_sub]
+    survey_ids = [id_sur for id_sur in survey_ids if id_sur]
 
     if survey_ids:
         surveys = Survey.objects.filter(id__in=survey_ids)

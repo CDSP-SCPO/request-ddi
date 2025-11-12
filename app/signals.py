@@ -1,4 +1,6 @@
 # -- DJANGO
+import logging
+
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -12,10 +14,11 @@ from .models import (
     RepresentedVariable,
 )
 
+logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=BindingSurveyRepresentedVariable)
 def update_index(sender, instance, **kwargs):
-    """Met à jour Elasticsearch à chaque sauvegarde d’un binding."""
+    """Met à jour Elasticsearch à chaque sauvegarde d’un binding.""" # noqa: RUF002
     BindingSurveyDocument().update(instance)
 
 
@@ -35,10 +38,10 @@ def delete_represented_variable_if_unused(represented_variable):
 
     for category in categories:
         if not category.variables.exists():
-            print(f"Deleting category: {category.category_label}")
+            logger.info("Deleting category: %s", category.category_label)
             category.delete()
 
     conceptual_var = represented_variable.conceptual_var
     if not RepresentedVariable.objects.filter(conceptual_var=conceptual_var).exists():
-        print(f"Deleting conceptual variable: {conceptual_var.internal_label}")
+        logger.info("Deleting conceptual variable: %s", conceptual_var.internal_label)
         conceptual_var.delete()

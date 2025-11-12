@@ -1,4 +1,5 @@
 # -- STDLIB
+import logging
 import time
 
 # -- BASEDEQUESTIONS (LOCAL)
@@ -15,15 +16,16 @@ from .utils.normalize_string import (
     normalize_string_for_database,
 )
 
-BATCH_SIZE = 50
+logger = logging.getLogger(__name__)
+batch_size = 50
 
 
 class DataImporter:
     def __init__(self):
         self.errors = []
 
-    def import_data(self, question_datas):
-        BATCH_SIZE = 50
+    def import_data(self, question_datas): # noqa: PLR0912, C901
+        batch_size = 50
         num_records = 0
         num_new_variables = 0
         num_new_bindings = 0
@@ -44,7 +46,8 @@ class DataImporter:
             start_time = time.time()
             try:
                 if doi in missing_dois:
-                    raise Survey.DoesNotExist(f"Survey with DOI {doi} not found")
+                    msg = f"Survey with DOI {doi} not found"
+                    raise Survey.DoesNotExist(msg)
 
                 survey = surveys_dict[doi]
                 for question_data in questions:
@@ -79,7 +82,7 @@ class DataImporter:
                         num_new_bindings += 1
                         bindings_to_index.append(binding)
 
-                        if len(bindings_to_index) >= BATCH_SIZE:
+                        if len(bindings_to_index) >= batch_size:
                             BindingSurveyDocument().update(bindings_to_index)
                             BindingSurveyRepresentedVariable.objects.filter(
                                 pk__in=[b.pk for b in bindings_to_index]
@@ -93,10 +96,10 @@ class DataImporter:
             except ValueError as ve:
                 self.errors.append(f"DOI '{doi}': Erreur de valeur : {ve}")
             except Exception as e:
-                self.errors.append(f"DOI '{doi}': Erreur inattendue : {str(e)}")
+                self.errors.append(f"DOI '{doi}': Erreur inattendue : {e!s}")
             finally:
                 duration = time.time() - start_time
-                print(f"⏱ Temps d'import pour le DOI '{doi}' : {duration:.2f} secondes")
+                logger.info("⏱ Temps d'import pour le DOI '%s' : %.2f secondes", doi, duration)
 
         if bindings_to_index:
             BindingSurveyDocument().update(bindings_to_index)
@@ -106,7 +109,8 @@ class DataImporter:
 
         if self.errors:
             error_summary = "<br/>".join(self.errors)
-            raise ValueError(f"Erreurs rencontrées :<br/> {error_summary}")
+            msg = f"Erreurs rencontrées :<br/> {error_summary}"
+            raise ValueError(msg)
 
         return num_records, num_new_variables, num_new_bindings
 
@@ -236,7 +240,8 @@ class DataImporter:
                 if self.check_category(category_label, var.categories):
                     return var, False  # ✅ Variable existante avec mêmes catégories
 
-            # Aucun match exact sur les catégories → on crée une nouvelle liée à la même conceptuelle
+            # Aucun match exact sur les catégories → on crée une nouvelle liée à
+            # la même conceptuelle
             var = var_represented_list[
                 0
             ]  # Pour attacher à la même conceptuelle et logguer

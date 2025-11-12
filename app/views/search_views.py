@@ -1,4 +1,5 @@
 # -- STDLIB
+import logging
 from html import unescape
 
 from django.http import JsonResponse
@@ -17,6 +18,7 @@ from app.models import Collection, RepresentedVariable, Subcollection, Survey
 
 from .utils_views import remove_html_tags
 
+logger = logging.getLogger(__name__)
 
 class RepresentedVariableSearchView(ListView):
     model = RepresentedVariable
@@ -230,8 +232,8 @@ class SearchResultsDataView(ListView):
                         {
                             "match": {
                                 "variable_name": {
-                                    "query": search_value,
-                                    "operator": "and",
+                                    "query": term,
+                                    "operator": "or",
                                     "boost": 5,
                                 }
                             }
@@ -271,12 +273,11 @@ class SearchResultsDataView(ListView):
                             }
                         }
                     )
-
         if queries:
             search = search.query("bool", should=queries, minimum_should_match=1)
         return search
 
-    def format_search_results(self, response, search_locations):
+    def format_search_results(self, response, search_locations): # noqa: C901
         data = []
         is_category_search = "categories" in search_locations
 
@@ -286,9 +287,9 @@ class SearchResultsDataView(ListView):
                 survey = getattr(result, "survey", None)
 
                 if not variable:
-                    print(f"⚠️ Variable manquante pour le résultat ID {result.meta.id}")
+                    logger.warning("⚠️ Variable manquante pour le résultat ID %s", result.meta.id)
                 if not survey:
-                    print(f"⚠️ Survey manquant pour le résultat ID {result.meta.id}")
+                    logger.warning("⚠️ Survey manquant pour le résultat ID %s", result.meta.id)
 
                 original_question = getattr(variable, "question_text", "N/A")
                 highlighted_question = (
@@ -304,14 +305,13 @@ class SearchResultsDataView(ListView):
 
                 if "categories" in search_locations and hasattr(
                     result.meta, "highlight"
-                ):
-                    if "variable.categories.category_label" in result.meta.highlight:
-                        category_highlight = result.meta.highlight[
-                            "variable.categories.category_label"
-                        ]
-                        category_matched = (
-                            category_highlight[0] if category_highlight else None
-                        )
+                ) and  "variable.categories.category_label" in result.meta.highlight:
+                    category_highlight = result.meta.highlight[
+                        "variable.categories.category_label"
+                    ]
+                    category_matched = (
+                        category_highlight[0] if category_highlight else None
+                    )
 
                 try:
                     sorted_categories = sorted(
@@ -322,8 +322,11 @@ class SearchResultsDataView(ListView):
                         ),
                     )
                 except Exception as e:
-                    print(
-                        f"❌ Erreur lors du tri des catégories pour ID {result.meta.id} : {e}"
+                    logger.error(
+                        "❌ Erreur lors du tri des catégories pour ID %s : %s",
+                        result.meta.id,
+                        e,
+                        exc_info=True
                     )
                     sorted_categories = categories
 
@@ -331,12 +334,13 @@ class SearchResultsDataView(ListView):
                     code = getattr(cat, "code", "N/A")
                     label = getattr(cat, "category_label", "N/A")
                     if category_matched and label == remove_html_tags(category_matched):
+                        style = "style='background-color: rgba(255, 70, 78, 0.15);'"
                         all_clean_categories.append(
-                            f"<tr><td class='code-cell'><mark style='background-color: rgba(255, 70, 78, 0.15);'>{code}</mark></td><td class='text-cell'><mark style='background-color: rgba(255, 70, 78, 0.15);'>{label}</mark></td></tr>"
+                            f"<tr><td class='code-cell'><mark {style}>{code}</mark></td><td class='text-cell'><mark {style}>{label}</mark></td></tr>"  # noqa: E501
                         )
                     else:
                         all_clean_categories.append(
-                            f"<tr><td class='code-cell'>{code}</td><td class='text-cell'>{label}</td></tr>"
+                            f"<tr><td class='code-cell'>{code}</td><td class='text-cell'>{label}</td></tr>"  # noqa: E501
                         )
 
                 variable_name = getattr(result, "variable_name", "N/A")
@@ -375,8 +379,11 @@ class SearchResultsDataView(ListView):
                 )
 
             except Exception as e:
-                print(
-                    f"❌ Erreur inattendue lors du traitement du résultat ID {getattr(result.meta, 'id', 'inconnu')} : {e}"
+                logger.error(
+                    "❌ Erreur inattendue lors du traitement du résultat ID %s : %s",
+                    getattr(result.meta, "id", "inconnu"),
+                    e,
+                    exc_info=True
                 )
 
         return data
@@ -401,11 +408,7 @@ class SearchResultsDataView(ListView):
             )
 
         except Exception as e:
-            print(f"❌ Erreur dans post(): {e}")
-            # -- STDLIB
-            import traceback
-
-            traceback.print_exc()
+            logger.exception("❌ Erreur dans post() : %s", e)
             return JsonResponse({"error": str(e)}, status=500)
 
 

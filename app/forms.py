@@ -18,16 +18,17 @@ class XMLUploadForm(forms.Form):
     xml_file = forms.FileField(label="Select an XML file")
 
     # Liste des balises obligatoires et attributs
-    required_tags = ["IDNo", "var", "catValu", "labl", "catgry", "qstnLit"]
-    required_attributes = {"var": "name"}
+    required_tags = ["IDNo", "var", "catValu", "labl", "catgry", "qstnLit"]  # noqa: RUF012
+    required_attributes = {"var": "name"}  # noqa: RUF012
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def clean_xml_file(self):
+    def clean_xml_file(self): # noqa: C901
         xml_file = self.cleaned_data["xml_file"]
         if not xml_file.name.endswith(".xml"):
-            raise forms.ValidationError("Le fichier doit être au format XML.")
+            msg = "Le fichier doit être au format XML."
+            raise forms.ValidationError(msg)
 
         try:
             content = xml_file.read().decode("utf-8")
@@ -36,7 +37,7 @@ class XMLUploadForm(forms.Form):
             soup = BeautifulSoup(content, "xml")
 
             # Extraire l'espace de noms par défaut (si présent)
-            namespaces = {prefix: uri for prefix, uri in soup.find_all("xmlns")}
+            namespaces = dict(soup.find_all("xmlns"))
             default_ns = namespaces.get(None, "")
 
             missing_tags = []
@@ -78,9 +79,8 @@ class XMLUploadForm(forms.Form):
             return content  # Renvoie le contenu pour traitement ultérieur
 
         except Exception as e:
-            raise forms.ValidationError(
-                f"Erreur lors de la lecture du fichier XML : {str(e)}"
-            )
+            msg = f"Erreur lors de la lecture du fichier XML : {e!s}"
+            raise forms.ValidationError(msg) from e
 
 
 class CustomAuthenticationForm(AuthenticationForm):
@@ -107,7 +107,7 @@ class CollectionForm(ModelForm):
         model = Collection
         fields = "__all__"
 
-        widgets = {
+        widgets = {  # noqa: RUF012
             "name": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-lg",
@@ -130,7 +130,7 @@ class CollectionForm(ModelForm):
 class CSVUploadFormCollection(forms.Form):
     csv_file = forms.FileField(label="Sélectionnez un fichier CSV")
 
-    required_columns = [
+    required_columns = [  # noqa: RUF012
         "doi",
         "xml_lang",
         "title",
@@ -151,7 +151,8 @@ class CSVUploadFormCollection(forms.Form):
     def clean_csv_file(self):
         csv_file = self.cleaned_data["csv_file"]
         if not csv_file.name.endswith(".csv"):
-            raise forms.ValidationError("Le fichier doit être au format CSV.")
+            msg = "Le fichier doit être au format CSV."
+            raise forms.ValidationError(msg)
         try:
             decoded_file = csv_file.read().decode("utf-8").splitlines()
             sample = "\n".join(decoded_file[:2])
@@ -163,16 +164,14 @@ class CSVUploadFormCollection(forms.Form):
                 col for col in self.required_columns if col not in reader.fieldnames
             ]
             if missing_columns:
-                raise forms.ValidationError(
-                    f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}"
-                )
+                msg = f"Les colonnes suivantes sont manquantes : {', '.join(missing_columns)}"
+                raise forms.ValidationError(msg)
 
             self.cleaned_data["decoded_csv"] = decoded_file
             self.cleaned_data["delimiter"] = delimiter
-
-            return decoded_file  # Si tout va bien, renvoie le fichier décodé pour un traitement ultérieur
+            # Si tout va bien, renvoie le fichier décodé pour un traitement ultérieur
+            return decoded_file
 
         except Exception as e:
-            raise forms.ValidationError(
-                f"Erreur lors de la lecture du fichier CSV : {str(e)}"
-            )
+            msg = f"Erreur lors de la lecture du fichier CSV : {e!s}"
+            raise forms.ValidationError(msg) from e

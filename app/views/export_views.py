@@ -74,7 +74,7 @@ class ExportQuestionsCSVView(View):
         dataset_var_headers = [f"dataset_var{i + 1}" for i in range(max_vars)]
 
         writer.writerow(
-            ["question_text", "categories", "variable_label"] + dataset_var_headers
+            ["question_text", "categories", "variable_label", *dataset_var_headers]
         )
 
         # Écrire les lignes
