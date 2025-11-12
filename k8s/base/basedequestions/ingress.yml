@@ -12,7 +12,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-request-buffering: off
 spec:
   rules:
-    - host: request.sciencespo.fr
+    - host: HOST_PLACEHOLDER
       http:
         paths:
           # Accès aux fichiers médias, via le service NGINX

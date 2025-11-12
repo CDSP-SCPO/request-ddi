@@ -7,19 +7,23 @@ namespace: request
 resources:
   - basedequestions/deployment.yml
   - basedequestions/service.yml
+  - basedequestions/ingress.yml
   - elasticsearch/deployment.yml
   - elasticsearch/service.yml
+  - elasticsearch/elasticsearch-pvc.yml
+  - elasticsearch/configmap.yml
   - db/deployment.yml
   - db/service.yml
+  - db/db-pvc.yml
   - nginx-media/deployment.yml
   - nginx-media/service.yml
   - nginx-media/nginx-configmap.yml
-  - elasticsearch/configmap.yml
+  - nginx-media/media-pvc.yml
 
 
 
-# Gestion des secrets (ex : clé secrète de Django)
+
 secretGenerator:
   - name: basedequestions-secret
     literals:
-      - DJANGO_SECRET_KEY=your-secret-key-here  # Remplace avec ta vraie clé secrète
+      - DJANGO_SECRET_KEY=your-secret-key-here

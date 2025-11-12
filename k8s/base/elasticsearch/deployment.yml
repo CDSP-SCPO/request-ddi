@@ -32,7 +32,12 @@ spec:
             - name: ES_JAVA_OPTS
               value: '-Xms1g -Xmx1g'
             - name: xpack.security.enabled
-              value: 'false' # Valeur par défaut (préprod)
+              value: "true"
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-secret
+                  key: ES_ADMIN_PASS
 
           ports:
             - containerPort: 9200
@@ -49,21 +54,6 @@ spec:
             limits:
               memory: "2Gi"
               cpu: "1000m"
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 9200
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            failureThreshold: 3
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 9200
-            initialDelaySeconds: 20
-            periodSeconds: 20
-            failureThreshold: 3
-
       volumes:
         - name: elasticsearch-data
           persistentVolumeClaim:

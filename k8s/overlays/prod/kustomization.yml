@@ -7,9 +7,8 @@ bases:
   - ../../base/
 
 resources:
-  - pvc.yml
-  - media-pvc.yml
-  - ingress.yml
+  - ../../base/basedequestions/ingress.yml
+
 
 
 # Labels communs à toutes les ressources dans cet overlay
@@ -17,20 +16,15 @@ commonLabels:
   environment: prod
 
 
-# Images à utiliser pour cet environnement (staging)
+# Images à utiliser pour cet environnement
 images:
   - name: gitlab.sciences-po.fr:4567/cdspit/request/base-de-questions
     newTag: 'prod'
 
 
 patches:
-  - path: elasticsearch-patch.yml
+  - path: ingress-patch.yml
     target:
-      kind: Deployment
-      name: elasticsearch
-  - path: elasticsearch-configmap-patch.yml
-    target:
-      kind: ConfigMap
-      name: elasticsearch-config
-
-
+      kind: Ingress
+      name: basedequestions-ingress
+      namespace: request

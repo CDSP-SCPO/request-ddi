@@ -4,4 +4,9 @@ metadata:
   name: elasticsearch-config
 data:
   elasticsearch.yml: |
-    xpack.security.enabled: false
+    xpack.security.enabled: true
+    xpack.security.transport.ssl.enabled: false
+    network.host: 0.0.0.0
+    xpack.security.authc.anonymous.username: "anonymous_user"
+    xpack.security.authc.anonymous.roles: "read_only"
+    xpack.security.authc.anonymous.authz_exception: false
