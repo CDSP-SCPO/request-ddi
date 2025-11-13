@@ -16,5 +16,6 @@ django-debug-toolbar
 requests
 vulture
 pyan3
+django-health-check
 ruff
 django-extensions>=3.3

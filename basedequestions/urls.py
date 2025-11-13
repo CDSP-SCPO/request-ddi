@@ -35,6 +35,7 @@ urlpatterns = [
         ExportQuestionsCSVView.as_view(),
         name="export_questions_csv",
     ),
+    path("health/", include("health_check.urls")),
 ]
 
 
