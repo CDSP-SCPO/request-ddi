@@ -16,7 +16,7 @@ class ExportQuestionsCSVView(View):
         survey_ids = request.GET.getlist("survey")
         collection_ids = request.GET.getlist("collections")
         sub_collection_ids = request.GET.getlist("sub_collections")
-        years = request.GET.getlist("years")
+        raw_years = request.GET.getlist("years")
 
         # Créer la réponse CSV
         response = HttpResponse(content_type="text/csv")
@@ -40,7 +40,20 @@ class ExportQuestionsCSVView(View):
             questions = questions.filter(
                 survey__subcollection__id__in=sub_collection_ids
             )
-        if years and any(years):
+
+        years = []
+        for value in raw_years:
+            if not value:
+                continue
+
+            parts = value.split(',')
+
+            for p in parts:
+                p = p.strip()
+                if p.isdigit():
+                    years.append(int(p))
+
+        if years:
             questions = questions.filter(survey__start_date__year__in=years)
 
         questions = questions.distinct()
