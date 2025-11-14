@@ -1,7 +1,7 @@
 from django.conf import settings
+from elasticsearch import Elasticsearch
 from health_check.backends import BaseHealthCheckBackend
 from health_check.exceptions import ServiceUnavailable
-from elasticsearch import Elasticsearch
 
 
 class ElasticsearchHealthCheck(BaseHealthCheckBackend):
@@ -15,7 +15,8 @@ class ElasticsearchHealthCheck(BaseHealthCheckBackend):
 
     def check_status(self):
         if not self.es.ping():
-            raise ServiceUnavailable("Elasticsearch cluster not responding")
+            message = "Elasticsearch cluster not responding"
+            raise ServiceUnavailable(message)
 
     def identifier(self):
         return "ElasticsearchHealthCheck"

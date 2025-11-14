@@ -63,10 +63,10 @@ INSTALLED_APPS = [
     "django_extensions",
     "django_elasticsearch_dsl",
     "app",
-    'health_check',
-    'health_check.db',
-    'health_check.cache',
-    'health_check.storage',
+    "health_check",
+    "health_check.db",
+    "health_check.cache",
+    "health_check.storage",
 ]
 
 MIDDLEWARE = [
@@ -236,11 +236,11 @@ LOGGING = {
 }
 
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 HEALTH_CHECKS = [
-    'app.health_checks.ElasticsearchHealthCheck',
+    "app.health_checks.ElasticsearchHealthCheck",
 ]
 
 if ENVIRONMENT == "production":
