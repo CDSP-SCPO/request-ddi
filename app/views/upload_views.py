@@ -3,16 +3,18 @@ import csv
 import logging
 import re
 from datetime import datetime
+from functools import wraps
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
 
 # -- DJANGO
-from django import forms
 from django.contrib import messages
-from django.db import IntegrityError, transaction
+from django.contrib.auth.mixins import AccessMixin
+from django.db import transaction
 from django.http import JsonResponse
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.edit import FormView
 
@@ -29,10 +31,13 @@ from app.models import (
 )
 from app.parser import XMLParser
 from app.utils.timing import timed
+from app.views.mixins import StaffRequiredMixin, staff_required_json
+
 
 logger = logging.getLogger(__name__)
 
-class XMLUploadView(FormView):
+
+class XMLUploadView(StaffRequiredMixin, FormView):
     template_name = "upload_xml.html"
     form_class = XMLUploadForm
     success_url = reverse_lazy("app:representedvariable_search")
@@ -139,66 +144,44 @@ class XMLUploadView(FormView):
         return results
 
 
-class CSVUploadViewCollection(FormView):
-    template_name = "upload_csv_collection.html"
+class CSVUploadViewCollection(StaffRequiredMixin, View):
     form_class = CSVUploadFormCollection
 
-    def form_valid(self, form):
-        try:
-            data = self.get_data(form)
-            delimiter = form.cleaned_data["delimiter"]
-            survey_datas = list(self.convert_data(data, delimiter))
-            self.process_data(survey_datas)
-            return JsonResponse(
-                {
-                    "status": "success",
-                    "message": "Le fichier CSV a été importé avec succès.",
-                }
-            )
-        except forms.ValidationError as ve:
-            logger.error("Validation error: %s", ve.messages)
-            return JsonResponse({"status": "error", "message": ve.messages})
-        except IntegrityError as ie:
-            doi = self.extract_doi_from_error(str(ie))
-            if "unique constraint" in str(ie):
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                data = self.get_data(form)
+                delimiter = form.cleaned_data["delimiter"]
+                survey_datas = list(self.convert_data(data, delimiter))
+                self.process_data(survey_datas)
                 return JsonResponse(
-                    {
-                      "status": "error",
-                      "message": f"Une enquête avec le DOI {doi} existe déjà dans la base de données.",  # noqa: E501
-                    }
+                    {"status": "success", "message": "Le fichier CSV a été importé avec succès."}
                 )
-        except ValueError as ve:
-            return JsonResponse({"status": "error", "message": str(ve)})
-        except Exception as e:
+            except Exception as e:
+                logger.error("Erreur lors de l'import CSV: %s", e)
+                msg = f"Erreur lors de l'importation du fichier CSV : {e}"
+                return JsonResponse({"status": "error", "message": msg})
+
+        else:
+            errors = form.errors.as_json()
             return JsonResponse(
-                {
-                    "status": "error",
-                    "message": f"Erreur lors de l'importation du fichier CSV : {e!s}",
-                }
+                {"status": "error", "message": "Le formulaire est invalide.", "errors": errors}
             )
 
-    def form_invalid(self, form):
-        errors = form.errors.as_json()
-        return JsonResponse(
-            {
-              "status": "error",
-              "message": "Le formulaire est invalide.",
-              "errors": errors,
-            }
-        )
+    def get(self, request, *args, **kwargs):
+        # Bloquer toute tentative d'accès GET, cette vue est POST uniquement
+        return JsonResponse({"error": "Méthode non autorisée"}, status=405)
 
     def get_data(self, form):
         # Utilisez les données décodées du formulaire
         return form.cleaned_data["decoded_csv"]
 
     def convert_data(self, content, delimiter):
-        # Utilisez le délimiteur détecté dans le formulaire
         reader = csv.DictReader(content, delimiter=delimiter)
         return reader
 
     def extract_doi_from_error(self, error_message):
-        # Extraire le DOI du message d'erreur
-
         match = re.search(r"\(external_ref\)=\((.*?)\)", error_message)
         return match.group(1) if match else "inconnu"
 
@@ -206,9 +189,7 @@ class CSVUploadViewCollection(FormView):
     def process_data(self, survey_datas):
         for line_number, row in enumerate(survey_datas, start=1):
             distributor_name = row["distributor"]
-            distributor, created = Distributor.objects.get_or_create(
-                name=distributor_name
-            )
+            distributor, created = Distributor.objects.get_or_create(name=distributor_name)
 
             collection_name = row["collection"]
             collection, created = Collection.objects.get_or_create(
@@ -216,7 +197,7 @@ class CSVUploadViewCollection(FormView):
             )
 
             subcollection_name = row["sous-collection"]
-            subcollection, created = Subcollection.objects.get_or_create( # noqa: RUF059
+            subcollection, created = Subcollection.objects.get_or_create(  # noqa: RUF059
                 name=subcollection_name, collection=collection
             )
 
@@ -250,10 +231,11 @@ class CSVUploadViewCollection(FormView):
                             survey_start_date, "%Y-%m-%d"
                         ).date()
                     except ValueError:
-                        raise ValueError(
-                            f"L'année de début à la ligne {line_number} n'est pas valide : "+
-                            f"{survey_start_date}"
-                        ) from None
+                        msg = f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}" # noqa: E501
+                        raise ValueError(msg) from None
+
+
+
             else:
                 survey_start_date = None
 
@@ -267,12 +249,14 @@ class CSVUploadViewCollection(FormView):
                         survey_date_last_version, "%Y-%m-%d"
                     ).date()
                 except ValueError:
-                    raise ValueError(
-                        f"La date de la dernière version à la ligne {line_number} n'est "+
-                        f"pas valide : {survey_date_last_version}"
-                    ) from None
+                    msg = f"La date de la dernière version à la ligne {line_number} n'est pas valide : {survey_date_last_version}" # noqa: E501
+                    raise ValueError(msg) from None
+
+
+
             else:
                 survey_date_last_version = None
+
             Survey.objects.get_or_create(
                 external_ref=survey_doi,
                 name=survey_name,
@@ -289,7 +273,9 @@ class CSVUploadViewCollection(FormView):
             )
 
 
+
 @csrf_exempt
+@staff_required_json
 def check_duplicates(request):
     if request.method == "POST":
         # Récupérer uniquement le fichier XML

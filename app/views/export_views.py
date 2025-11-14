@@ -7,6 +7,7 @@ from django.views import View
 
 # -- LOCAL
 from app.models import BindingSurveyRepresentedVariable, Collection, Survey
+from app.views.mixins import staff_required_html
 
 
 class ExportQuestionsCSVView(View):
@@ -86,7 +87,7 @@ class ExportQuestionsCSVView(View):
 
         return response
 
-
+@staff_required_html
 def export_page(request):
     collections = Collection.objects.all()
     surveys = Survey.objects.all()
