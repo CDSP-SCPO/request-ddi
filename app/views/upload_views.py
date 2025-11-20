@@ -147,24 +147,33 @@ class XMLUploadView(StaffRequiredMixin, FormView):
 class CSVUploadViewCollection(StaffRequiredMixin, View):
     form_class = CSVUploadFormCollection
 
-    def post(self, request, *args, **kwargs):
-        form = self.form_class(request.POST, request.FILES)
-        if form.is_valid():
-            try:
-                data = self.get_data(form)
-                delimiter = form.cleaned_data["delimiter"]
-                survey_datas = list(self.convert_data(data, delimiter))
-                self.process_data(survey_datas)
+    def form_valid(self, form):
+        try:
+            data = self.get_data(form)
+            delimiter = form.cleaned_data["delimiter"]
+            survey_datas = list(self.convert_data(data, delimiter))
+            self.process_data(survey_datas)
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "message": "Le fichier CSV a été importé avec succès.",
+                }
+            )
+        except forms.ValidationError as ve:
+            logger.error("Validation error: %s", ve.messages)
+            return JsonResponse({"status": "error", "message": ve.messages})
+        except IntegrityError as ie:
+            doi = self.extract_doi_from_error(str(ie))
+            if "unique constraint" in str(ie):
                 return JsonResponse(
-                    {"status": "success", "message": "Le fichier CSV a été importé avec succès."}
+                    {
+                      "status": "error",
+                      "message": f"Une enquête avec le DOI {doi} existe déjà dans la base de données.",
+                    }
                 )
-            except Exception as e:
-                logger.error("Erreur lors de l'import CSV: %s", e)
-                msg = f"Erreur lors de l'importation du fichier CSV : {e}"
-                return JsonResponse({"status": "error", "message": msg})
-
-        else:
-            errors = form.errors.as_json()
+        except ValueError as ve:
+            return JsonResponse({"status": "error", "message": str(ve)})
+        except Exception as e:
             return JsonResponse(
                 {"status": "error", "message": "Le formulaire est invalide.", "errors": errors}
             )

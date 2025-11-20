@@ -190,3 +190,14 @@ class BindingConcept(models.Model):
 
     def __str__(self):
         return f"Binding Concept: {self.parent.name} -> {self.child.name}"
+
+class BindingVariableCategoryStat(models.Model):
+    binding = models.ForeignKey(BindingSurveyRepresentedVariable, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    stat = models.IntegerField(default=0)
+
+    class Meta:
+        unique_together = ("binding", "category")
+
+    def __str__(self):
+        return f"{self.binding.variable_name} - {self.category.code}: {self.stat}"

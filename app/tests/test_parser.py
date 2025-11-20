@@ -17,7 +17,7 @@ class XMLParserTests(TestCase):
                 <labl>Age</labl>
                 <qstnLit>Quel âge avez-vous ?</qstnLit>
                 <catgry>
-                    <catValu>1</catValu><labl>18-25</labl>
+                    <catValu>1</catValu><labl>18-25</labl><catStat type="freq">26</catStat>
                 </catgry>
             </var>
         </root>
@@ -27,7 +27,6 @@ class XMLParserTests(TestCase):
 
         seen_invalid_dois = set()
         data = self.parser.parse_file(file, seen_invalid_dois)
-
         self.assertIsNotNone(data)
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0][0], "doi:10.1234/test")

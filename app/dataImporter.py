@@ -6,6 +6,7 @@ import time
 from .documents import BindingSurveyDocument
 from .models import (
     BindingSurveyRepresentedVariable,
+    BindingVariableCategoryStat,
     Category,
     ConceptualVariable,
     RepresentedVariable,
@@ -24,7 +25,7 @@ class DataImporter:
     def __init__(self):
         self.errors = []
 
-    def import_data(self, question_datas): # noqa: PLR0912, C901
+    def import_data(self, question_datas): # noqa: PLR0912, C901, PLR0915
         batch_size = 50
         num_records = 0
         num_new_variables = 0
@@ -59,7 +60,21 @@ class DataImporter:
                         universe,
                         notes,
                     ) = question_data[1:]
+                    placeholder_rv = None
+                    binding = BindingSurveyRepresentedVariable.objects.filter(
+                        survey=survey,
+                        variable_name=variable_name
+                    ).first()
+                    if not binding:
 
+                        placeholder_rv = self.create_placeholder_rv(variable_label)
+                        binding = BindingSurveyRepresentedVariable.objects.create(
+                            survey=survey,
+                            variable=placeholder_rv,
+                            variable_name=variable_name,
+                            universe=universe,
+                            notes=notes,
+                        )
                     represented_variable, created_variable = (
                         self.get_or_create_represented_variable(
                             variable_name,
@@ -67,18 +82,27 @@ class DataImporter:
                             category_label,
                             variable_label,
                             survey,
+                            binding,
                             cleaned_questions,
                         )
                     )
+                    binding.variable = represented_variable
+                    binding.save()
+
+                    if placeholder_rv:
+                        conceptual = placeholder_rv.conceptual_var
+                        placeholder_rv.delete()
+                        if conceptual.representedvariable_set.count() == 0:
+                            conceptual.delete()
 
                     if created_variable:
                         num_new_variables += 1
 
-                    binding, created_binding = self.get_or_create_binding(
+                    binding, created_or_changed_binding = self.get_or_create_binding(
                         survey, represented_variable, variable_name, universe, notes
                     )
 
-                    if created_binding:
+                    if created_or_changed_binding:
                         num_new_bindings += 1
                         bindings_to_index.append(binding)
 
@@ -123,12 +147,16 @@ class DataImporter:
         ).first()
 
         if binding:
-            # On met à jour si besoin
-            binding.variable = represented_variable
-            binding.universe = universe
-            binding.notes = notes
-            binding.save()
-            created = False
+            changed = (
+                binding.variable != represented_variable or
+                binding.universe != universe or
+                binding.notes != notes
+            )
+            if changed:
+                binding.variable = represented_variable
+                binding.universe = universe
+                binding.notes = notes
+                binding.save()
         else:
             # Sinon, on le crée
             binding = BindingSurveyRepresentedVariable.objects.create(
@@ -138,9 +166,9 @@ class DataImporter:
                 universe=universe,
                 notes=notes,
             )
-            created = True
+            changed = True
 
-        return binding, created
+        return binding, changed
 
     def check_category(self, category_string, existing_categories):
         csv_categories = (
@@ -151,7 +179,7 @@ class DataImporter:
                         normalize_string_for_database(label)
                     ),
                 )
-                for code, label in self.parse_categories(category_string)
+                for code, label, stat in self.parse_categories(category_string)
             ]
             if category_string
             else []
@@ -167,19 +195,22 @@ class DataImporter:
         categories = []
         csv_category_pairs = category_string.split(" | ")
         for pair in csv_category_pairs:
-            code, label = pair.split(",", 1)
-            categories.append((code.strip(), label.strip()))
+            stat, code, label= pair.split(r" \ ", 2)
+            categories.append((code.strip(), label.strip(), stat.strip()))
         return categories
 
-    def create_new_categories(self, category_string):
+    def create_new_categories(self, category_string, binding):
         categories = []
         if category_string:
             parsed_categories = self.parse_categories(category_string)
-            for code, label in parsed_categories:
+            for code, label, stat in parsed_categories:
                 category, _ = Category.objects.get_or_create(
                     code=code, category_label=normalize_string_for_database(label)
                 )
                 categories.append(category)
+                binding_stat, created = BindingVariableCategoryStat.objects.get_or_create(binding=binding, category=category) # noqa: RUF059
+                binding_stat.stat = stat
+                binding_stat.save()
         return categories
 
     def create_new_represented_variable(
@@ -188,6 +219,7 @@ class DataImporter:
         name_question_normalized,
         category_label,
         variable_label,
+        binding,
         is_unique: bool = False,
     ):
         new_represented_var = RepresentedVariable.objects.create(
@@ -196,7 +228,7 @@ class DataImporter:
             internal_label=variable_label,
             is_unique=is_unique,
         )
-        new_categories = self.create_new_categories(category_label)
+        new_categories = self.create_new_categories(category_label, binding)
         new_represented_var.categories.set(new_categories)
 
         return new_represented_var
@@ -208,6 +240,7 @@ class DataImporter:
         category_label,
         variable_label,
         survey,
+        binding,
         cleaned_questions,
     ):
         name_question_for_database = normalize_string_for_database(question_text)
@@ -219,9 +252,9 @@ class DataImporter:
             # Cas particulier : pas de texte de question → on regarde si déjà lié par nom
             existing_binding = BindingSurveyRepresentedVariable.objects.filter(
                 variable_name=variable_name, survey=survey
-            ).first()
-
+            ).exclude(variable__question_text=None).first()
             if existing_binding:
+                self.maj_stats_categories(existing_binding, category_label, existing_binding.variable)
                 return existing_binding.variable, False
             else:
                 conceptual_var = ConceptualVariable.objects.create(is_unique=True)
@@ -230,6 +263,7 @@ class DataImporter:
                     name_question_for_database,
                     category_label,
                     variable_label,
+                    binding,
                     is_unique=True,
                 ), True
 
@@ -238,6 +272,7 @@ class DataImporter:
 
             for var in var_represented_list:
                 if self.check_category(category_label, var.categories):
+                    self.maj_stats_categories(binding, category_label, var)
                     return var, False  # ✅ Variable existante avec mêmes catégories
 
             # Aucun match exact sur les catégories → on crée une nouvelle liée à
@@ -251,10 +286,27 @@ class DataImporter:
                 name_question_for_database,
                 category_label,
                 variable_label,
+                binding,
             ), True
 
         # ❌ Texte inconnu → nouvelle variable conceptuelle + représentée
         conceptual_var = ConceptualVariable.objects.create()
         return self.create_new_represented_variable(
-            conceptual_var, name_question_for_database, category_label, variable_label
+            conceptual_var, name_question_for_database, category_label, variable_label, binding
         ), True
+
+    def create_placeholder_rv(self, variable_label):
+        conceptual = ConceptualVariable.objects.create(is_unique=True)
+        return RepresentedVariable.objects.create(
+            conceptual_var=conceptual,
+            question_text=None,
+            internal_label=variable_label,
+            type="question",
+            type_categories="text",
+            is_unique=True
+        )
+
+    def maj_stats_categories(self, binding, category_label, rv=None):
+        self.create_new_categories(category_label, binding)
+
+

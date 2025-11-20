@@ -336,11 +336,11 @@ class SearchResultsDataView(ListView):
                     if category_matched and label == remove_html_tags(category_matched):
                         style = "style='background-color: rgba(255, 70, 78, 0.15);'"
                         all_clean_categories.append(
-                            f"<tr><td class='code-cell'><mark {style}>{code}</mark></td><td class='text-cell'><mark {style}>{label}</mark></td></tr>"  # noqa: E501
+                            f"<tr><td class='code-cell'><mark {style}>{code}</mark></td><td class='text-cell'><mark {style}>{label}</mark></td></tr>"
                         )
                     else:
                         all_clean_categories.append(
-                            f"<tr><td class='code-cell'>{code}</td><td class='text-cell'>{label}</td></tr>"  # noqa: E501
+                            f"<tr><td class='code-cell'>{code}</td><td class='text-cell'>{label}</td></tr>"
                         )
 
                 variable_name = getattr(result, "variable_name", "N/A")

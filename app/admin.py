@@ -5,6 +5,7 @@ from django.contrib import admin
 from .models import (
     BindingConcept,
     BindingSurveyRepresentedVariable,
+    BindingVariableCategoryStat,
     Category,
     Collection,
     Concept,
@@ -25,3 +26,4 @@ admin.site.register(BindingConcept)
 admin.site.register(Collection)
 admin.site.register(Subcollection)
 admin.site.register(Distributor)
+admin.site.register(BindingVariableCategoryStat)

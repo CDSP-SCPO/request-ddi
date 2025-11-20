@@ -270,6 +270,15 @@
     <script src="{% static 'js/search_results/init.js' %}"></script>
     <script>
 
+        window.translations = {
+            enquete: "{% trans 'Enquête : ' %}",
+            nomVariable: "{% trans 'Nom de la variable : ' %}",
+            libelleVariable: "{% trans 'Libellé de la variable : ' %}",
+            modalites: "{% trans 'Modalités' %}",
+            accederAuxDonnees: "{% trans 'Accéder aux données' %}",
+            resultats: "{% trans ' résultats' %}",
+        };
+
         function updateSubcollections(selectedCollections) {
             fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
                 .then(response => response.json())

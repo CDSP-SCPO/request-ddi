@@ -14,6 +14,8 @@ lint.ignore = [
 	"PLR0913",
 	# SIM105 Use `contextlib.suppress(...)`
 	"SIM105",
+	# E501 Line too long (112 > 100)
+	"E501",
 ]
 
 [tool.ruff.lint.per-file-ignores]

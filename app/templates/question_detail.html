@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
+{% load custom_tags %}
 
 {% block content %}
 <div class="inner-container-custom d-flex">
@@ -56,15 +57,28 @@
                 <table class="styled-table">
                     <thead>
                         <tr class="title-modalities-table">
-                            <th class="code-cell">{% trans "Code" %}</th>
-                            <th class="text-cell">{% trans "Label" %}</th>
+                            <th class="cell">{% trans "Code" %}</th>
+                            <th class="cell text-cell">{% trans "Label" %}</th>
+                            <th class="cell text-cell">{% trans "Cas" %}</th>
+                            <th class="text-cell">{% trans "Pourcentage" %}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for category in categories %}
                         <tr>
-                            <td class="code-cell title-modalities-table">{{ category.code }}</td>
-                            <td class="text-cell custom-title-2">{{ category.category_label }}</td>
+                            <td class="cell title-modalities-table">{{ category.code }}</td>
+                            <td class="cell text-cell custom-title-2">{{ category.category_label }}</td>
+                            <td class="cell text-cell title-modalities-table">
+                                {{ stat_map|dict_get:category.id|default:0 }}
+                            </td>
+                            <td class="percentage-cell">
+                                {% with percentage=categories_percentages|index:forloop.counter0 %}
+                                    <div class="percentage-bar" style='width: {{ percentage|replace_two:",|." }}%;'>
+                                        <span class="percentage-value">{{ percentage|floatformat:1 }}%</span>
+                                    </div>
+                                {% endwith %}
+                            </td>
+                                                  
                         </tr>
                         {% endfor %}
                     </tbody>

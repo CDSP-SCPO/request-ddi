@@ -31,8 +31,11 @@ class XMLParser:
             for line in soup.find_all("var"):
                 categories = " | ".join(
                     [
-                        ",".join(
+                        r" \ ".join(
                             [
+                                cat.find("catStat").text.strip()
+                                if cat.find("catStat")
+                                else "0",
                                 cat.find("catValu").text.strip()
                                 if cat.find("catValu")
                                 else "",

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-08 12:19+0000\n"
+"POT-Creation-Date: 2025-11-19 09:38+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -39,69 +39,78 @@ msgid ""
 "Découvrez, comparez et réutilisez des questions d'enquêtes en sciences "
 "humaines et sociales"
 msgstr ""
-"Discover, compare and reuse questions from social sciences and humanities surveys"
+"Discover, compare and reuse questions from social sciences and humanities "
+"surveys"
 
-#: app/templates/question_detail.html:13 app/templates/question_detail.html:19
+#: app/templates/question_detail.html:14 app/templates/question_detail.html:20
 msgid "Retour à la recherche"
 msgstr "Back to search"
 
-#: app/templates/question_detail.html:26
+#: app/templates/question_detail.html:27
 msgid "Exporter les métadonnées"
 msgstr "Export metadata"
 
-#: app/templates/question_detail.html:30 app/templates/question_detail.html:124
-#: app/templates/question_detail.html:195 app/templates/search_results.html:900
+#: app/templates/question_detail.html:31 app/templates/question_detail.html:137
+#: app/templates/question_detail.html:208
 msgid "Accéder aux données"
 msgstr "Access data"
 
-#: app/templates/question_detail.html:39 app/templates/question_detail.html:116
-#: app/templates/question_detail.html:177 app/templates/search_results.html:884
+#: app/templates/question_detail.html:40 app/templates/question_detail.html:129
+#: app/templates/question_detail.html:190
 msgid "Enquête : "
 msgstr "Survey: "
 
-#: app/templates/question_detail.html:45 app/templates/question_detail.html:118
-#: app/templates/question_detail.html:178 app/templates/search_results.html:885
+#: app/templates/question_detail.html:46 app/templates/question_detail.html:131
+#: app/templates/question_detail.html:191
 msgid "Nom de la variable : "
 msgstr "Variable name: "
 
-#: app/templates/question_detail.html:48 app/templates/search_results.html:886
+#: app/templates/question_detail.html:49
 msgid "Libellé de la variable : "
 msgstr "Variable label: "
 
-#: app/templates/question_detail.html:54 app/templates/question_detail.html:188
-#: app/templates/search_results.html:65 app/templates/search_results.html:894
+#: app/templates/question_detail.html:55 app/templates/question_detail.html:201
+#: app/templates/search_results.html:65
 msgid "Modalités"
 msgstr "Categories"
 
-#: app/templates/question_detail.html:59
+#: app/templates/question_detail.html:60
 msgid "Code"
 msgstr "Code"
 
-#: app/templates/question_detail.html:60
+#: app/templates/question_detail.html:61
 msgid "Label"
 msgstr "Label"
 
-#: app/templates/question_detail.html:73 app/templates/question_detail.html:211
+#: app/templates/question_detail.html:62
+msgid "Cas"
+msgstr "Cases"
+
+#: app/templates/question_detail.html:63
+msgid "Pourcentage"
+msgstr "Percentage"
+
+#: app/templates/question_detail.html:86 app/templates/question_detail.html:224
 msgid "Aucune catégorie associée."
 msgstr "No associated category"
 
-#: app/templates/question_detail.html:89
+#: app/templates/question_detail.html:102
 msgid "Questions identiques"
 msgstr "Identical questions"
 
-#: app/templates/question_detail.html:100
+#: app/templates/question_detail.html:113
 msgid "Questions avec les mêmes intitulés de questions, codes et modalités."
 msgstr "Questions with the same question titles, codes, and categories."
 
-#: app/templates/question_detail.html:132
+#: app/templates/question_detail.html:145
 msgid "Aucune question identique trouvée."
 msgstr "No identical question found."
 
-#: app/templates/question_detail.html:150
+#: app/templates/question_detail.html:163
 msgid "Questions similaires"
 msgstr "Similar questions"
 
-#: app/templates/question_detail.html:161
+#: app/templates/question_detail.html:174
 msgid ""
 "Questions avec les mêmes intitulés de questions, mais dont les codes et/ou "
 "modalités peuvent différer."
@@ -109,13 +118,13 @@ msgstr ""
 "Questions with the same question titles, but with different codes and/or "
 "categories"
 
-#: app/templates/question_detail.html:220
+#: app/templates/question_detail.html:233
 msgid "Aucune question similaire trouvée."
 msgstr "No similar question found"
 
 #: app/templates/search_results.html:10
-msgid "résultats"
-msgstr "results"
+msgid " résultats"
+msgstr " results"
 
 #: app/templates/search_results.html:14
 msgid "Exporter la sélection"
@@ -169,10 +178,8 @@ msgstr "Years"
 msgid "Réinitialiser"
 msgstr "Reset"
 
-#: app/templates/search_results.html:1030
-msgid "Veuillez sélectionner au moins une question à exporter."
-msgstr "Please select at least one question to export."
+#~ msgid "Veuillez sélectionner au moins une question à exporter."
+#~ msgstr "Please select at least one question to export."
 
-#: app/templates/search_results.html:1033
-msgid "Fermer"
-msgstr "Close"
+#~ msgid "Fermer"
+#~ msgstr "Close"

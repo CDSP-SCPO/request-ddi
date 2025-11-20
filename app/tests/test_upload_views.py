@@ -35,6 +35,7 @@ class XMLUploadViewTest(BaseUploadTest):
                 <catgry>
                     <catValu>1</catValu>
                     <labl>18-25 ans</labl>
+                    <catStat type="freq">26</catStat>
                 </catgry>
             </var>
         </root>
@@ -42,7 +43,14 @@ class XMLUploadViewTest(BaseUploadTest):
         xml_file = SimpleUploadedFile("test.xml", xml_content, content_type="text/xml")
 
         with patch("app.views.upload_views.XMLUploadView.convert_data") as mock_convert:
-            mock_convert.return_value = [{"variable_name": "Q1", "survey_id": "doi:1234/test"}]
+            mock_convert.return_value = [
+                {"variable_name": "Q2",
+                "survey_id": "doi:5678/stat-test",
+                "categories": [
+                    {"value": "1", "label": "Homme", "stat": {"type": "freq", "value": "120"}}
+                ]}
+            ]
+
             with patch("app.dataImporter.DataImporter.import_data") as mock_import:
                 mock_import.return_value = (1, 1, 1)
                 response = self.client.post(

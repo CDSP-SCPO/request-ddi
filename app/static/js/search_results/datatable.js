@@ -30,7 +30,7 @@ function initializeDataTable() {
             "dataSrc": function (json) {
                 totalRecords = json.recordsTotal;
                 currentRecords = json.data.length;
-                $('#results-count').text(totalRecords + ' résultats');
+                $('#results-count').text(totalRecords + window.translations.resultats);
                 if (currentRecords < totalRecords) {
                     $('#load-more').show();
                 } else {
@@ -76,9 +76,9 @@ function initializeDataTable() {
                                                 </div>
                                                 <div class="custom-metadatas">
                                                     <div class="flex-grow-1 d-flex flex-column inner-container-metadatas custom-body">
-                                                        <div class="card-subtitle">Enquête : <span class="ft-600"> ${row.survey_name} </span> </div>
-                                                        <div class="card-subtitle">Nom de la variable : <span class="ft-600">${row.variable_name}</span></div>
-                                                        <div class="card-subtitle">Libellé de la variable : <span class="ft-600">${row.internal_label}</span></div>
+                                                        <div class="card-subtitle">${window.translations.enquete}<span class="ft-600"> ${row.survey_name} </span> </div>
+                                                        <div class="card-subtitle">${window.translations.nomVariable}<span class="ft-600">${row.variable_name}</span></div>
+                                                        <div class="card-subtitle">${window.translations.libelleVariable}<span class="ft-600">${row.internal_label}</span></div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -86,12 +86,12 @@ function initializeDataTable() {
                                                 <div class="container-buttons-card">
                                                     <span type="button" id="toggle-categories" onclick="toggleCategories('categories-${row.id}')" class="button-card button-modalities-card">
                                                         <img src="/static/svg/icons/modalites.svg" alt="Modalités" class="icon-modalites">
-                                                        <span>Modalités</span>
+                                                        <span>${window.translations.modalites}</span>
                                                         ${caretIcon}
                                                     </span>
                                                     <span type="button" onclick="window.location.href='${doiUrl}'" class="button-card button-access-data button-access-data-card-hover">
                                                         <img src="/static/svg/icons/doi.svg" alt="Données" class="icon-access-data">
-                                                        <span>Accéder aux données</span>
+                                                        <span>${window.translations.accederAuxDonnees}</span>
                                                     </span>
                                                 </div>
                                                 <div id="categories-` + row.id + `" class="categories-list mt-3" style="display: none;">

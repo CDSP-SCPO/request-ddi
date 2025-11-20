@@ -187,11 +187,11 @@
 
 .styled-table {
     width: 100%;
-    border-collapse: collapse;  /* Important pour que les bordures partagées s'effondrent */
+    border-collapse: collapse;
 }
 
 .styled-table tr:not(:last-child) {
-    border-bottom: 1px solid #D3DFD5;  /* Applique une bordure sous toutes les lignes sauf la dernière */
+    border-bottom: 1px solid #D3DFD5;
 }
 
 .styled-table td {
@@ -202,18 +202,16 @@
 .styled-table th {
     text-align: left;
     padding: 8px;
-    border-bottom: 1px solid #D3DFD5; /* Ajoute une bordure en bas des cellules d'en-tête */
+    border-bottom: 1px solid #D3DFD5;
 }
 
 .text-cell {
     padding-left: 16px!important;
 }
 
-.code-cell {
+.cell {
     width: 110px;
-    border-right: 1px solid #D3DFD5;;  /* Bar verticale entre les deux cellules */
-    text-align: center;  /* Centré pour les index */
-    padding-right: 16px;
+    border-right: 1px solid #D3DFD5;;
 }
 
 .card-question-detail{
@@ -349,3 +347,26 @@
     display:flex;
     gap:16px;
 }
+
+.percentage-cell {
+    position: relative;
+    padding: 2px 8px !important;
+    width: 25%;
+}
+
+.percentage-bar {
+    height: 100%;
+    background-color: #EFF7F0;
+    border-radius: 4px;
+    width: 0;
+    transition: width 0.3s ease;
+}
+
+.percentage-value {
+    padding-left: 4px;
+    margin-left: auto;
+    font-weight: bold;
+    font-size: 0.9em;
+    z-index: 1;
+}
+

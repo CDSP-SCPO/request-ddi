@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views import View
 
 # -- LOCAL
-from app.models import BindingSurveyRepresentedVariable
+from app.models import BindingSurveyRepresentedVariable, BindingVariableCategoryStat
 
 
 class QuestionDetailView(View):
@@ -14,11 +14,22 @@ class QuestionDetailView(View):
         question_conceptual_var = question_represented_var.conceptual_var
         question_survey = question.survey
 
+        categories_percentages = []
+        category_stats = (
+            BindingVariableCategoryStat.objects
+            .filter(binding=question)
+            .select_related("category")
+        )
+
         # Tri des catégories
         categories = sorted(
             question.variable.categories.all(),
             key=lambda x: (int(x.code) if x.code.isdigit() else float("inf"), x.code),
         )
+
+        stat_map = {cs.category_id: cs.stat for cs in category_stats}
+        sum_categories_cases = sum(stat_map.values())
+
         similar_representative_questions = (
             BindingSurveyRepresentedVariable.objects.filter(
                 variable=question.variable, variable__is_unique=False
@@ -54,5 +65,10 @@ class QuestionDetailView(View):
                 ),
             )
 
+        categories_percentages = [
+            (stat_map[cat.id] * 100 / sum_categories_cases)
+            if sum_categories_cases != 0 else 0
+            for cat in categories
+        ]
         context = locals()
         return render(request, "question_detail.html", context)
