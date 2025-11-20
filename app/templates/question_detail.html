@@ -250,6 +250,13 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script>
+    window.request_question_detail = {
+        exportUrl: "{% url 'export_questions_csv' %}",
+        questionId: "{{ question.id }}",
+    };
+    </script>
+
 <script src="{% static 'js/question_detail.js' %}"></script>
 
 {% endblock %}

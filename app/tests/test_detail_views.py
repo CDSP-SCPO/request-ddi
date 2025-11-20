@@ -77,3 +77,17 @@ class QuestionDetailViewTest(TestCase):
         similar_questions = context["similar_representative_questions"]
         self.assertEqual(len(similar_questions), 1)
         self.assertEqual(similar_questions[0].id, similar_question.id)
+
+    def test_export_url_injected_in_template(self):
+        response = self.client.get(reverse("app:question_detail", args=[self.question.id]))
+        content = response.content.decode("utf-8")
+
+        # Check that the JS variable is present
+        self.assertIn("window.request_question_detail", content)
+
+        # Check that the export URL is correctly included in the template
+        self.assertIn(reverse("export_questions_csv"), content)
+
+        # Check that the question ID is correctly included in the template
+        self.assertIn(str(self.question.id), content)
+

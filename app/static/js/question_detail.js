@@ -1,3 +1,5 @@
+const {exportUrl, questionId} = window.request_question_detail;
+
 function toggleCategories(categoryId) {
     var categoriesDiv = document.getElementById(categoryId);
     var caretIcon = event.currentTarget.querySelector('.icon-caret');
@@ -11,24 +13,23 @@ function toggleCategories(categoryId) {
     }
 }
 function exportMetadata() {
-const questionId = "{{ question.id }}";
-const query = `ids=${questionId}`;
-window.location.href = "{% url 'export_questions_csv' %}?" + query;
+    const query = `ids=${questionId}`;
+    window.location.href = `${exportUrl}?${query}`;
 }
 
-$(document).ready(function() {
+$(document).ready(function () {
     // Initialiser les tooltips
     $('[data-toggle="tooltip"]').tooltip({
         position: {
-        my: "right center",
-        at: "left center",
-        collision: "flipfit"
+            my: "right center",
+            at: "left center",
+            collision: "flipfit"
         },
         tooltipClass: "ui-tooltip"
     });
 
     // Ajouter un gestionnaire d'événement pour les boutons d'accordéon
-    $('.header-container-questions').on('click', function() {
+    $('.header-container-questions').on('click', function () {
         // Changer l'icône de basculement
         var caretIcon = $(this).find('i.fas');
         if (caretIcon.length) {
