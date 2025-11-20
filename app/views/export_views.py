@@ -6,7 +6,7 @@ from django.shortcuts import render
 from django.views import View
 
 # -- LOCAL
-from app.models import BindingSurveyRepresentedVariable, Collection, Survey
+from app.models import BindingSurveyRepresentedVariable, Collection, Survey, Subcollection
 from app.views.mixins import staff_required_html
 
 
@@ -130,5 +130,6 @@ class ExportQuestionsCSVView(View):
 def export_page(request):
     collections = Collection.objects.all()
     surveys = Survey.objects.all()
+    subcollections = Subcollection.objects.all()
     context = locals()
     return render(request, "export_csv.html", context)

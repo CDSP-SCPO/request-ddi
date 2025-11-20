@@ -7,7 +7,7 @@ function loadDecades() {
         const subcollections = getFilterValues('subcollection-checkbox');
         const surveys = getFilterValues('survey-checkbox');
         $.ajax({
-            url: '/api/get-decades/',
+            url: `/api/${window.requestdata.api_version}/get-decades/`,
             type: 'GET',
             data: {
                 collections_ids: collections.join(','),
@@ -84,7 +84,7 @@ function loadYears(decade) {
     const subcollections = getFilterValues('subcollection-checkbox');
     const surveys = getFilterValues('survey-checkbox');
     $.ajax({
-        url: '/api/get-years-by-decade/',
+        url: `/api/${window.requestdata.api_version}/get-years-by-decade/`,
         type: 'GET',
         data: {
             decade: decade,

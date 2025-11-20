@@ -57,7 +57,8 @@
                 <form method="GET" action="{% url 'app:search_results' %}" id="header-form" class="search-bar">
                     <div class="search-input-wrapper">
                         <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" name="q" placeholder="{% trans 'mot(s)-clé(s)...' %}" value="{{ request.GET.q }}">
+                        <input type="text" name="q" placeholder="{% trans 'mot(s)-clé(s)...' %}"
+                               value="{{ request.GET.q }}">
                         <button type="submit" class="search-button">{% trans "Rechercher" %}</button>
                     </div>
                     <input type="hidden" name="search_location[]" value="questions">
@@ -76,19 +77,21 @@
                     <input name="next" type="hidden" value="{{ redirect_to }}">
                     {% get_current_language as LANGUAGE_CODE %}
                     {% if LANGUAGE_CODE == 'fr' %}
-                        <button type="submit" name="language" value="en" class="btn_language white-button custom-text-white-buttons">
+                        <button type="submit" name="language" value="en"
+                                class="btn_language white-button custom-text-white-buttons">
                             <img src="{% static 'svg/icons/language.svg' %}" alt="Language icon">
                             Anglais
                         </button>
                     {% else %}
-                        <button type="submit" name="language" value="fr" class="btn_language white-button custom-text-white-buttons">
+                        <button type="submit" name="language" value="fr"
+                                class="btn_language white-button custom-text-white-buttons">
                             <img src="{% static 'svg/icons/language.svg' %}" alt="Language icon">
                             French
                         </button>
                     {% endif %}
                 </form>
             </div>
-                 
+
             {% if user.is_authenticated %}
                 <div class="d-flex align-items-center">
                     <!-- CSV Buttons -->
@@ -149,7 +152,8 @@
             </span>
 
             <div class="custom-popover-content" style="display: none;">
-                <a href="https://www.sciencespo.fr/fr/termes-legaux/" target="_blank" class="popover-link">{% trans "Mentions légales" %}</a>
+                <a href="https://www.sciencespo.fr/fr/termes-legaux/" target="_blank"
+                   class="popover-link">{% trans "Mentions légales" %}</a>
                 <hr class="popover-divider"/>
                 <p class="popover-meta"> {% trans "Mis à jour le" %} 10/06/2025</p>
                 <p class="popover-meta">Copyright © 2025,<br> Sciences Po</p>
@@ -170,20 +174,25 @@
 
 {% block extra_css %}
 {% endblock %}
+<script>
+    window.requestdata = {api_version: "{{ API_VERSION }}"}
+</script>
 
 <!-- Matomo -->
 <script>
-  var _paq = window._paq = window._paq || [];
-  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-  _paq.push(['trackPageView']);
-  _paq.push(['enableLinkTracking']);
-  (function() {
-    var u="//ws.sciences-po.fr/";
-    _paq.push(['setTrackerUrl', u+'piwik.php']);
-    _paq.push(['setSiteId', '26']);
-    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-    g.async=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
-  })();
+    var _paq = window._paq = window._paq || [];
+    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+    _paq.push(['trackPageView']);
+    _paq.push(['enableLinkTracking']);
+    (function () {
+        var u = "//ws.sciences-po.fr/";
+        _paq.push(['setTrackerUrl', u + 'piwik.php']);
+        _paq.push(['setSiteId', '26']);
+        var d = document, g = d.createElement('script'), s = d.getElementsByTagName('script')[0];
+        g.async = true;
+        g.src = u + 'piwik.js';
+        s.parentNode.insertBefore(g, s);
+    })();
 </script>
 <!-- End Matomo Code -->
 

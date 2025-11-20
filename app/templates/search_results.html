@@ -260,6 +260,7 @@
 {% endblock %}
 
 {% block extra_js %}
+
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 
     <script src="{% static 'js/search_results/utils.js' %}"></script>
@@ -280,7 +281,7 @@
         };
 
         function updateSubcollections(selectedCollections) {
-            fetch(`/api/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
+            fetch(`/api/${window.requestdata.api_version}/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
                 .then(response => response.json())
                 .then(data => {
                     const subcollectionsFilter = $('#subcollections-filter');
@@ -307,7 +308,7 @@
         }
 
         function updateSurveys(selectedSubcollections) {
-            fetch(`/api/get-surveys-by-subcollections/?subcollections_ids=${selectedSubcollections.join(',')}`)
+            fetch(`/api/${window.requestdata.api_version}/get-surveys-by-subcollections/?subcollections_ids=${selectedSubcollections.join(',')}`)
                 .then(response => response.json())
                 .then(data => {
                     const surveysFilter = $('#survey-filter');

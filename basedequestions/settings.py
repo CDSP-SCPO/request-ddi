@@ -94,6 +94,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "app.context_processors.api_version",
             ],
         },
     },
@@ -263,3 +264,5 @@ if ENVIRONMENT == "production":
     LOGGING["loggers"]["app"]["level"] = "ERROR"
 
 # Mettre un admin pour recevoir les mails pour les logs de la prod ?
+
+API_VERSION = "v1"

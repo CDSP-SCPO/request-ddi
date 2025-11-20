@@ -7,9 +7,21 @@
             <!-- Sélection de la collection -->
             <div class="mb-3">
                 <label for="collections-filter" class="form-label">Choisissez une ou plusieurs collections :</label>
-                <select name="collections" id="collections-filter" class="selectpicker form-select" multiple data-live-search="true">
+                <select name="collections" id="collections-filter" class="selectpicker form-select" multiple
+                        data-live-search="true">
                     {% for collection in collections %}
                         <option value="{{ collection.id }}">{{ collection.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Sélection de la collection -->
+            <div class="mb-3">
+                <label for="subcollections-filter" class="form-label">Choisissez une ou plusieurs sous-collections :</label>
+                <select name="subcollections" id="subcollections-filter" class="selectpicker form-select" multiple
+                        data-live-search="true">
+                    {% for sub in subcollections %}
+                        <option value="{{ sub.id }}">{{ sub.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -17,7 +29,8 @@
             <!-- Sélection de l'enquête -->
             <div class="mb-3">
                 <label for="survey-filter" class="form-label">Choisissez une ou plusieurs enquêtes :</label>
-                <select name="surveys" id="survey-filter" class="selectpicker form-select" multiple data-live-search="true">
+                <select name="surveys" id="survey-filter" class="selectpicker form-select" multiple
+                        data-live-search="true">
                     {% for survey in surveys %}
                         <option value="{{ survey.id }}">{{ survey.name }}</option>
                     {% endfor %}
@@ -31,22 +44,23 @@
 {% endblock %}
 
 {% block extra_css %}
-<style>
-    button {
-        background-color: #007bff;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-    }
-    button:hover {
-        background-color: #0056b3;
-    }
-</style>
+    <style>
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/export.js' %}"></script>
+    <script src="{% static 'js/export.js' %}"></script>
 {% endblock %}

@@ -69,7 +69,7 @@ class RepresentedVariableSearchViewTest(BaseSearchViewTest):
 
 class SearchResultsDataViewTest(BaseSearchViewTest):
     def setUp(self):
-        self.url = reverse("app:search_results_data")
+        self.url = reverse("api:search_results_data")
 
     @patch.object(SearchResultsDataView, "get_queryset")
     @patch.object(SearchResultsDataView, "build_filtered_search")

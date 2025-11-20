@@ -36,6 +36,11 @@ urlpatterns = [
         name="export_questions_csv",
     ),
     path("health/", include("health_check.urls")),
+
+    # -------------------
+    # API versionnée
+    # -------------------
+    path("api/", include(("app.api_urls", "api"), namespace="api")),
 ]
 
 

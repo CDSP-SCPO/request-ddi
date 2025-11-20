@@ -13,7 +13,7 @@ function initializeDataTable() {
             updateCheckboxes();
         },
         "ajax": {
-            "url": "/api/search-results/",
+            url: `/api/${window.requestdata.api_version}/search-results/`,
             "type": "POST",
             "async": true,
             "data": function (d) {

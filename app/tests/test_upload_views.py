@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -18,11 +19,24 @@ from app.models import (
 class BaseUploadTest(TestCase):
     @classmethod
     def setUpTestData(cls):
+        # Création du client test
         cls.client = Client()
+
+        # Création d'un utilisateur staff pour les tests
+        cls.user = User.objects.create_user(
+            username="testuser",
+            password="12345",
+            is_staff=True,  #
+        )
+
+    def login(self):
+        self.client.force_login(self.user)
 
 
 class XMLUploadViewTest(BaseUploadTest):
     def test_form_valid_with_valid_xml(self):
+        self.login()
+
         """Teste l'import d'un fichier XML valide."""
         xml_content = """
         <root>
@@ -61,6 +75,7 @@ class XMLUploadViewTest(BaseUploadTest):
                 self.assertEqual(response.status_code, 302)
 
     def test_form_invalid_with_invalid_xml(self):
+        self.login()
         xml_content = b"<root></root>"
         xml_file = SimpleUploadedFile("test.xml", xml_content, content_type="text/xml")
 
@@ -75,6 +90,7 @@ class XMLUploadViewTest(BaseUploadTest):
 
 class CSVUploadViewCollectionTest(BaseUploadTest):
     def test_form_valid_with_valid_csv(self):
+        self.login()
         csv_content = (
             "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version\n"
@@ -90,6 +106,7 @@ class CSVUploadViewCollectionTest(BaseUploadTest):
 
     def test_form_invalid_with_duplicate_doi(self):
         """Teste l'import d'un fichier CSV avec un DOI en double."""
+        self.login()
         Distributor.objects.create(name="Distrib")
         Collection.objects.create(name="Collection", distributor=Distributor.objects.first())
         Subcollection.objects.create(name="Subcollection", collection=Collection.objects.first())
@@ -136,6 +153,7 @@ class CheckDuplicatesTest(BaseUploadTest):
         )
 
     def test_check_duplicates_with_duplicate(self):
+        self.login()
         xml_content = b"""
         <root>
             <IDNo agency="DataCite">doi:1234/test</IDNo>
@@ -149,6 +167,7 @@ class CheckDuplicatesTest(BaseUploadTest):
         self.assertIn("Q1", response.json()["existing_variables"])
 
     def test_check_duplicates_with_no_duplicate(self):
+        self.login()
         xml_content = b"""
         <root>
             <IDNo agency="DataCite">doi:1234/test</IDNo>

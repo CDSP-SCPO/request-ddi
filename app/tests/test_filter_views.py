@@ -21,21 +21,14 @@ class JSONViewsTest(TestCase):
             start_date="2020-01-01"
         )
 
-    def test_get_surveys_by_collections(self):
-        """Teste la récupération des surveys par collections."""
-        response = self.client.get(
-            reverse("app:get_surveys_by_collections"),
-            {"collections_ids": str(self.collection.id)}
-        )
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("surveys", data)
-        self.assertEqual(len(data["surveys"]), 1)
+    # The test `test_get_surveys_by_collections` has been removed
+    # because the `get_surveys_by_collections` endpoint no longer exists.
+
 
     def test_get_subcollections_by_collections(self):
         """Teste la récupération des subcollections et surveys par collections."""
         response = self.client.get(
-            reverse("app:get_subcollections_by_collections"),
+            reverse("api:get_subcollections_by_collections"),
             {"collections_ids": str(self.collection.id)}
         )
         self.assertEqual(response.status_code, 200)
@@ -55,7 +48,7 @@ class JSONViewsTest(TestCase):
         )
 
         response = self.client.get(
-            reverse("app:get_decades"),
+            reverse("api:get_decades"),
             {"collections_ids": str(self.collection.id)}
         )
         self.assertEqual(response.status_code, 200)
@@ -66,7 +59,7 @@ class JSONViewsTest(TestCase):
     def test_get_years_by_decade(self):
         """Teste la récupération des années par décennie."""
         response = self.client.get(
-            reverse("app:get_years_by_decade"),
+            reverse("api:get_years_by_decade"),
             {
                 "decade": "2020",
                 "collections_ids": str(self.collection.id),
