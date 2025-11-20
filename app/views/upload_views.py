@@ -147,6 +147,13 @@ class XMLUploadView(StaffRequiredMixin, FormView):
 class CSVUploadViewCollection(StaffRequiredMixin, View):
     form_class = CSVUploadFormCollection
 
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST, request.FILES)
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return JsonResponse({"status": "error", "message": form.errors}, status=400)
+
     def form_valid(self, form):
         try:
             data = self.get_data(form)
