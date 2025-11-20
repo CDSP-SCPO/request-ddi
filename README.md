@@ -192,7 +192,9 @@ data:
 
 ---
 
+## Diagramme d'architecture
 
+Le diagramme d'architecture est disponible à l'URL suivante : " https://www.canva.com/design/DAG5D0e_dcM/bc-f7EnHqbgVJkeqtzS7sw/edit?utm_content=DAG5D0e_dcM&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton"
 
 ## Configuration des Secrets Kubernetes
 
