@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView
 
 # -- THIRDPARTY
-from elasticsearch_dsl import Q
+from elasticsearch.dsl import Q
 
 # -- LOCAL
 from app.documents import BindingSurveyDocument
