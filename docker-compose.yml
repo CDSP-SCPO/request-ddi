@@ -47,7 +47,7 @@ services:
   # POSTGRES DATABASE
   # -----------------------------------------------------
   db_dev:
-    image: postgres:14
+    image: postgres:17
 
     # Variables propres au service Postgres uniquement
     environment:
