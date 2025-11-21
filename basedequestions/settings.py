@@ -9,25 +9,18 @@ from dotenv import load_dotenv
 # BASE DIRECTORY
 # ---------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Charger le fichier .env si présent
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # ---------------------------------------------------------
 # DEBUG & SECRET
 # ---------------------------------------------------------
-DEBUG = os.getenv("DJANGO_DEBUG", "True") != "False"
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "changeme-in-dev")
+DEBUG = os.getenv("DJANGO_DEBUG") == "True"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # ---------------------------------------------------------
 # ALLOWED HOSTS
 # ---------------------------------------------------------
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS")
-if ALLOWED_HOSTS:
-    ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS.split(",")]
-else:
-    # Valeurs par défaut pour dev
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 
 # ---------------------------------------------------------
 # DATABASE
@@ -35,32 +28,30 @@ else:
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB", "db_dev_basedequestions"),
-        "USER": os.getenv("POSTGRES_USER", "dev_user_basedequestions"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "dev_4mAugurt6cyyKt"),
-        "HOST": os.getenv("POSTGRES_HOST", "db_dev"),
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("POSTGRES_HOST"),
+        "PORT": os.getenv("POSTGRES_PORT"),
     }
 }
 
 # ---------------------------------------------------------
 # ELASTICSEARCH
 # ---------------------------------------------------------
-ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "http://localhost:9200")
-ES_PUBLIC_URL = os.getenv("ES_HOST_PUBLIC", ELASTICSEARCH_HOST)
-ES_ADMIN_USER = os.getenv("ES_ADMIN_USER", "elastic")
-ES_ADMIN_PASS = os.getenv("ES_ADMIN_PASS", "changeme")
+ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST")
+ELASTICSEARCH_ADMIN_USER = os.getenv("ELASTICSEARCH_ADMIN_USER")
+ELASTICSEARCH_ADMIN_PASSWORD = os.getenv("ELASTICSEARCH_ADMIN_PASSWORD")
 
-ES_PUBLIC_CLIENT = {"hosts": [ES_PUBLIC_URL]}
-ES_ADMIN_CLIENT = {"hosts": [ES_PUBLIC_URL], "http_auth": (ES_ADMIN_USER, ES_ADMIN_PASS)}
 
 ELASTICSEARCH_DSL = {
     "default": {
         "hosts": ELASTICSEARCH_HOST,
-        "http_auth": (ES_ADMIN_USER, ES_ADMIN_PASS),
+        "http_auth": (ELASTICSEARCH_ADMIN_USER, ELASTICSEARCH_ADMIN_PASSWORD),
     },
     "auto_sync": False,
 }
+
 
 # ---------------------------------------------------------
 # APPLICATIONS & MIDDLEWARE
@@ -156,12 +147,8 @@ MEDIA_ROOT = BASE_DIR / "media"
 # ---------------------------------------------------------
 # CSRF / SECURITY
 # ---------------------------------------------------------
-if DEBUG:
-    CSRF_COOKIE_SECURE = False
-    CSRF_TRUSTED_ORIGINS = ["http://localhost:8000"]
-else:
-    CSRF_COOKIE_SECURE = True
-    CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",") if o.strip()]
 
 # ---------------------------------------------------------
 # LOGIN URLS

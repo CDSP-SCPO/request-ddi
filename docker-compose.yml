@@ -1,61 +1,94 @@
 services:
+
+  # -----------------------------------------------------
+  # DJANGO BACKEND
+  # -----------------------------------------------------
   basedequestions:
     image: question_base-backend:local
     build:
       context: .
       dockerfile: Dockerfile
+
+    environment:
+      # DEBUG & SECRET
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-changeme-in-dev}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+
+      # DATABASE
+      POSTGRES_DB: ${POSTGRES_DB:-db_dev_basedequestions}
+      POSTGRES_USER: ${POSTGRES_USER:-dev_user_basedequestions}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_4mAugurt6cyyKt}
+      POSTGRES_HOST: ${POSTGRES_HOST:-db_dev}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+
+      # ELASTICSEARCH
+      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST:-http://elasticsearch:9200}
+      ELASTICSEARCH_ADMIN_USER: ${ELASTICSEARCH_ADMIN_USER:-elastic}
+      ELASTICSEARCH_ADMIN_PASSWORD: ${ELASTICSEARCH_ADMIN_PASSWORD:-changeme}
+
+      # SECURITY
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost}
+
     ports:
       - "8000:8000"
-    user: "1000:1000"
     volumes:
       - ./:/app
-      - media_data:/app/media  # Ajout du volume pour media
-    entrypoint: /app/entrypoint.sh
+    user: "1000:1000"
+    entrypoint: /app/entrypoint.dev.sh
     depends_on:
+      - db_dev
       - elasticsearch
-      - db
     networks:
       - default
-    environment:
-      - SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DEBUG=${DJANGO_DEBUG}
-      - ALLOWED_HOSTS=[*]
-      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
 
-  db:
+
+  # -----------------------------------------------------
+  # POSTGRES DATABASE
+  # -----------------------------------------------------
+  db_dev:
     image: postgres:14
+
+    # Variables propres au service Postgres uniquement
     environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-db_dev_basedequestions}
+      POSTGRES_USER: ${POSTGRES_USER:-dev_user_basedequestions}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_4mAugurt6cyyKt}
+
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_dev:/var/lib/postgresql/data
     networks:
       - default
 
+
+  # -----------------------------------------------------
+  # ELASTICSEARCH
+  # -----------------------------------------------------
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+
+    # Variables propres à Elasticsearch uniquement
     environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - xpack.security.transport.ssl.enabled=false
-      - ES_JAVA_OPTS=-Xms4g -Xmx4g
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.transport.ssl.enabled: "false"
+      ES_JAVA_OPTS: -Xms2g -Xmx2g
+
     ports:
       - "9200:9200"
     volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
+      - elasticsearch_data_dev:/usr/share/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          memory: 4G
     networks:
       - default
 
-volumes:
-  postgres_data:
-  elasticsearch_data:
-  media_data:
 
-networks:
-  default:
-    driver: bridge
+# ---------------------------------------------------------
+# VOLUMES
+# ---------------------------------------------------------
+volumes:
+  postgres_data_dev:
+  elasticsearch_data_dev:
