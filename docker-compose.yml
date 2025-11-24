@@ -12,7 +12,7 @@ services:
     environment:
       # DEBUG & SECRET
       DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-changeme-in-dev}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-changeme-in-prod}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
 
       # DATABASE
