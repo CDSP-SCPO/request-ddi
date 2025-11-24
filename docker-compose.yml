@@ -46,8 +46,9 @@ services:
   # -----------------------------------------------------
   # POSTGRES DATABASE
   # -----------------------------------------------------
-  db_dev:
-    image: postgres:17
+  db:
+    image: postgres:17-alpine
+    container_name: db
 
     # Variables propres au service Postgres uniquement
     environment:
