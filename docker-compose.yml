@@ -5,6 +5,7 @@ services:
   # -----------------------------------------------------
   basedequestions:
     image: question_base-backend:local
+    container_name: basedequestions
     build:
       context: .
       dockerfile: Dockerfile
@@ -16,16 +17,16 @@ services:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
 
       # DATABASE
-      POSTGRES_DB: ${POSTGRES_DB:-db_dev_basedequestions}
-      POSTGRES_USER: ${POSTGRES_USER:-dev_user_basedequestions}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_4mAugurt6cyyKt}
-      POSTGRES_HOST: ${POSTGRES_HOST:-db_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
 
       # ELASTICSEARCH
       ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST:-http://elasticsearch:9200}
       ELASTICSEARCH_ADMIN_USER: ${ELASTICSEARCH_ADMIN_USER:-elastic}
-      ELASTICSEARCH_ADMIN_PASSWORD: ${ELASTICSEARCH_ADMIN_PASSWORD:-changeme}
+      ELASTICSEARCH_ADMIN_PASSWORD: ${ELASTICSEARCH_ADMIN_PASSWORD:-elastic}
 
       # SECURITY
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost}
@@ -52,9 +53,9 @@ services:
 
     # Variables propres au service Postgres uniquement
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-db_dev_basedequestions}
-      POSTGRES_USER: ${POSTGRES_USER:-dev_user_basedequestions}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_4mAugurt6cyyKt}
+      POSTGRES_DB: ${POSTGRES_DB:-db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
 
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
