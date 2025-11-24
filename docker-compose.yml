@@ -37,7 +37,7 @@ services:
     user: "1000:1000"
     entrypoint: /app/entrypoint.dev.sh
     depends_on:
-      - db_dev
+      - db
       - elasticsearch
     networks:
       - default
