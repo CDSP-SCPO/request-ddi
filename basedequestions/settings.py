@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # BASE DIRECTORY
 # ---------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 
 
 
