@@ -40,8 +40,6 @@ services:
     depends_on:
       - db
       - elasticsearch
-    networks:
-      - default
 
 
   # -----------------------------------------------------
@@ -59,8 +57,6 @@ services:
 
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
-    networks:
-      - default
 
 
   # -----------------------------------------------------
@@ -68,7 +64,7 @@ services:
   # -----------------------------------------------------
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
-container_name: elasticsearch
+    container_name: elasticsearch
     # Variables propres à Elasticsearch uniquement
     environment:
       discovery.type: single-node
@@ -84,9 +80,6 @@ container_name: elasticsearch
       resources:
         limits:
           memory: 4G
-    networks:
-      - default
-
 
 # ---------------------------------------------------------
 # VOLUMES
