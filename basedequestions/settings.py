@@ -9,9 +9,8 @@ from dotenv import load_dotenv
 # BASE DIRECTORY
 # ---------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
-# load_dotenv(os.path.join(BASE_DIR, ".env"))
-# This line is commented out because all environment variables are provided via Docker.
-# Uncomment this line only if you want to load additional variables from a local .env file.
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
 
 
 # ---------------------------------------------------------
