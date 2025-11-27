@@ -1,6 +1,8 @@
 from django.apps import AppConfig
 from health_check.plugins import plugin_dir
 
+from utils.db_logging import DBQueryLogger
+
 from .health_checks import ElasticsearchHealthCheck
 
 
@@ -16,3 +18,6 @@ class AppConfig(AppConfig):
 
         # enregistrer le custom health check Elasticsearch
         plugin_dir.register(ElasticsearchHealthCheck)
+
+        db_logger = DBQueryLogger()
+        db_logger.enable()

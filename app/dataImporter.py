@@ -17,7 +17,7 @@ from .utils.normalize_string import (
     normalize_string_for_database,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("performance")
 batch_size = 50
 
 
@@ -123,7 +123,12 @@ class DataImporter:
                 self.errors.append(f"DOI '{doi}': Erreur inattendue : {e!s}")
             finally:
                 duration = time.time() - start_time
-                logger.info("⏱ Temps d'import pour le DOI '%s' : %.2f secondes", doi, duration)
+                logger.debug(
+                    "⏱ Temps d'import — Survey '%s', DOI '%s' : %.2f s",
+                    survey,
+                    doi,
+                    duration,
+                )
 
         if bindings_to_index:
             BindingSurveyDocument().update(bindings_to_index)

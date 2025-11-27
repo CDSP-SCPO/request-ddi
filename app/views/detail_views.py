@@ -1,11 +1,14 @@
 # -- DJANGO
 from django.shortcuts import get_object_or_404, render
+from django.utils.decorators import method_decorator
 from django.views import View
 
 # -- LOCAL
 from app.models import BindingSurveyRepresentedVariable, BindingVariableCategoryStat
+from decorators.timer import log_time
 
 
+@method_decorator(log_time, name="dispatch")
 class QuestionDetailView(View):
     def get(self, request, id_quest, *args, **kwargs):
         search_params = request.GET.urlencode()

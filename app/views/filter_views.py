@@ -7,8 +7,10 @@ from app.models import (
     Survey,
 )
 from app.utils.sort import alphanum_key
+from decorators.timer import log_time
 
 
+@log_time
 def get_surveys_by_collections(request):
     collections_ids = request.GET.get("collections_ids")
     if collections_ids:
@@ -22,7 +24,7 @@ def get_surveys_by_collections(request):
     surveys_data = [{"id": survey.id, "name": survey.name} for survey in surveys]
     return JsonResponse({"surveys": surveys_data})
 
-
+@log_time
 def get_subcollections_by_collections(request):
     collection_ids = request.GET.get("collections_ids", "").split(",")
     collection_ids = [id_coll for id_coll in collection_ids if id_coll]
@@ -50,7 +52,7 @@ def get_subcollections_by_collections(request):
 
     return JsonResponse(data)
 
-
+@log_time
 def get_surveys_by_subcollections(request):
     subcollection_ids = request.GET.get("subcollections_ids", "").split(",")
     subcollection_ids = [id_sub for id_sub in subcollection_ids if id_sub]
@@ -76,7 +78,7 @@ def get_surveys_by_subcollections(request):
     data = {"surveys": [{"id": s.id, "name": s.name} for s in surveys]}
     return JsonResponse(data)
 
-
+@log_time
 def get_decades(request):
     collection_ids = request.GET.get("collections_ids", "").split(",")
     subcollection_ids = request.GET.get("subcollections_ids", "").split(",")
@@ -109,7 +111,7 @@ def get_decades(request):
         decades[decade].append(year)
     return JsonResponse({"decades": decades})
 
-
+@log_time
 def get_years_by_decade(request):
     try:
         decade = int(request.GET.get("decade", 0))

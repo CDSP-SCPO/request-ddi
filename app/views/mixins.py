@@ -1,6 +1,7 @@
 from functools import wraps
-from django.http import JsonResponse
+
 from django.contrib.auth.mixins import AccessMixin
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 
@@ -33,6 +34,6 @@ def staff_required_html(view_func):
         if not user.is_authenticated:
             return redirect(f"{reverse('app:login')}?next={request.path}")
         if not user.is_staff:
-            return redirect('forbidden')
+            return redirect("forbidden")
         return view_func(request, *args, **kwargs)
     return _wrapped_view

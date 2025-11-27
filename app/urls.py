@@ -2,7 +2,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth.views import LogoutView
-from django.urls import path, include
+from django.urls import path
 
 from .views.auth_views import CustomLoginView
 from .views.detail_views import QuestionDetailView
@@ -14,6 +14,7 @@ from .views.search_views import (
 
 # -- BASEDEQUESTIONS (LOCAL)
 from .views.upload_views import CSVUploadViewCollection, XMLUploadView, check_duplicates
+
 API_VERSION = getattr(settings, "API_VERSION", "v1")
 
 app_name = "app"

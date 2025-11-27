@@ -3,13 +3,16 @@ import csv
 
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.utils.decorators import method_decorator
 from django.views import View
 
 # -- LOCAL
-from app.models import BindingSurveyRepresentedVariable, Collection, Survey, Subcollection
+from app.models import BindingSurveyRepresentedVariable, Collection, Subcollection, Survey
 from app.views.mixins import staff_required_html
+from decorators.timer import log_time
 
 
+@method_decorator(log_time, name="dispatch")
 class ExportQuestionsCSVView(View):
     def get(self, request, *args, **kwargs):
         selected_ids = request.GET.getlist("ids")
@@ -125,7 +128,7 @@ class ExportQuestionsCSVView(View):
 
         return questions_data, max_vars
 
-
+@log_time
 @staff_required_html
 def export_page(request):
     collections = Collection.objects.all()

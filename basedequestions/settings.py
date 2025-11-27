@@ -1,5 +1,6 @@
 # -- STDLIB
 import os
+import sys
 from pathlib import Path
 
 # -- THIRDPARTY
@@ -84,6 +85,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "app.middleware.logging_responsetime.ResponseTimeLoggingMiddleware",
 ]
 
 ROOT_URLCONF = "basedequestions.urls"
@@ -168,17 +170,33 @@ LOGGING = {
     "formatters": {
         "verbose": {"format": "{levelname} {asctime} {module} {message}", "style": "{"},
         "simple": {"format": "{levelname} {message}", "style": "{"},
+        "performance": {"format": "{asctime} | {levelname} | {message}", "style": "{"},
     },
     "handlers": {
         "console": {"level": "DEBUG", "class": "logging.StreamHandler", "formatter": "verbose"},
+        "performance_file": {
+            "level": "DEBUG",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "performance.log",
+            "maxBytes": 1024 * 1024 * 5,
+            "backupCount": 5,
+            "formatter": "performance",
+        },
     },
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO"},
         "app": {"handlers": ["console"], "level": "DEBUG"},
+        "performance": {
+            "handlers": ["performance_file", "console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
     },
 }
 
 if not DEBUG:
+    LOGGING["loggers"]["performance"]["handlers"] = []
+    LOGGING["loggers"]["performance"]["propagate"] = False
     LOGGING["handlers"]["file"] = {
         "level": "ERROR",
         "class": "logging.handlers.RotatingFileHandler",
@@ -196,6 +214,13 @@ if not DEBUG:
     LOGGING["loggers"]["app"]["handlers"] = ["file", "mail_admins"]
     LOGGING["loggers"]["django"]["level"] = "ERROR"
     LOGGING["loggers"]["app"]["level"] = "ERROR"
+
+if "test" in sys.argv:
+    LOGGING["loggers"]["performance"] = {
+        "handlers": [],
+        "level": "CRITICAL",
+        "propagate": False,
+    }
 
 # ---------------------------------------------------------
 # HEALTH CHECKS

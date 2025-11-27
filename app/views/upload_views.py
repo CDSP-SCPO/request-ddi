@@ -3,17 +3,17 @@ import csv
 import logging
 import re
 from datetime import datetime
-from functools import wraps
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
 
 # -- DJANGO
+from django import forms
 from django.contrib import messages
-from django.contrib.auth.mixins import AccessMixin
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.edit import FormView
@@ -32,11 +32,12 @@ from app.models import (
 from app.parser import XMLParser
 from app.utils.timing import timed
 from app.views.mixins import StaffRequiredMixin, staff_required_json
-
+from decorators.timer import log_time
 
 logger = logging.getLogger(__name__)
+perf_logger = logging.getLogger("performance")
 
-
+@method_decorator(log_time, name="dispatch")
 class XMLUploadView(StaffRequiredMixin, FormView):
     template_name = "upload_xml.html"
     form_class = XMLUploadForm
@@ -126,7 +127,7 @@ class XMLUploadView(StaffRequiredMixin, FormView):
         results = []
         seen_invalid_dois = set()
         for file in files:
-            logger.info(f"Début du traitement du fichier : {file.name}")
+            perf_logger.debug(f"Début du traitement du fichier : {file.name}")
             try:
                 parser = XMLParser()
                 result = parser.parse_file(file, seen_invalid_dois)
@@ -143,7 +144,7 @@ class XMLUploadView(StaffRequiredMixin, FormView):
 
         return results
 
-
+@method_decorator(log_time, name="dispatch")
 class CSVUploadViewCollection(StaffRequiredMixin, View):
     form_class = CSVUploadFormCollection
 
@@ -182,7 +183,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
             return JsonResponse({"status": "error", "message": str(ve)})
         except Exception as e:
             return JsonResponse(
-                {"status": "error", "message": "Le formulaire est invalide.", "errors": errors}
+                {"status": "error", "message": "Le formulaire est invalide.", "errors": e}
             )
 
     def get(self, request, *args, **kwargs):
@@ -247,7 +248,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                             survey_start_date, "%Y-%m-%d"
                         ).date()
                     except ValueError:
-                        msg = f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}" # noqa: E501
+                        msg = f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}"
                         raise ValueError(msg) from None
 
 
@@ -265,7 +266,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                         survey_date_last_version, "%Y-%m-%d"
                     ).date()
                 except ValueError:
-                    msg = f"La date de la dernière version à la ligne {line_number} n'est pas valide : {survey_date_last_version}" # noqa: E501
+                    msg = f"La date de la dernière version à la ligne {line_number} n'est pas valide : {survey_date_last_version}"
                     raise ValueError(msg) from None
 
 
@@ -290,6 +291,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
 
 
 
+@log_time
 @csrf_exempt
 @staff_required_json
 def check_duplicates(request):

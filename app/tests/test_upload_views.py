@@ -21,13 +21,12 @@ class BaseUploadTest(TestCase):
     def setUpTestData(cls):
         # Création du client test
         cls.client = Client()
-
-        # Création d'un utilisateur staff pour les tests
         cls.user = User.objects.create_user(
-            username="testuser",
-            password="12345",
-            is_staff=True,  #
+            username="admin", password="pwd", is_staff=True # noqa: S106
         )
+
+    def setUp(self):
+        self.client.login(username="admin", password="pwd") # noqa: S106
 
     def login(self):
         self.client.force_login(self.user)

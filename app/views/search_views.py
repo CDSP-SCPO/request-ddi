@@ -4,6 +4,7 @@ from html import unescape
 
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
 # -- DJANGO
@@ -15,11 +16,13 @@ from elasticsearch.dsl import Q
 # -- LOCAL
 from app.documents import BindingSurveyDocument
 from app.models import Collection, RepresentedVariable, Subcollection, Survey
+from decorators.timer import log_time
 
 from .utils_views import remove_html_tags
 
 logger = logging.getLogger(__name__)
 
+@method_decorator(log_time, name="dispatch")
 class RepresentedVariableSearchView(ListView):
     model = RepresentedVariable
     template_name = "homepage.html"  # Nom du template
@@ -32,7 +35,7 @@ class RepresentedVariableSearchView(ListView):
         context["upload_stats"] = self.request.GET.get("upload_stats", None)
         return context
 
-
+@method_decorator(log_time, name="dispatch")
 class SearchResultsDataView(ListView):
     model = BindingSurveyDocument
     context_object_name = "results"
@@ -411,7 +414,7 @@ class SearchResultsDataView(ListView):
             logger.exception("❌ Erreur dans post() : %s", e)
             return JsonResponse({"error": str(e)}, status=500)
 
-
+@method_decorator(log_time, name="dispatch")
 def search_results(request):
     selected_surveys = request.GET.getlist("survey")
     selected_sub_collection = request.GET.getlist("subcollection")

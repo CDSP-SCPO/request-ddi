@@ -1,9 +1,12 @@
-from django.urls import path
 from django.conf import settings
+from django.urls import path
 
-from .views.filter_views import get_subcollections_by_collections, get_surveys_by_subcollections, get_decades, \
-    get_years_by_decade
-
+from .views.filter_views import (
+    get_decades,
+    get_subcollections_by_collections,
+    get_surveys_by_subcollections,
+    get_years_by_decade,
+)
 from .views.search_views import SearchResultsDataView
 
 app_name = "api"
