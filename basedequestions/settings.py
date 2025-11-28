@@ -12,8 +12,6 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 
-
-
 # ---------------------------------------------------------
 # DEBUG & SECRET
 # ---------------------------------------------------------
@@ -42,14 +40,14 @@ DATABASES = {
 # ---------------------------------------------------------
 # ELASTICSEARCH
 # ---------------------------------------------------------
-ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST")
+ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL")
 ELASTICSEARCH_ADMIN_USER = os.getenv("ELASTICSEARCH_ADMIN_USER")
 ELASTICSEARCH_ADMIN_PASSWORD = os.getenv("ELASTICSEARCH_ADMIN_PASSWORD")
 
 
 ELASTICSEARCH_DSL = {
     "default": {
-        "hosts": ELASTICSEARCH_HOST,
+        "hosts": ELASTICSEARCH_URL,
         "http_auth": (ELASTICSEARCH_ADMIN_USER, ELASTICSEARCH_ADMIN_PASSWORD),
     },
     "auto_sync": False,
@@ -162,6 +160,7 @@ LOGOUT_REDIRECT_URL = "/"
 # ---------------------------------------------------------
 # LOGGING
 # ---------------------------------------------------------
+LOGS_DIRECTORY = os.getenv("LOGS_DIRECTORY", "/tmp") # noqa: S108
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -175,7 +174,7 @@ LOGGING = {
         "performance_file": {
             "level": "DEBUG",
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": "performance.log",
+            "filename": os.path.join(LOGS_DIRECTORY, "performance.log"),
             "maxBytes": 1024 * 1024 * 5,
             "backupCount": 5,
             "formatter": "performance",
@@ -198,7 +197,7 @@ if not DEBUG:
     LOGGING["handlers"]["file"] = {
         "level": "ERROR",
         "class": "logging.handlers.RotatingFileHandler",
-        "filename": "errors.log",
+        "filename": os.path.join(LOGS_DIRECTORY, "errors.log"),
         "maxBytes": 1024 * 1024 * 5,
         "backupCount": 5,
         "formatter": "simple",

@@ -24,19 +24,31 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
 
       # ELASTICSEARCH
-      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST:-http://elasticsearch:9200}
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
       ELASTICSEARCH_ADMIN_USER: ${ELASTICSEARCH_ADMIN_USER:-elastic}
       ELASTICSEARCH_ADMIN_PASSWORD: ${ELASTICSEARCH_ADMIN_PASSWORD:-elastic}
 
       # SECURITY
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost}
 
+      # LOGS
+      LOGS_DIRECTORY: ${LOGS_DIRECTORY:-/app}
+
+    # We are using the same user as we defined in the Dockerfile here. However,
+    # for rootless podman, we need to map the host user to root user inside the container
+    # to be able to make /app directory writable. So, for rootless podman we will need
+    # to run using command 
+    #
+    # CONT_UID=0 CONT_GID=0 podman-compose up --build
+    #
+    # This means the process will be launched as root user in the container. But this is
+    # not a security issue as root user in the container is mapped to current host
+    # user which is normal unprivileged one in most of the cases.
+    user: "${CONT_UID:-1000}:${CONT_GID:-1000}"
     ports:
       - "8000:8000"
     volumes:
       - ./:/app
-    user: "1000:1000"
-    entrypoint: /app/entrypoint.dev.sh
     depends_on:
       - db
       - elasticsearch

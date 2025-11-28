@@ -16,3 +16,4 @@ pyan3
 django-health-check
 ruff
 django-extensions>=3.3
+pre-commit

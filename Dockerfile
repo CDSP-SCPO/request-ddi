@@ -1,13 +1,13 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Crée un utilisateur non privilégié
-RUN adduser -u 5678 --disabled-password --gecos "" appuser
+RUN adduser -u 1000 --disabled-password --gecos "" appuser
 
-# Installe netcat pour les vérifications de connexion
-RUN apt-get update && apt-get install -y netcat-openbsd && apt-get clean
+# Installe curl pour les vérifications de connexion
+RUN apt-get update && apt-get install -y curl jq && apt-get clean
 
 # Définit le répertoire de travail
 WORKDIR /app
@@ -15,7 +15,6 @@ WORKDIR /app
 # Crée les répertoires pour les fichiers statiques et ajuste les permissions
 RUN mkdir -p /app/static && chown -R appuser:appuser /app/static
 RUN mkdir -p /app/collected_static && chown -R appuser:appuser /app/collected_static
-
 
 RUN python -m pip install --upgrade pip setuptools wheel
 

@@ -215,4 +215,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Misc
 .history
+
+# Django specific
+collected_static

@@ -1,47 +1,32 @@
-image: docker:stable
-
 stages:
+  - pre-test
   - build
-  - deploy
+  - test
 
-variables:
-  IMAGE_NAME_TAG_BACK: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+# Built images are pushed to dockerhub as well for general public usage.
+.request-ddi-build-extends:
+  after_script:
+    - echo "Pushing image to Docker Hub"
+    - echo "${DOCKERHUB_PAT}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+    - |
+      # Push only tagged images to DockerHub
+      # If CONTAINER_IMAGE_TAGGED_URI is non empty, it means a new tag has been created, push to remote
+      if [ -n "${CONTAINER_IMAGE_TAGGED_URI}" ]; then
+        echo "Pushing image ${CONTAINER_IMAGE_TAGGED_URI} to Dockerhub..."
+        docker push ${CONTAINER_IMAGE_TAGGED_URI}
+      fi
 
-build:
-  stage: build
-  script:
-    - docker build -t $IMAGE_NAME_TAG_BACK -f Dockerfile .
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
-    - docker push $IMAGE_NAME_TAG_BACK
-  only:
-    - tags
-    - pprd
-    - prod
-  environment:
-    name: $CI_COMMIT_REF_SLUG
+      # If CONTAINER_IMAGE_TAGGED_URI is non empty, it means a new latest tag has been created, push to remote
+      if [ -n "${CONTAINER_IMAGE_LATEST_TAG_URI}" ]; then
+        echo "Pushing image ${CONTAINER_IMAGE_LATEST_TAG_URI} to Dockerhub..."
+        docker push ${CONTAINER_IMAGE_LATEST_TAG_URI}
+      fi
 
-deploy:
-  image:
-    name: bitnami/kubectl:1.24
-    entrypoint: [ "" ]
-  stage: deploy
-  dependencies:
-    - build
-  before_script:
-    - export KUBECONFIG=$kubeconfig_file
-    - if [ -z "$kubectl_context" ]; then echo "La variable kubectl_context est vide."; exit 1; fi
+include:
+  # Lint Python packages using Ruff
+  - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/ruff-lint@main
 
-  script:
-    - kubectl config use-context $kubectl_context
-
-    - echo "Deploying basedequestions...";
-    - kubectl apply -f k8s/base/namespace.yml
-    - kubectl apply -k k8s/overlays/$CI_COMMIT_REF_SLUG
-
-    - echo "${CI_COMMIT_REF_SLUG} overlay done."
-
-  environment:
-    name: $CI_COMMIT_REF_SLUG
-  only:
-    - pprd
-    - prod
+  # Build frontend
+  - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/build-image@main
+    inputs:
+      job_extends: [".request-ddi-build-extends"]

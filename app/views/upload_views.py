@@ -9,7 +9,6 @@ from bs4 import BeautifulSoup
 from django import forms
 
 # -- DJANGO
-from django import forms
 from django.contrib import messages
 from django.db import IntegrityError, transaction
 from django.http import JsonResponse

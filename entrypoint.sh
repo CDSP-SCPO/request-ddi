@@ -1,54 +1,65 @@
 #!/usr/bin/env sh
 
 # Lancer les migrations Django
-echo "Application des migrations Django..."
+echo "Applying Django DB migrations..."
 python manage.py migrate
 if [ $? -eq 0 ]; then
-    echo "Migrations appliquées avec succès."
+    echo "DB migrations applied successfully."
 else
-    echo "Erreur lors de l'application des migrations."
+    echo "Error applying DB migrations."
     exit 1
 fi
 
 # Attendre qu'Elasticsearch soit prêt
-echo "Attente de la disponibilité d'Elasticsearch..."
-while ! nc -z elasticsearch 9200; do
+echo "Waiting until Elasticsearch is available..."
+until curl -s -f -o /dev/null --user "${ELASTICSEARCH_ADMIN_USER}:${ELASTICSEARCH_ADMIN_PASSWORD}" "${ELASTICSEARCH_URL}/_cluster/health?wait_for_status=green&timeout=5s"; do
     sleep 1
 done
-echo "Elasticsearch est prêt."
+echo "Elasticsearch is ready and reporting status green."
 
-# Collecte des fichiers statiques
-echo "Collecte des fichiers statiques..."
-python manage.py collectstatic --noinput
-if [ $? -eq 0 ]; then
-    echo "Fichiers statiques collectés avec succès."
-else
-    echo "Erreur lors de la collecte des fichiers statiques."
-    exit 1
-fi
-
-# Démarrage du serveur Gunicorn
-echo "Démarrage du serveur Gunicorn..."
-exec gunicorn basedequestions.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --timeout 300 \
-    --workers 3 \
-    --threads 4 \
-    --log-level info \
-    --access-logfile -
-if [ $? -eq 0 ]; then
-    echo "Serveur Gunicorn démarré avec succès."
-else
-    echo "Erreur lors du démarrage du serveur Gunicorn."
-    exit 1
+# Création des index dans l'Elasticsearch
+if curl -s --user "${ELASTICSEARCH_ADMIN_USER}:${ELASTICSEARCH_ADMIN_PASSWORD}" "${ELASTICSEARCH_URL}/_cat/indices?format=json" | jq -e '. == []'; then
+    echo "No indices found in Elasticsearch. Creating indices..."
+    python manage.py search_index --rebuild -f
 fi
 
 # Mise à jour de l'index Elasticsearch
-echo "Mise à jour de l'index Elasticsearch..."
+echo "Updating Elasticsearch index..."
 python manage.py shell -c "from app.documents import BindingSurveyDocument; BindingSurveyDocument().update_index()"
 if [ $? -eq 0 ]; then
-    echo "Mise à jour de l'index réussie."
+    echo "Elasticsearch index updated successfully."
 else
-    echo "Erreur lors de la mise à jour de l'index."
+    echo "Error updating Elasticsearch index."
+    exit 1
+fi
+
+# Démarrage du serveur
+if [ "${DJANGO_DEBUG}" = "True" ]; then
+    echo "Starting development server..."
+    python manage.py runserver 0.0.0.0:8000
+else
+    # Collecte des fichiers statiques
+    echo "Collect static files..."
+    python manage.py collectstatic --noinput
+    if [ $? -eq 0 ]; then
+        echo "Static files collected successfully."
+    else
+        echo "Error collecting static files."
+        exit 1
+    fi
+
+    echo "Starting Gunicorn server..."
+    exec gunicorn basedequestions.wsgi:application \
+        --bind 0.0.0.0:8000 \
+        --timeout 300 \
+        --workers 3 \
+        --threads 4 \
+        --log-level info \
+        --access-logfile -
+fi
+if [ $? -eq 0 ]; then
+    echo "Server started successfully."
+else
+    echo "Error while starting server."
     exit 1
 fi

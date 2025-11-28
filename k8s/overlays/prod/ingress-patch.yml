@@ -1,8 +1,0 @@
-# overlays/prod/ingress-patch.yml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: basedequestions-ingress
-spec:
-  rules:
-    - host: request.sciencespo.fr
