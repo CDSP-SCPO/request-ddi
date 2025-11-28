@@ -20,7 +20,6 @@ class Collection(models.Model):
     distributor = models.ForeignKey(
         Distributor, on_delete=models.CASCADE, null=True, blank=True
     )
-    photo = models.ImageField(upload_to="collections_photos/", blank=True, null=True)
     abstract = models.TextField(default="")
 
     def __str__(self):
@@ -32,7 +31,6 @@ class Subcollection(models.Model):
     collection = models.ForeignKey(
         Collection, on_delete=models.CASCADE, null=True, blank=True
     )
-    photo = models.ImageField(upload_to="subcollections_photos/", blank=True, null=True)
 
     def __str__(self):
         return f"{self.name}"

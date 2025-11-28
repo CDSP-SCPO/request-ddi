@@ -16,8 +16,6 @@ Including another URLconf
 """
 
 # -- DJANGO
-from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from django.views.i18n import set_language
@@ -42,7 +40,3 @@ urlpatterns = [
     # -------------------
     path("api/", include(("app.api_urls", "api"), namespace="api")),
 ]
-
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

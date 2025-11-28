@@ -133,7 +133,7 @@ LANGUAGES = [("fr", "Français"), ("en", "English")]
 LOCALE_PATHS = [os.path.join(BASE_DIR, "locale")]
 
 # ---------------------------------------------------------
-# STATIC & MEDIA
+# STATIC
 # ---------------------------------------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "collected_static"
@@ -145,8 +145,6 @@ STATICFILES_STORAGE = (
     else "whitenoise.storage.CompressedManifestStaticFilesStorage"
 )
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
 
 # ---------------------------------------------------------
 # CSRF / SECURITY

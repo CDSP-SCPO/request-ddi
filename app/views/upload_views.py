@@ -6,6 +6,7 @@ from datetime import datetime
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
+from django import forms
 
 # -- DJANGO
 from django import forms
@@ -183,7 +184,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
             return JsonResponse({"status": "error", "message": str(ve)})
         except Exception as e:
             return JsonResponse(
-                {"status": "error", "message": "Le formulaire est invalide.", "errors": e}
+                {"status": "error", "message": "Le formulaire est invalide.", "errors": str(e)}
             )
 
     def get(self, request, *args, **kwargs):

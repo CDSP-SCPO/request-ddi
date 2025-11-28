@@ -15,11 +15,6 @@ spec:
     - host: HOST_PLACEHOLDER
       http:
         paths:
-          # Accès aux fichiers médias, via le service NGINX
-          - path: /media/
-            backend:
-              serviceName: nginx-media
-              servicePort: 80  # Port exposé par le service NGINX
 
           # Accès à l'application principale
           - path: /

@@ -15,10 +15,6 @@ resources:
   - db/deployment.yml
   - db/service.yml
   - db/db-pvc.yml
-  - nginx-media/deployment.yml
-  - nginx-media/service.yml
-  - nginx-media/nginx-configmap.yml
-  - nginx-media/media-pvc.yml
 
 
 
