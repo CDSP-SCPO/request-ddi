@@ -51,7 +51,7 @@ else
     echo "Starting Gunicorn server..."
     exec gunicorn basedequestions.wsgi:application \
         --bind 0.0.0.0:8000 \
-        --timeout 300 \
+        --timeout 3600 \
         --workers 3 \
         --threads 4 \
         --log-level info \
