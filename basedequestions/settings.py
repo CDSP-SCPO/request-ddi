@@ -21,7 +21,11 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 # ---------------------------------------------------------
 # ALLOWED HOSTS
 # ---------------------------------------------------------
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if h.strip()
+]
 
 # ---------------------------------------------------------
 # DATABASE
@@ -148,7 +152,11 @@ STATICFILES_STORAGE = (
 # CSRF / SECURITY
 # ---------------------------------------------------------
 CSRF_COOKIE_SECURE = not DEBUG
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",") if o.strip()]
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",")
+    if o.strip()
+]
 
 # ---------------------------------------------------------
 # LOGIN URLS
@@ -160,7 +168,7 @@ LOGOUT_REDIRECT_URL = "/"
 # ---------------------------------------------------------
 # LOGGING
 # ---------------------------------------------------------
-LOGS_DIRECTORY = os.getenv("LOGS_DIRECTORY", "/tmp") # noqa: S108
+LOGS_DIRECTORY = os.getenv("LOGS_DIRECTORY", "/tmp")  # noqa: S108
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -192,7 +200,7 @@ LOGGING = {
 }
 
 if not DEBUG:
-    LOGGING["loggers"]["performance"]["handlers"] = []
+    LOGGING["loggers"]["performance"]["handlers"] = ["performance_file"]
     LOGGING["loggers"]["performance"]["propagate"] = False
     LOGGING["handlers"]["file"] = {
         "level": "ERROR",
