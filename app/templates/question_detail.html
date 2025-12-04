@@ -72,11 +72,19 @@
                                 {{ stat_map|dict_get:category.id|default:0 }}
                             </td>
                             <td class="percentage-cell">
-                                {% with percentage=categories_percentages|index:forloop.counter0 %}
-                                    <div class="percentage-bar" style='width: {{ percentage|replace_two:",|." }}%;'>
-                                        <span class="percentage-value">{{ percentage|floatformat:1 }}%</span>
-                                    </div>
-                                {% endwith %}
+                                {% if not category.missing %}
+                                    {% with percentage=categories_percentages|index:forloop.counter0 %}
+                                        {% if percentage > 0 %}
+                                            <div class="percentage-bar" style='width: {{ percentage|replace_two:",|." }}%;'>
+                                                <span class="percentage-value">{{ percentage|floatformat:1 }}%</span>
+                                            </div>
+                                        {% else %}
+                                            <span class="percentage-value">N/A</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="percentage-value">N/A</span>
+                                {% endif %}
                             </td>
                                                   
                         </tr>

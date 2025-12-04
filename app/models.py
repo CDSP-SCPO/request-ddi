@@ -82,6 +82,7 @@ class Category(models.Model):
 
     code = models.CharField(max_length=255)
     category_label = models.TextField(null=True)
+    missing = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.code} : {self.category_label}"

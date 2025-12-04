@@ -184,7 +184,7 @@ class DataImporter:
                         normalize_string_for_database(label)
                     ),
                 )
-                for code, label, stat in self.parse_categories(category_string)
+                for code, label, stat, missing in self.parse_categories(category_string)
             ]
             if category_string
             else []
@@ -200,18 +200,22 @@ class DataImporter:
         categories = []
         csv_category_pairs = category_string.split(" | ")
         for pair in csv_category_pairs:
-            stat, code, label= pair.split(r" \ ", 2)
-            categories.append((code.strip(), label.strip(), stat.strip()))
+            stat, code, label, miss= pair.split(r" \ ", 3)
+            missing = miss=="missing"
+            categories.append((code.strip(), label.strip(), stat.strip(), missing))
         return categories
 
     def create_new_categories(self, category_string, binding):
         categories = []
         if category_string:
             parsed_categories = self.parse_categories(category_string)
-            for code, label, stat in parsed_categories:
+            for code, label, stat, missing in parsed_categories:
                 category, _ = Category.objects.get_or_create(
-                    code=code, category_label=normalize_string_for_database(label)
+                    code=code, category_label=normalize_string_for_database(label),
                 )
+                if category.missing != missing:
+                    category.missing = missing
+                    category.save()
                 categories.append(category)
                 binding_stat, created = BindingVariableCategoryStat.objects.get_or_create(binding=binding, category=category) # noqa: RUF059
                 binding_stat.stat = stat

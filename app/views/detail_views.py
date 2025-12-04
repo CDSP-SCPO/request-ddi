@@ -30,8 +30,14 @@ class QuestionDetailView(View):
             key=lambda x: (int(x.code) if x.code.isdigit() else float("inf"), x.code),
         )
 
+        non_missing_categories = [cat for cat in categories if not cat.missing]
         stat_map = {cs.category_id: cs.stat for cs in category_stats}
-        sum_categories_cases = sum(stat_map.values())
+        sum_categories_cases = sum(stat_map[cat.id] for cat in non_missing_categories if cat.id in stat_map)
+
+        categories_percentages = [
+            (stat_map[cat.id] * 100 / sum_categories_cases) if sum_categories_cases != 0 and not cat.missing else 0
+            for cat in categories
+        ]
 
         similar_representative_questions = (
             BindingSurveyRepresentedVariable.objects.filter(
@@ -68,10 +74,5 @@ class QuestionDetailView(View):
                 ),
             )
 
-        categories_percentages = [
-            (stat_map[cat.id] * 100 / sum_categories_cases)
-            if sum_categories_cases != 0 else 0
-            for cat in categories
-        ]
         context = locals()
         return render(request, "question_detail.html", context)

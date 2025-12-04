@@ -42,6 +42,7 @@ class XMLParser:
                                 cat.find("labl").text.strip()
                                 if cat.find("labl")
                                 else "",
+                                "missing" if cat.get("missing") == "Y" else "",
                             ]
                         )
                         for cat in line.find_all("catgry")
