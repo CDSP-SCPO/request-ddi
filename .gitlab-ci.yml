@@ -1,7 +1,7 @@
 stages:
   - pre-test
-  - build
   - test
+  - build
 
 # Built images are pushed to dockerhub as well for general public usage.
 .request-ddi-build-extends:
@@ -26,7 +26,10 @@ include:
   # Lint Python packages using Ruff
   - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/ruff-lint@main
 
-  # Build frontend
+  # Build container image
   - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/build-image@main
     inputs:
       job_extends: [".request-ddi-build-extends"]
+  
+  # Unit tests
+  - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/pytest@main

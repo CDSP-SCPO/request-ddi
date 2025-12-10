@@ -52,7 +52,6 @@ coverage.xml
 cover/
 
 # Translations
-*.mo
 *.pot
 
 # Django stuff:
@@ -219,4 +218,8 @@ __marimo__/
 .history
 
 # Django specific
-collected_static
+collect_static
+/manage.py
+
+# Version file
+request_ddi/_version.py

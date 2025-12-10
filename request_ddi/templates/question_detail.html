@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+{% load custom_tags %}
+
+{% block content %}
+<div class="inner-container-custom d-flex">
+    <div class="top-bar">
+        <div class="return-search-container">
+            {% if search_params %}
+                    <div type="button" class="white-button custom-text-white-buttons"
+                            onclick="window.location.href='{% url 'request_ddi:search_results' %}?{{ search_params }}'">
+                        <img src="{% static 'svg/icons/return.svg' %}">
+                        <span>{% trans "Retour à la recherche" %}</span>
+                    </div>
+                {% else %}
+                    <div type="button" class="white-button custom-text-white-buttons"
+                            onclick="window.location.href='{% url 'request_ddi:search_results' %}'">
+                        <img src="{% static 'svg/icons/return.svg' %}">
+                        <span>{% trans "Retour à la recherche" %}</span>
+                    </div>
+                {% endif %}
+        </div>
+        <div class="export-access-container">
+            <div class="white-button custom-text-white-buttons" type="button" onclick="exportMetadata()">
+                <img src="{% static 'svg/icons/export.svg' %}">
+                <span>{% trans "Exporter les métadonnées" %}</span>
+            </div>
+            <span type="button" onclick="window.open('https://doi.org/{{ question_survey.external_ref }}','_blank')" class="button-card button-access-data button-access-data-card-hover">
+                <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
+                <span>{% trans "Accéder aux données" %}</span>
+            </span>
+        </div>
+    </div>
+    <div class="details-variable-container">
+        <div class="information-variable">
+            <div class="custom-title-1">{{ question_represented_var.question_text|default:"N/A" }}</div>
+            <div class="custom-title-2">
+                <div class="">
+                    {% trans "Enquête : " %}<span class="ft-600">{{ question_survey.name }}</span>
+                    {% if question_survey.dist_date %}
+                        (Date : {{ question_survey.dist_date|date:"d-m-Y" }})
+                    {% endif %}
+                </div>
+                <div class="">
+                    {% trans "Nom de la variable : " %}<span class="ft-600">{{ question.variable_name }}</span>
+                </div>
+                <div class="">
+                    {% trans "Libellé de la variable : " %}<span class="ft-600">{{ question_represented_var.internal_label }}</span>
+                </div>
+            </div>
+
+
+            <div class="modalities-container">
+                <div class="custom-headline">{% trans "Modalités" %}</div>
+                {% if categories %}
+                <table class="styled-table">
+                    <thead>
+                        <tr class="title-modalities-table">
+                            <th class="cell">{% trans "Code" %}</th>
+                            <th class="cell text-cell">{% trans "Label" %}</th>
+                            <th class="cell text-cell">{% trans "Cas" %}</th>
+                            <th class="text-cell">{% trans "Pourcentage" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in categories %}
+                        <tr>
+                            <td class="cell title-modalities-table">{{ category.code }}</td>
+                            <td class="cell text-cell custom-title-2">{{ category.category_label }}</td>
+                            <td class="cell text-cell title-modalities-table">
+                                {{ stat_map|dict_get:category.id|default:0 }}
+                            </td>
+                            <td class="percentage-cell">
+                                {% if not category.missing %}
+                                    {% with percentage=categories_percentages|index:forloop.counter0 %}
+                                        {% if percentage > 0 %}
+                                            <div class="percentage-bar" style='width: {{ percentage|replace_two:",|." }}%;'>
+                                                <span class="percentage-value">{{ percentage|floatformat:1 }}%</span>
+                                            </div>
+                                        {% else %}
+                                            <span class="percentage-value">N/A</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="percentage-value">N/A</span>
+                                {% endif %}
+                            </td>
+                                                  
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>{% trans "Aucune catégorie associée." %}</p>
+                {% endif %}
+            </div>  
+        </div>
+        <div class="questions-container">          
+
+            <div class="accordion accordion-custom" id="questionsAccordion">
+                <div class="accordion-item accordion-item-custom padding-filters-container">
+                    <div class="accordion-header" id="headingIdentiques">
+                        <div class="accordion-button collapsed custom-body">
+                            <div type="button"
+                                 class="header-container-questions"
+                                 data-toggle="collapse"
+                                 data-target="#collapseIdentiques"
+                                 aria-expanded="{% if similar_representative_questions|length <= 5 %}true{% else %}false{% endif %}"
+                                 aria-controls="collapseIdentiques">
+                                <span class="custom-title-1">{% trans "Questions identiques" %}</span>
+                                <span class="badge badge-custom {% if similar_representative_questions|length == 0 %}d-none{% endif %}">
+                                    {{ similar_representative_questions|length }}
+                                </span>
+                                <i class="fas fa-caret-down icon-caret"></i>
+                            </div>
+                            <span class="info-icon" 
+                                onmouseover="this.querySelector('img').src='{% static 'svg/icons/information_hover.svg' %}'"
+                                onmouseout="this.querySelector('img').src='{% static 'svg/icons/information.svg' %}'"
+                                data-toggle="tooltip" 
+                                data-placement="top"
+                                title="{% trans 'Questions avec les mêmes intitulés de questions, codes et modalités.' %}">
+                                <img src="{% static 'svg/icons/information.svg' %}" alt="info" class="information-icon" />
+                            </span>
+                        </div>
+                    </div>
+                
+                    <div id="collapseIdentiques" class="collapse {% if similar_representative_questions|length <= 5 %}show{% endif %}"
+                         aria-labelledby="headingIdentiques">
+                        <div class="accordion-body">
+                            <div class="row row-cols-1 row-cols-md-2 g-4">
+                                {% for question in similar_representative_questions %}
+                                <div class="col mb-3">
+                                    <div class="text-decoration-none card-link">
+                                        <div class="card-question-detail h-100">
+                                            <div class="custom-title-2">
+                                                <div class="title-question" type="button" onclick="window.location.href='{% url 'request_ddi:question_detail' question.id %}'">
+                                                    {% trans "Enquête : " %}<span class="ft-600">{{ question.survey }}</span>
+                                                </div>
+                                                <div class="">{% trans "Nom de la variable : " %}<span class="ft-600">{{ question.variable_name }}</span></div>
+                                            </div>
+                                            <span type="button"
+                                                    onclick="window.open('https://doi.org/{{ question.survey.external_ref }}','_blank')"
+                                                    class="button-card button-access-data-card button-access-data-card-hover">
+                                                <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
+                                                <span>{% trans "Accéder aux données" %}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% if not similar_representative_questions %}
+                                <div class="col">
+                                    <span>{% trans "Aucune question identique trouvée." %}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            
+                <div class="accordion-item accordion-item-custom padding-filters-container">
+                    <div class="accordion-header" id="headingSimilaires">
+                        <div class="accordion-button collapsed custom-body">
+                            <div type="button"
+                                 class="header-container-questions"
+                                 data-toggle="collapse"
+                                 data-target="#collapseSimilaires"
+                                 aria-expanded="{% if similar_conceptual_questions|length <= 5 %}true{% else %}false{% endif %}"
+                                 aria-controls="collapseSimilaires">
+                                <span class="custom-title-1">{% trans "Questions similaires" %}</span>
+                                <span class="badge badge-custom {% if similar_conceptual_questions|length == 0 %}d-none{% endif %}">
+                                    {{ similar_conceptual_questions|length }}
+                                </span>
+                                <i class="fas fa-caret-down icon-caret"></i>
+                            </div>
+                            <span class="info-icon" 
+                                data-toggle="tooltip" 
+                                data-placement="top"
+                                onmouseover="this.querySelector('img').src='{% static 'svg/icons/information_hover.svg' %}'"
+                                onmouseout="this.querySelector('img').src='{% static 'svg/icons/information.svg' %}'"
+                                title="{% trans 'Questions avec les mêmes intitulés de questions, mais dont les codes et/ou modalités peuvent différer.' %}">
+                                <img src="{% static 'svg/icons/information.svg' %}" alt="info" class="information-icon" />
+                            </span>
+                        </div>
+                    </div>
+                
+                    <div id="collapseSimilaires"
+                         class="collapse {% if similar_conceptual_questions|length <= 5 %}show{% endif %}"
+                         aria-labelledby="headingSimilaires">
+                        <div class="accordion-body">
+                            <div class="row row-cols-1 row-cols-md-2 g-4">
+                                {% for question in similar_conceptual_questions %}
+                                <div class="col mb-3">
+                                    <div class="text-decoration-none card-link">
+                                        <div class="card-question-detail h-100">
+                                            <div class="custom-title-2">
+                                                <div class="title-question" type="button" onclick="window.location.href='{% url 'request_ddi:question_detail' question.id %}'">{% trans "Enquête : " %}<span class="ft-600">{{ question.survey }}</span></div>
+                                                <div>{% trans "Nom de la variable : " %}<span class="ft-600">{{ question.variable_name }}</span></div>
+                                            </div>
+                                            <div class="container-button-card">
+                                                <span type="button" id="toggle-categories"
+                                                    onclick="toggleCategories('categories-{{ question.id }}')"
+                                                    class="button-card button-modalities-card"
+                                                    onmouseover="this.querySelector('.icon-modalites').src='{% static 'svg/icons/modalites_green.svg' %}'; this.querySelector('.icon-caret').src='{% static 'svg/buttons/caret_down_green.svg' %}'"
+                                                    onmouseout="this.querySelector('.icon-modalites').src='{% static 'svg/icons/modalites.svg' %}'; this.querySelector('.icon-caret').src='{% static 'svg/buttons/caret_down.svg' %}'">
+                                                    
+                                                    <img src="{% static 'svg/icons/modalites.svg' %}" alt="Modalités" class="icon-modalites">
+                                                    <span>{% trans "Modalités" %}</span>
+                                                    <img src="{% static 'svg/buttons/caret_down.svg' %}" alt="Caret Down" class="icon-caret">
+                                                </span>
+                                                <span type="button"
+                                                      onclick="window.open('https://doi.org/{{ question.survey.external_ref }}','_blank')"
+                                                      class="button-card button-access-data-card button-access-data-card-hover">
+                                                    <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
+                                                    <span>{% trans "Accéder aux données" %}</span>
+                                                </span>
+                                            </div>
+                                            <div id="categories-{{ question.id }}" class="categories-list mt-3" style="display: none;">
+                                                {% if question.categories %}
+                                                <table class="styled-table">
+                                                    <tbody>
+                                                        {% for category in question.categories %}
+                                                        <tr>
+                                                            <td class="code-cell-card">{{ category.code }}</td>
+                                                            <td class="text-cell">{{ category.category_label }}</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                                {% else %}
+                                                <p>{% trans "Aucune catégorie associée." %}</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% if not similar_conceptual_questions %}
+                                <div class="col">
+                                    <span>{% trans "Aucune question similaire trouvée." %}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>              
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/question_detail.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+    window.request_question_detail = {
+        exportUrl: "{% url 'export_questions_csv' %}",
+        questionId: "{{ question.id }}",
+    };
+    </script>
+
+<script src="{% static 'js/question_detail.js' %}"></script>
+
+{% endblock %}
+
+
+
+

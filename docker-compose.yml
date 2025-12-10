@@ -3,18 +3,25 @@ services:
   # -----------------------------------------------------
   # DJANGO BACKEND
   # -----------------------------------------------------
-  basedequestions:
-    image: question_base-backend:local
-    container_name: basedequestions
+  request-ddi:
+    image: request-ddi:local
+    container_name: request-ddi
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        development: ${DJANGO_DEBUG:-True}
 
     environment:
       # DEBUG & SECRET
       DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-changeme-in-prod}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+
+      # ADMIN USER
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-request-ddi}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-request-ddi-secret}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-request-ddi@example.com}
 
       # DATABASE
       POSTGRES_DB: ${POSTGRES_DB:-db}
@@ -50,8 +57,10 @@ services:
     volumes:
       - ./:/app
     depends_on:
-      - db
-      - elasticsearch
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
 
 
   # -----------------------------------------------------
@@ -66,6 +75,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
@@ -79,10 +95,19 @@ services:
     container_name: elasticsearch
     # Variables propres à Elasticsearch uniquement
     environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      xpack.security.transport.ssl.enabled: "false"
+      ES_SETTING_CLUSTER_NAME: request-ddi
+      ES_SETTING_DISCOVERY_TYPE: single-node
+      ES_SETTING_XPACK_SECURITY_ENABLED: "true"
+      ES_SETTING_XPACK_SECURITY_TRANSPORT_SSL_ENABLED: "false"
+      ELASTIC_PASSWORD: ${ELASTICSEARCH_ADMIN_PASSWORD:-elastic}
       ES_JAVA_OPTS: -Xms2g -Xmx2g
+
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s --user elastic:$${ELASTIC_PASSWORD} -X GET http://localhost:9200/_cluster/health?pretty | grep status | grep -q '\\(green\\|yellow\\)'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
     ports:
       - "9200:9200"
