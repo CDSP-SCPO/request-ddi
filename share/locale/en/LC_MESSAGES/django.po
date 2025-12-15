@@ -79,12 +79,12 @@ msgid "Code"
 msgstr "Code"
 
 #: app/templates/question_detail.html:61
-msgid "Label"
+msgid "Libellé"
 msgstr "Label"
 
 #: app/templates/question_detail.html:62
-msgid "Cas"
-msgstr "Cases"
+msgid "Fréquence"
+msgstr "Frequency"
 
 #: app/templates/question_detail.html:63
 msgid "Pourcentage"
