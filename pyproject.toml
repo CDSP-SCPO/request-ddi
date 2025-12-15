@@ -17,9 +17,14 @@ keywords = [
   "elasticsearch",
   "surveys",
   "ddi",
+  "data documentation initative",
+  "codebook",
+  "questionnaire",
+  "question bank",
+  "discovery",
   "documentation",
   "metadata",
-  "socialsciences",
+  "social sciences",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -132,3 +137,49 @@ extend-exclude = ["request_ddi/migrations/*"]
 "request_ddi/tests/*" = ["E501"]
 # RUF012 Mutable class attributes should be annotated with `typing.ClassVar`
 "request_ddi/migrations/*" = ["RUF012"]
+
+[tool.gitlab-activity.options]
+# Changelog file path
+output = "CHANGELOG.md"
+# Only query for merge requests
+activity = ["merge_requests"]
+# Append to existing file
+append = true
+# Add list of contributors to each entry
+include_contributors_list = true
+# Use heading level of 2 to account for top level heading
+heading_level = 2
+
+[tool.gitlab-activity.activity]
+# List of bot_users
+bot_users = [
+  "(.*)codecov(.*)",
+  "gitlab-bot",
+  "ghost1",
+]
+
+[tool.gitlab-activity.activity.categories]
+# Labels used in issues
+# Dicts must be inline for linters not to complain
+issues = [
+  { labels = [ "feature", "feat", "new" ], pre = [ "NEW", "FEAT", "FEATURE" ], description = "New features added" },
+  { labels = [ "enhancement", "enhancements" ], pre = [ "ENH", "ENHANCEMENT", "IMPROVE", "IMP" ], description = "Enhancements made" },
+  { labels = [ "bug", "bugfix", "bugs" ], pre = [ "FIX", "BUG" ], description = "Bugs fixed" },
+  { labels = [ "packaging", "build" ], pre = [ "BUILD", ], description = "Build changes" },
+  { labels = [ "ci" ], pre = [ "CI", ], description = "CI changes" },
+  { labels = [ "maintenance", "maint" ], pre = [ "MAINT", "MNT" ], description = "Maintenance and upkeep improvements" },
+  { labels = [ "documentation", "docs", "doc" ], pre = [ "DOC", "DOCS" ], description = "Documentation improvements" },
+  { labels = [ "deprecation", "deprecate" ], pre = [ "DEPRECATE", "DEPRECATION", "DEP" ], description = "Deprecated features" },
+]
+# Labels used in MRs
+# Dicts must be inline for linters not to complain
+merge_requests = [
+  { labels = [ "feature", "feat", "new" ], pre = [ "NEW", "FEAT", "FEATURE" ], description = "New features added" },
+  { labels = [ "enhancement", "enhancements" ], pre = [ "ENH", "ENHANCEMENT", "IMPROVE", "IMP" ], description = "Enhancements made" },
+  { labels = [ "bug", "bugfix", "bugs" ], pre = [ "FIX", "BUG" ], description = "Bugs fixed" },
+  { labels = [ "packaging", "build" ], pre = [ "BUILD", ], description = "Build changes" },
+  { labels = [ "ci" ], pre = [ "CI", ], description = "CI changes" },
+  { labels = [ "maintenance", "maint" ], pre = [ "MAINT", "MNT" ], description = "Maintenance and upkeep improvements" },
+  { labels = [ "documentation", "docs", "doc" ], pre = [ "DOC", "DOCS" ], description = "Documentation improvements" },
+  { labels = [ "deprecation", "deprecate" ], pre = [ "DEPRECATE", "DEPRECATION", "DEP" ], description = "Deprecated features" },
+]
