@@ -5,8 +5,8 @@
 | CI/CD   | [![ci](https://github.com/CDSP-SCPO/request-ddi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CDSP-SCPO/request-ddi/actions/workflows/ci.yml?query=branch%3Amain)                                                               |
 | App    | ![Website](https://img.shields.io/website?url=https%3A%2F%2Frequest.sciencespo.fr%2F&label=re%7Bquest)                                                                                                                                                                                                                             |
 | Docs    | [![docs](https://img.shields.io/badge/docs-passing-green?style=flat&link=https://request.sciencespo.fr/docs/)](https://request.sciencespo.fr/docs/)                                                                                                                                                                                                                             |
-| Package | [![Release](https://img.shields.io/github/v/release/CDSP-SCPO/request-ddi.svg?include_prereleases)](https://github.com/CDSP-SCPO/request-ddi/releases/latest)                                                                                                                                                                    |
-| Meta    | [![GitHub License](https://img.shields.io/github/license/CDSP-SCPO/request-ddi)](https://github.com/CDSP-SCPO/request-ddi) [![code style](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff) |
+| Package | [![Release](https://img.shields.io/github/v/tag/CDSP-SCPO/request-ddi.svg?include_prereleases)](https://github.com/CDSP-SCPO/request-ddi/releases/latest)                                                                                                                                                                    |
+| Meta    | [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![code style](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff) |
 
 ## Project objective
 
