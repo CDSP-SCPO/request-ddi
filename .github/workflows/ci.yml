@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  # All nested workflows will inherit these permissions and so no need to declare
+  # in each step file
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-lint:
+    uses: ./.github/workflows/step_lint.yml
+
+  test-unit:
+    needs: [test-lint]
+    uses: ./.github/workflows/step_test.yml
+
+  build:
+    needs: [test-lint, test-unit]
+    uses: ./.github/workflows/step_build.yml
