@@ -65,10 +65,10 @@ dynamic = [
 request_ddi_manage = "request_ddi.manage:main"
 
 [project.urls]
-Homepage = "https://gitlab.sciences-po.fr/cdspit/request/request-ddi"
-Documentation = "http://cdspit.gitlab-pages.sciences-po.fr/request/docs/"
-Source = "https://gitlab.sciences-po.fr/cdspit/request/request-ddi"
-Issues = "https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/issues"
+Homepage = "https://request.sciencespo.fr"
+Documentation = "https://request.sciencespo.fr/docs/"
+Source = "https://github.com/CDSP-SCPO/request-ddi"
+Issues = "https://github.com/CDSP-SCPO/request-ddi/issues"
 
 [project.optional-dependencies]
 test = [
