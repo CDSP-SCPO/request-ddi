@@ -8,15 +8,25 @@
 | Package | [![Release](https://img.shields.io/github/v/tag/CDSP-SCPO/request-ddi.svg?include_prereleases)](https://github.com/CDSP-SCPO/request-ddi/releases/latest)                                                                                                                                                                    |
 | Meta    | [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![code style](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff) |
 
-## Project objective
+## Background
 
-Request is an open-source web application developed by engineers at the
-[Centre des Données Socio-Politiques (CDSP)](https://www.sciencespo.fr/cdsp/fr/).
-It provides centralized access to 65000 questions and variables from over 250 surveys in the
-CDSP database. Its main purpose revolves in the textual research tool, with advanced filters,
-along with the possibility to compare similar or identical variables. It also provides a
-direct access to [CDSP data](https://data.sciencespo.fr/dataverse/cdsp) repository,
-and allows the questions export.
+In the context of the increasing amount of research data available in the last years and 
+the European and national efforts around the FAIR principles, 
+this project aims to built a system to gather and harmonise Social Science and Humanities (SSH) surveys metadata 
+from different sources to facilitate data reusability by the academic sphere and beyond.
+
+## Description
+
+re{quest – reuse questionnaire data – is an open-source web application designed by the
+[Centre des Données Socio-Politiques (CDSP) - Sciences Po, CNRS](https://www.sciencespo.fr/cdsp/fr/).
+It combines a PostgreSQL database for structured metadata storage with an Elasticsearch index for efficient full-text and similarity search. 
+Together, they support the discovery, comparison, and reuse of social science survey metadata.
+The database stores structured information on questionnaires, including question texts, response categories, 
+and variable information mappings across studies and waves. 
+Built on the ETL process, re{quest's pipeline uses standardised metadata schemas using the [Data Documentation International (DDI)](https://ddialliance.org/) norm.
+To date, [request.sciencespo.fr](https://request.sciencespo.fr) provides an online access to a centralised, searchable and reusable database 
+of 65,000 questions and variables across more than 250 quantitative surveys of the
+[CDSP's Data Bank](https://data.sciencespo.fr/dataverse/cdsp)
 
 ## Contents
 
