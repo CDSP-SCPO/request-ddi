@@ -2,25 +2,30 @@ stages:
   - pre-test
   - test
   - build
+  - post-build
 
 # Built images are pushed to dockerhub as well for general public usage.
-.request-ddi-build-extends:
-  after_script:
+push-to-dockerhub:
+  stage: post-build
+  image:
+    name: docker:28-cli
+  script:
+    - export CONTAINER_IMAGE_TAGGED_URI="${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
+    - export CONTAINER_IMAGE_LATEST_TAG_URI="${CI_REGISTRY_IMAGE}:latest"
+    # This is a post build job so we are quite sure that image with tag already exists
+    # by the time pipeline reaches here.
+    - echo "Pulling image ${CONTAINER_IMAGE_TAGGED_URI} from registry..."
+    - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin ${CI_REGISTRY}
+    - docker pull ${CONTAINER_IMAGE_TAGGED_URI}
+    - echo "Tagging image ${CONTAINER_IMAGE_TAGGED_URI} as latest"
+    - docker image tag ${CONTAINER_IMAGE_TAGGED_URI} ${CONTAINER_IMAGE_LATEST_TAG_URI}
+    - docker image ls
     - echo "Pushing image to Docker Hub"
     - echo "${DOCKERHUB_PAT}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
-    - |
-      # Push only tagged images to DockerHub
-      # If CONTAINER_IMAGE_TAGGED_URI is non empty, it means a new tag has been created, push to remote
-      if [ -n "${CONTAINER_IMAGE_TAGGED_URI}" ]; then
-        echo "Pushing image ${CONTAINER_IMAGE_TAGGED_URI} to Dockerhub..."
-        docker push ${CONTAINER_IMAGE_TAGGED_URI}
-      fi
-
-      # If CONTAINER_IMAGE_TAGGED_URI is non empty, it means a new latest tag has been created, push to remote
-      if [ -n "${CONTAINER_IMAGE_LATEST_TAG_URI}" ]; then
-        echo "Pushing image ${CONTAINER_IMAGE_LATEST_TAG_URI} to Dockerhub..."
-        docker push ${CONTAINER_IMAGE_LATEST_TAG_URI}
-      fi
+    - docker push ${CONTAINER_IMAGE_TAGGED_URI}
+    - docker push ${CONTAINER_IMAGE_LATEST_TAG_URI}
+  rules:
+    - if: $CI_COMMIT_TAG
 
 include:
   # Lint Python packages using Ruff
@@ -28,8 +33,6 @@ include:
 
   # Build container image
   - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/build-image@main
-    inputs:
-      job_extends: [".request-ddi-build-extends"]
   
   # Unit tests
   - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/pytest@main
