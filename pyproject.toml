@@ -10,7 +10,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.9"
 authors = [
   { name = "William Feraux", email = "william.feraux@sciencespo.fr" },
-  { name = "Malaury Lemaitre-Salmon", email = "malaury.lemaitresalmon@sciencespo.fr" },
+  { name = "Malaury Lemaître-Salmon", email = "malaury.lemaitresalmon@sciencespo.fr" },
 ]
 keywords = [
   "django",

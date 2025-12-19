@@ -30,6 +30,8 @@ and allows the questions export.
 * [Versioning](#versioning)
 * [Changelog](#changelog)
 * [License](#license)
+* [Authors and contributors](#authors-and-contributors)
+* [Acknowledgments](#acknowledgments)
 
 ## Application overview
 
@@ -201,3 +203,14 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes between versions
 ## License
 
 This project is licensed under GNU GPL v3 - see the [LICENSE](LICENSE) file for details.
+
+## Authors and contributors
+
+The list of authors and contributors is available in the [AUTHORS.md](AUTHORS.md) file.
+
+## Acknowledgments
+
+**re { quest** is developed by the [Centre for socio-political data (CDSP)](https://www.sciencespo.fr/cdsp/fr/),
+a Support and Research Unit jointly operated by [Sciences Po](https://www.sciencespo.fr/en/)
+and the [CNRS](https://www.cnrs.fr/en), and received the support of the French National Research Agency
+([ANR-24-RESO-0003](https://anr.fr/Projet-ANR-24-RESO-0003))
