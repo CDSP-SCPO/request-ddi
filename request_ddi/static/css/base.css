@@ -309,6 +309,8 @@ header {
     color: #1F1F1F;
     font-weight: bold;
     text-decoration: none;
+    gap: 8px;
+    display: flex;
 }
 
 .popover-link:hover {
@@ -316,7 +318,6 @@ header {
 }
 
 .popover-divider {
-    width: 90%;
     border-top: 1px solid #D3DFD5;
 }
 
@@ -328,6 +329,12 @@ header {
 
 .custom-popover-box a {
     font-size: 0.9em;
+}
+
+.popover-item{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
 }
 
 #header-form {
@@ -424,3 +431,9 @@ header {
 .btn_language:focus{
     outline:none;
 }
+
+.custom-width-icon{
+    width:20px;
+    height:20px;
+}
+
