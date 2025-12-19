@@ -2,12 +2,13 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
-## main@{2025-09-30}...main@{2025-12-15}
+## v1.0.0
 
 ([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/c8c5828d57d87fea252d9b74bcb0e7d5f351b5b8...None?from_project_id=766&straight=false))
 
 ### New features added
 
+- feat: :sparkles: link to guide [!449](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/449) ([@lucie.marie2](https://gitlab.sciences-po.fr/lucie.marie2), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
 - feat: :sparkles: Ignore missing values in percentage calculation [!442](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/442) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
 - feat: :sparkles: Add logs timing for views and API endpoint [!436](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/436) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
 - feat(api): add API versioning and separate API URLs [!431](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/431) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
@@ -23,6 +24,8 @@
 
 ### Maintenance and upkeep improvements
 
+- ci: Add GH workflows [!446](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/446) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+- feat: :lipstick: Change traduction files [!444](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/444) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
 - Major restructuring of the code base to make it packagable [!439](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/439) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
 - Preparation for release 1 [!438](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/438) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
 - style: :art: Ruff fixes and media container removal [!437](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/437) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
@@ -31,6 +34,9 @@
 
 ### Documentation improvements
 
+- docs: :memo: add readme authors [!448](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/448) ([@lucie.marie2](https://gitlab.sciences-po.fr/lucie.marie2), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- docs: :memo: update readme background and description [!447](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/447) ([@lucie.marie2](https://gitlab.sciences-po.fr/lucie.marie2), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- docs: :memo: Add ReadMe and Deployment doc [!445](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/445) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
 - docs: :memo: Add architecture diagram [!433](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/433) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
 
 ### Unlabelled Merged MRs
@@ -43,7 +49,7 @@
 
 ### [Contributors to this release](https://mahendrapaipuri.gitlab.io/gitlab-activity/usage#contributors-list)
 
-[@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon) | [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri) | [@william.feraux](https://gitlab.sciences-po.fr/william.feraux)
+[@lucie.marie2](https://gitlab.sciences-po.fr/lucie.marie2) | [@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon) | [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri) | [@william.feraux](https://gitlab.sciences-po.fr/william.feraux)
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
