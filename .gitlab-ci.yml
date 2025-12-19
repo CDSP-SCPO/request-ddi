@@ -11,19 +11,21 @@ push-to-dockerhub:
     name: docker:28-cli
   script:
     - export CONTAINER_IMAGE_TAGGED_URI="${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
-    - export CONTAINER_IMAGE_LATEST_TAG_URI="${CI_REGISTRY_IMAGE}:latest"
     # This is a post build job so we are quite sure that image with tag already exists
     # by the time pipeline reaches here.
     - echo "Pulling image ${CONTAINER_IMAGE_TAGGED_URI} from registry..."
     - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin ${CI_REGISTRY}
     - docker pull ${CONTAINER_IMAGE_TAGGED_URI}
+    - export DOCKERHUB_CONTAINER_IMAGE_TAGGED_URI="${DOCKERHUB_REGISTRY_NAME}:${CI_COMMIT_TAG}"
+    - export DOCKERHUB_CONTAINER_IMAGE_LATEST_TAG_URI="${DOCKERHUB_REGISTRY_NAME}:latest"
     - echo "Tagging image ${CONTAINER_IMAGE_TAGGED_URI} as latest"
-    - docker image tag ${CONTAINER_IMAGE_TAGGED_URI} ${CONTAINER_IMAGE_LATEST_TAG_URI}
+    - docker image tag ${CONTAINER_IMAGE_TAGGED_URI} ${DOCKERHUB_CONTAINER_IMAGE_TAGGED_URI}
+    - docker image tag ${CONTAINER_IMAGE_TAGGED_URI} ${DOCKERHUB_CONTAINER_IMAGE_LATEST_TAG_URI}
     - docker image ls
     - echo "Pushing image to Docker Hub"
     - echo "${DOCKERHUB_PAT}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
-    - docker push ${CONTAINER_IMAGE_TAGGED_URI}
-    - docker push ${CONTAINER_IMAGE_LATEST_TAG_URI}
+    - docker push ${DOCKERHUB_CONTAINER_IMAGE_TAGGED_URI}
+    - docker push ${DOCKERHUB_CONTAINER_IMAGE_LATEST_TAG_URI}
   rules:
     - if: $CI_COMMIT_TAG
 
