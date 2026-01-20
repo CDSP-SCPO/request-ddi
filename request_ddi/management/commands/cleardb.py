@@ -81,9 +81,9 @@ class Command(BaseCommand):
             deleted_docs = response.get("deleted", 0)
             logger.info("Index Elasticsearch '%s' réinitialisé, %d documents supprimés.", index_to_clear, deleted_docs)
             self.stdout.write(self.style.SUCCESS(f"Elasticsearch index '{index_to_clear}' cleared ({deleted_docs} documents)"))
-        except Exception as e:  # <- capture toute erreur sans importer ElasticsearchException
+        except Exception as e:
             logger.error("Erreur lors de la suppression de l'index Elasticsearch : %s", str(e))
-            self.stdout.write(self.style.ERROR(f"Failed to clear Elasticsearch index '{index_to_clear}'"))
+            self.stderr.write(self.style.ERROR(f"Failed to clear Elasticsearch index '{index_to_clear}'"))
 
         end_time = time.time()
         total_duration = end_time - start_time
