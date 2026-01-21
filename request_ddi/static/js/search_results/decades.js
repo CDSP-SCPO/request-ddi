@@ -1,11 +1,9 @@
-// ---------------------------
-// 4. Chargement AJAX (décennies/années)
-// ---------------------------
 function loadDecades() {
     return new Promise((resolve, reject) => {
-        const collections = getFilterValues('collection-checkbox');
-        const subcollections = getFilterValues('subcollection-checkbox');
-        const surveys = getFilterValues('survey-checkbox');
+        const collections = Array.from(filterState.collections);
+        const subcollections = Array.from(filterState.sub_collections);
+        const surveys = Array.from(filterState.survey);
+
         $.ajax({
             url: `/api/${window.requestdata.api_version}/get-decades/`,
             type: 'GET',
@@ -17,72 +15,75 @@ function loadDecades() {
             success: function (data) {
                 const decadesFilter = $('#years-filter');
                 decadesFilter.empty();
+
                 const sortedDecades = Object.keys(data.decades).sort((a, b) => b - a);
+
+                // Stocker toutes les années disponibles par décennie
+                window.dataForDecades = {};
                 sortedDecades.forEach(decade => {
-                    const years = data.decades[decade];
-                    const chevronIconPath = '/static/svg/icons/chevron_right.svg';
+                    window.dataForDecades[decade] = data.decades[decade].map(y => parseInt(y, 10));
+                });
+
+                // 🔥 Supprimer les années invalides du filterState
+                const validYears = new Set();
+                Object.values(window.dataForDecades).forEach(years => years.forEach(y => validYears.add(y)));
+                filterState.years.forEach(year => { if (!validYears.has(year)) filterState.years.delete(year); });
+
+                // Créer les checkboxes des décennies
+                sortedDecades.forEach(decade => {
+                    const yearsInDecade = window.dataForDecades[decade];
+
                     const decadeDiv = $('<div class="form-check-custom decade-item"></div>');
-                    const checkboxAndLabelDiv = $('<div class="checkbox-and-label"></div>');
-                    const decadeCheckbox = $('<input type="checkbox" class="form-check-input decade-checkbox checkbox-custom" value="' + decade + '" id="decade-' + decade + '">');
-                    const decadeLabel = $('<label class="form-check-label" for="decade-' + decade + '">Années ' + decade + '</label>');
-                    checkboxAndLabelDiv.append(decadeCheckbox).append(decadeLabel);
-                    const chevronIcon = $('<img src="' + chevronIconPath + '" class="chevron-icon decade-chevron" alt="chevron">');
-                    decadeDiv.append(checkboxAndLabelDiv).append(chevronIcon);
+                    const checkboxAndLabel = $('<div class="checkbox-and-label"></div>');
+
+                    const decadeCheckbox = $(`<input type="checkbox" class="form-check-input decade-checkbox checkbox-custom" value="${decade}" id="decade-${decade}">`);
+                    const decadeLabel = $(`<label class="form-check-label" for="decade-${decade}">Années ${decade}</label>`);
+
+                    checkboxAndLabel.append(decadeCheckbox, decadeLabel);
+                    const chevronIcon = $('<img src="/static/svg/icons/chevron_right.svg" class="chevron-icon decade-chevron" alt="chevron">');
+
+                    decadeDiv.append(checkboxAndLabel, chevronIcon);
                     decadesFilter.append(decadeDiv);
-                    const allSelected = years.every(year => selectedYears.has(parseInt(year)));
-                    const someSelected = years.some(year => selectedYears.has(parseInt(year)));
-                    decadeCheckbox.prop('checked', allSelected);
-                    decadeCheckbox[0].indeterminate = someSelected && !allSelected;
+
+                    // ✅ Initialiser l'état des checkboxes décennies
+                    updateDecadeCheckboxes();
+
+                    // Coche / décoche toutes les années de la décennie
                     decadeCheckbox.on('change', function () {
-                        const isChecked = this.checked;
-                        const isIndeterminate = this.indeterminate;
-                        if (isIndeterminate) {
-                            years.forEach(year => {
-                                selectedYears.delete(parseInt(year));
-                                if (selectedFilters['year']) {
-                                    selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
-                                }
-                            });
-                            this.indeterminate = false;
-                            $(this).prop('checked', false);
-                        } else if (isChecked) {
-                            years.forEach(year => {
-                                selectedYears.add(parseInt(year));
-                                if (!selectedFilters['year']) selectedFilters['year'] = [];
-                                if (!selectedFilters['year'].some(f => f.value === year.toString())) {
-                                    selectedFilters['year'].push({value: year.toString(), label: `Année ${year}`});
-                                }
-                            });
+                        if (this.checked) {
+                            yearsInDecade.forEach(y => filterState.years.add(y));
                         } else {
-                            years.forEach(year => {
-                                selectedYears.delete(parseInt(year));
-                                if (selectedFilters['year']) {
-                                    selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
-                                }
-                            });
+                            yearsInDecade.forEach(y => filterState.years.delete(y));
                         }
-                        updateFiltersDisplay();
-                        updateFilterCounts();
-                        updateFilters();
+
+                        updateDecadeCheckboxes();
+                        window.updateFiltersDisplay();
+                        window.updateFilterCounts();
+                        updateURLWithFilters();
                         $('#survey-table').DataTable().ajax.reload();
                     });
+
+                    // Afficher les années de la décennie
                     chevronIcon.on('click', function () {
                         loadYears(decade);
                     });
                 });
+
                 resolve();
             },
-            error: function () {
-                reject();
+            error: function (err) {
+                console.error('❌ Erreur loadDecades():', err);
+                reject(err);
             }
         });
     });
 }
 
 function loadYears(decade) {
-    const collections = getFilterValues('collection-checkbox');
-    const subcollections = getFilterValues('subcollection-checkbox');
-    const surveys = getFilterValues('survey-checkbox');
+    const collections = Array.from(filterState.collections);
+    const subcollections = Array.from(filterState.sub_collections);
+    const surveys = Array.from(filterState.survey);
+
     $.ajax({
         url: `/api/${window.requestdata.api_version}/get-years-by-decade/`,
         type: 'GET',
@@ -95,37 +96,41 @@ function loadYears(decade) {
         success: function (data) {
             const decadesFilter = $('#years-filter');
             decadesFilter.empty();
-            const chevronIconPathReturn = '/static/svg/icons/chevron_left.svg';
-            const backButton = $('<img src="' + chevronIconPathReturn + '" class="back-button" alt="Retour">');
-            backButton.on('click', function () {
-                loadDecades();
-            });
+
+            // Bouton retour pour revenir aux décennies
+            const backButton = $('<img src="/static/svg/icons/chevron_left.svg" class="back-button" alt="Retour">');
+            backButton.on('click', () => loadDecades());
             decadesFilter.append(backButton);
+
+            // Affichage des années
             data.years.forEach(year => {
+                const numericYear = parseInt(year, 10);
                 const yearDiv = $('<div class="form-check-custom year-item"></div>');
-                const yearCheckbox = $('<input type="checkbox" class="form-check-input year-checkbox checkbox-custom" value="' + year + '" id="year-' + year + '">');
-                const yearLabel = $('<label class="form-check-label" for="year-' + year + '">' + year + '</label>');
-                if (selectedYears.has(year)) {
-                    yearCheckbox.prop('checked', true);
-                }
-                yearDiv.append(yearCheckbox).append(yearLabel);
+                const yearCheckbox = $(`<input type="checkbox" class="form-check-input year-checkbox checkbox-custom" value="${numericYear}" id="year-${numericYear}">`);
+                const yearLabel = $(`<label class="form-check-label" for="year-${numericYear}">${numericYear}</label>`);
+
+                yearDiv.append(yearCheckbox, yearLabel);
                 decadesFilter.append(yearDiv);
+
+                // Si l'année est déjà dans filterState, coche la checkbox
+                if (filterState.years.has(numericYear)) yearCheckbox.prop('checked', true);
+
+                // Gérer la sélection/déselection
                 yearCheckbox.on('change', function () {
-                    const year = parseInt($(this).val());
-                    if ($(this).is(':checked')) {
-                        addYearToFilters(year);
-                    } else {
-                        selectedYears.delete(year);
-                        if (selectedFilters['year']) {
-                            selectedFilters['year'] = selectedFilters['year'].filter(f => f.value !== year.toString());
-                        }
-                        updateDecadeCheckboxes();
-                    }
-                    updateFiltersDisplay();
-                    updateFilterCounts();
+                    const y = parseInt($(this).val(), 10);
+                    if ($(this).is(':checked')) filterState.years.add(y);
+                    else filterState.years.delete(y);
+
+                    updateDecadeCheckboxes();
+                    window.updateFiltersDisplay();
+                    window.updateFilterCounts();
+                    updateURLWithFilters();
                     $('#survey-table').DataTable().ajax.reload();
                 });
             });
+        },
+        error: function (err) {
+            console.error('❌ Erreur loadYears():', err);
         }
     });
 }

@@ -17,7 +17,7 @@
                             <img src="{% static 'svg/icons/export.svg' %}">
                             <span>{% trans "Tout exporter" %}</span>
                         </div>
-                    
+
                     </div>
                 </div>
             </div>
@@ -43,7 +43,7 @@
                 </div>
             </div>
             <div class="accordion" id="filtersAccordion">
-                <div class="accordion-item accordion-item-custom padding-filters-container">
+                <div class="accordion-item accordion-item-custom padding-filters-container" data-filter-type="search_location">
                     <div class="accordion-header" id="headingOne">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
                             <div class="collapse-title">
@@ -76,7 +76,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="accordion-item accordion-item-custom padding-filters-container">
+                <div class="accordion-item accordion-item-custom padding-filters-container" data-filter-type="collections">
                     <div class="accordion-header" id="headingTwo">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
                             <div class="collapse-title">
@@ -101,7 +101,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="accordion-item accordion-item-custom padding-filters-container">
+                <div class="accordion-item accordion-item-custom padding-filters-container" data-filter-type="sub_collections">
                     <div class="accordion-header" id="headingThree">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
                             <div class="collapse-title">
@@ -126,7 +126,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="accordion-item accordion-item-custom padding-filters-container">
+                <div class="accordion-item accordion-item-custom padding-filters-container" data-filter-type="survey">
                     <div class="accordion-header" id="headingFour">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
                             <div class="collapse-title">
@@ -151,7 +151,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="accordion-item accordion-item-custom padding-filters-container">
+                <div class="accordion-item accordion-item-custom padding-filters-container" data-filter-type="years">
                     <div class="accordion-header" id="headingFive">
                         <div class="accordion-button collapsed custom-body color-grey-1" type="button" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
                             <div class="collapse-title">
@@ -183,80 +183,7 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
-    <style>
-        
-        :root {
-            --selected-filters-container-height: 0px;
-        }
-        .inner-container-custom{
-            --topbar-height : 64px;
-            --resetbar-height : 64px;
-        }
-        .search-results-container {
-            width: 70%;
-            overflow: hidden;
-        }
-        .filters-container {
-            width: 30%;
-        }
-        .badge-category {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #007bff;
-            color: white;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-size: 0.8em; /* Taille des lettres du badge */
-            cursor: pointer;
-            z-index: 1; /* S'assurer que le badge est au-dessus du texte */
-            width: 15rem;
-        }
-        .category-dropdown {
-            display: none;
-            position: absolute;
-            top: 30px;
-            right: 10px;
-            background-color: white;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            z-index: 1;
-            width: 15rem;
-            padding: 10px;
-            border-radius: 3px;
-            max-height: calc(100% - 40px); /* Limite à la hauteur de la carte parent, en laissant 40px de marge */
-            overflow-y: auto; /* Scroll si nécessaire */
-        }
-        .category-item {
-            padding: 5px;
-            font-size: 0.75em; /* Réduit la taille du texte dans les catégories */
-        }
-        .highlight-category {
-            background-color: rgba(255, 70, 78, 0.15);
-            font-weight: bold;
-        }
-        .category-dropdown a {
-            display: block;
-            padding: 5px;
-            text-decoration: none;
-            color: black;
-            font-size: 0.75em; /* Réduit la taille du texte dans les liens */
-        }
-        .category-dropdown a:hover {
-            background-color: #f1f1f1;
-        }
-        .card {
-            position: relative; /* Important pour confiner le dropdown à la carte */
-            margin-bottom: 20px;
-            overflow: hidden; /* Empêche le dépassement du contenu */
-        }
-        .bootstrap-select .btn {
-            max-width: 200px;
-            max-height: 40px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    </style>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -269,6 +196,10 @@
     <script src="{% static 'js/search_results/datatable.js' %}"></script>
     <script src="{% static 'js/search_results/events.js' %}"></script>
     <script src="{% static 'js/search_results/init.js' %}"></script>
+    <script src="{% static 'js/search_results/filtersAPI.js' %}"></script>
+    <script src="{% static 'js/search_results/handleFilters.js' %}"></script>
+    <script src="{% static 'js/search_results/applyFiltersFromURL.js' %}"></script>
+
     <script>
 
         window.translations = {
@@ -280,170 +211,5 @@
             resultats: "{% trans ' résultats' %}",
         };
 
-        function updateSubcollections(selectedCollections) {
-            fetch(`/api/${window.requestdata.api_version}/get-subcollections-by-collections/?collections_ids=${selectedCollections.join(',')}`)
-                .then(response => response.json())
-                .then(data => {
-                    const subcollectionsFilter = $('#subcollections-filter');
-                    subcollectionsFilter.empty();
-                    const availableSubcollectionIds = data.subcollections.map(subcollection => subcollection.id);
-                    data.subcollections.forEach(subcollection => {
-                        const checkbox = $('<input type="checkbox" class="form-check-input subcollection-checkbox checkbox-custom" value="' + subcollection.id + '" id="subcollection-' + subcollection.id + '">');
-                        const label = $('<label class="form-check-label" for="subcollection-' + subcollection.id + '">' + subcollection.name + '</label>');
-                        const div = $('<div class="form-check-custom"></div>');
-                        div.append(checkbox).append(label);
-                        subcollectionsFilter.append(div);
-                    });
-                    $('.subcollection-checkbox').each(function () {
-                        const subcollectionId = $(this).val();
-                        if (!availableSubcollectionIds.includes(subcollectionId)) {
-                            $(this).prop('checked', false);
-                        }
-                    });
-                    attachDynamicCheckboxEvents();
-                    updateFilterCounts();
-                    const allSubcollections = data.subcollections.map(subcollection => subcollection.id);
-                    updateSurveys(allSubcollections);
-                });
-        }
-
-        function updateSurveys(selectedSubcollections) {
-            fetch(`/api/${window.requestdata.api_version}/get-surveys-by-subcollections/?subcollections_ids=${selectedSubcollections.join(',')}`)
-                .then(response => response.json())
-                .then(data => {
-                    const surveysFilter = $('#survey-filter');
-                    surveysFilter.empty();
-                    const availableSurveyIds = data.surveys.map(survey => survey.id);
-                    data.surveys.forEach(survey => {
-                        const checkbox = $('<input type="checkbox" class="form-check-input survey-checkbox checkbox-custom" value="' + survey.id + '" id="survey-' + survey.id + '">');
-                        const label = $('<label class="form-check-label" for="survey-' + survey.id + '">' + survey.name + '</label>');
-                        const div = $('<div class="form-check-custom"></div>');
-                        div.append(checkbox).append(label);
-                        surveysFilter.append(div);
-                    });
-                    $('.survey-checkbox').each(function () {
-                        const surveyId = $(this).val();
-                        if (!availableSurveyIds.includes(surveyId)) {
-                            $(this).prop('checked', false);
-                        }
-                    });
-                    attachDynamicCheckboxEvents();
-                    updateFiltersDisplay();
-                    updateFilterCounts();
-                });
-        }
-
-        function handleFilterChange(filterType, filterValue, filterLabel) {
-            selectedIds.clear();
-            if (!selectedFilters[filterType]) {
-                selectedFilters[filterType] = [];
-            }
-            var existingFilterIndex = selectedFilters[filterType].findIndex(f => f.value === filterValue);
-            if (existingFilterIndex !== -1) {
-                selectedFilters[filterType].splice(existingFilterIndex, 1);
-            } else {
-                selectedFilters[filterType].push({value: filterValue, label: filterLabel});
-            }
-            updateFiltersDisplay();
-            loadDecades();
-            $('#survey-table').DataTable().ajax.reload();
-        }
-
-        function updateCheckboxes() {
-            $('#survey-table tbody input[type="checkbox"]').each(function() {
-                if (selectedIds.has(this.value)) {
-                    this.checked = true;
-                } else {
-                    this.checked = false;
-                }
-            });
-        }
-
-        async function applyFiltersFromURL() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const q = urlParams.get('q');
-            if (q) {
-                $('input[name="q"]').val(q);
-            }
-
-            // Étape 1 : cocher les collections
-
-            const collections = urlParams.getAll('collections');
-            collections.forEach(val => {
-                $(`.collection-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
-            });
-
-            // Étape 2 : charger les sous-collections si nécessaire
-
-            const subCollections = urlParams.getAll('sub_collections');
-            if (collections.length > 0 || subCollections.length > 0) {
-                if (collections.length === 0) {
-                    await waitForElement('.collection-checkbox');
-                    const allCollectionIds = $('.collection-checkbox').map(function () {
-                        return this.value;
-                    }).get();
-                    updateSubcollections(allCollectionIds);
-                }
-                await waitForElement('.subcollection-checkbox');
-                subCollections.forEach(val => {
-                    $(`.subcollection-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
-                });
-            }
-
-            // Étape 3 : cocher les enquêtes
-
-            const surveys = urlParams.getAll('survey');
-            if (surveys.length > 0) {
-                await waitForElement('.survey-checkbox');
-                surveys.forEach(val => {
-                    $(`.survey-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
-                });
-            }
-
-            // Étape 4 : cocher les lieux de recherche
-
-            const searchLocations = urlParams.getAll('search_location');
-            searchLocations.forEach(val => {
-                $(`.search-location-checkbox[value="${val}"]`).prop('checked', true).trigger('change');
-            });
-
-            // Étape 5 : charger les décennies
-
-            await loadDecades();
-
-            // Étape 6 : gérer les années individuelles
-
-            const years = urlParams.getAll('years');
-            years.forEach(year => {
-                addYearToFilters(parseInt(year));
-            });
-
-            // Étape 7 : ouvrir les décennies concernées et cocher les années
-            
-            const decadesToOpen = new Set();
-            years.forEach(year => {
-                const decade = Math.floor(parseInt(year) / 10) * 10;
-                decadesToOpen.add(decade);
-            });
-            for (const decade of decadesToOpen) {
-                await loadYears(decade.toString());
-                years.forEach(year => {
-                    if (Math.floor(parseInt(year) / 10) * 10 === decade) {
-                        const checkbox = $(`.year-checkbox[value="${year}"]`);
-                        if (checkbox.length > 0) {
-                            checkbox.prop('checked', true);
-                            addYearToFilters(parseInt(year));
-                        }
-                    }
-                });
-            }
-            updateFiltersDisplay();
-            updateFilterCounts();
-            $('#survey-table').DataTable().ajax.reload();
-        }
-
-        function updateFilters() {
-            $('#survey-table').DataTable().ajax.reload();
-        }
     </script>
 {% endblock %}

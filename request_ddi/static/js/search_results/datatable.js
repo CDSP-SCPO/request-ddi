@@ -84,7 +84,7 @@ function initializeDataTable() {
                                             </div>
                                             <div class="custom-card-second-part">
                                                 <div class="container-buttons-card">
-                                                    <span type="button" id="toggle-categories" onclick="toggleCategories('categories-${row.id}')" class="button-card button-modalities-card">
+                                                    <span type="button" id="toggle-categories" onclick="toggleCategories(this, 'categories-${row.id}')" class="button-card button-modalities-card">
                                                         <img src="/static/svg/icons/modalites.svg" alt="Modalités" class="icon-modalites">
                                                         <span>${window.translations.modalites}</span>
                                                         ${caretIcon}

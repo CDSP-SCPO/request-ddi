@@ -1,6 +1,5 @@
 
-  
-  .filters {
+.filters {
     flex: 0 1 30%;
     max-width: 400px;
     min-width: 220px;
@@ -12,9 +11,9 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-  }
-  
-  .reset-btn {
+}
+
+.reset-btn {
     margin-top: auto;
     background: none;
     border: none;
@@ -24,9 +23,9 @@
     display: flex;
     align-items: center;
     gap: 4px;
-  }
-  
-  .content {
+}
+
+.content {
     flex: 1 1 70%;
     background: #fff;
     border-radius: 8px;
@@ -36,116 +35,115 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-  }
-  
-  .actions button {
+}
+
+.actions button {
     margin-left: 8px;
     background: none;
     border: none;
     color: #333;
     cursor: pointer;
     font-weight: bold;
-  }
-  
-  .height_topbar{
-      
-    height: var(--topbar-height);
-    
-  }
+}
 
-  .accordion-item-custom{
+.height_topbar {
+
+    height: var(--topbar-height);
+
+}
+
+.accordion-item-custom {
     min-height: 56px;
     align-items: flex-start;
     display: flex;
-    flex-direction:column;
+    flex-direction: column;
     justify-content: flex-start;
-  }
+}
 
-  .padding-filters-container{
+.padding-filters-container {
 
     padding-right: 16px;
     padding-left: 16px;
-    display:flex;
+    display: flex;
     align-items: center;
-    
-  }
 
-.export-container{
+}
+
+.export-container {
     width: 100%;
     display: flex;
-    flex-direction:row;
-    gap:10px;
+    flex-direction: row;
+    gap: 10px;
     align-items: center;
     justify-content: space-between;
 }
 
-.custom-topbar{
+.custom-topbar {
     padding-right: 16px;
     padding-left: 16px;
 }
 
 
-.custom-card-dt{
-    padding-top:16px;
+.custom-card-dt {
+    padding-top: 16px;
     padding-right: 32px;
     padding-bottom: 24px;
     padding-left: 32px;
-    display:flex;
-    gap:16px;
+    display: flex;
+    gap: 16px;
     border-bottom: 1px solid #D3DFD5;
 
 }
 
-.title-checkbox{
-    display:flex;   
-    flex-direction:row;
+.title-checkbox {
+    display: flex;
+    flex-direction: row;
     gap: 16px;
 }
 
-.custom-metadatas
-{
-    padding-left:56px
+.custom-metadatas {
+    padding-left: 56px
 }
 
-.inner-container-metadatas{
+.inner-container-metadatas {
     gap: 5px;
     line-height: 24px;
 }
 
-.custom-card-first-part{
+.custom-card-first-part {
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
-.custom-card-second-part{
+.custom-card-second-part {
     padding-left: 56px;
 }
 
-.custom-content-card{
-    display:flex;
-    flex-direction:column;
-    gap:16px;
+.custom-content-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-.container-buttons-card{
-    display:flex;
-    gap:16px;
+.container-buttons-card {
+    display: flex;
+    gap: 16px;
 }
 
-.icon-modalites{
+.icon-modalites {
     width: 20px;
     height: 20px;
 }
 
 .styled-table {
     width: 100%;
-    border-collapse: collapse;  /* Important pour que les bordures partagées s'effondrent */
+    border-collapse: collapse; /* Important pour que les bordures partagées s'effondrent */
     font-size: 0.9em;
 }
 
 .styled-table tr:not(:last-child) {
-    border-bottom: 1px solid #ddd;  /* Applique une bordure sous toutes les lignes sauf la dernière */
+    border-bottom: 1px solid #ddd; /* Applique une bordure sous toutes les lignes sauf la dernière */
 }
 
 .styled-table td {
@@ -156,8 +154,8 @@
 .code-cell {
     font-weight: bold;
     width: 50px;
-    border-right: 1px solid #ddd;  /* Bar verticale entre les deux cellules */
-    text-align: center;  /* Centré pour les index */
+    border-right: 1px solid #ddd; /* Bar verticale entre les deux cellules */
+    text-align: center; /* Centré pour les index */
 }
 
 .text-cell {
@@ -165,16 +163,16 @@
     /* Pas de bordure sur le texte lui-même */
 }
 
-.accordion-button{
-    display:flex;
+.accordion-button {
+    display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.accordion-header{
-    width:100%;
+.accordion-header {
+    width: 100%;
     margin: auto;
-    padding:16px 0;
+    padding: 16px 0;
 }
 
 .table-container {
@@ -184,16 +182,18 @@
     display: flex;
     height: calc(100% - var(--topbar-height) - var(--selected-filters-container-height));
 }
-.container-button-load-more{
-    padding-top:16px;
-    padding-bottom:16px;
+
+.container-button-load-more {
+    padding-top: 16px;
+    padding-bottom: 16px;
 }
+
 #load-more {
     display: block;
     margin: auto;
     padding: 10px 20px;
     cursor: pointer;
-    width:fit-content;
+    width: fit-content;
 }
 
 .selected-filters-container {
@@ -208,8 +208,8 @@
 }
 
 .selected-filter-card {
-    display:inline-flex;
-    gap:10px;
+    display: inline-flex;
+    gap: 10px;
     width: auto;
     background-color: #F8F1F2;
     border-radius: 8px;
@@ -218,12 +218,12 @@
     align-items: center;
 }
 
-.decade-item{
+.decade-item {
     justify-content: space-between;
 }
 
 .decade-item, .year-item {
-    width:100%
+    width: 100%
 
 }
 
@@ -246,7 +246,6 @@
     flex: 1; /* Permet à la table de prendre tout l'espace disponible */
     overflow-y: auto; /* Active le défilement vertical pour la table */
 }
-
 
 
 .checkbox-custom {
@@ -289,13 +288,13 @@
     background-repeat: no-repeat;
 }
 
-.div-all-checkboxes{
+.div-all-checkboxes {
     gap: 3px;
     display: flex;
     flex-direction: column;
 }
 
-.form-check-custom{
+.form-check-custom {
     padding: 8px 0;
     display: flex;
     align-items: center;
@@ -309,9 +308,8 @@
 }
 
 
-
 #filtersAccordion {
-    height:calc(100% - var(--topbar-height) - var(--resetbar-height));
+    height: calc(100% - var(--topbar-height) - var(--resetbar-height));
     overflow-y: auto;
 }
 
@@ -323,19 +321,20 @@
     height: 24px;
 }
 
-.accordion-collapse{
+.accordion-collapse {
     width: 100%;
 }
 
-.accordion-body{
-    width:100%;
+.accordion-body {
+    width: 100%;
 }
-#years-filter{
-    width:100%;
+
+#years-filter {
+    width: 100%;
     padding-bottom: 10px;
 }
 
-.reset-filters-container{
+.reset-filters-container {
     border-top: 1px solid #D3DFD5;
     padding-top: 8px;
     padding-bottom: 8px;
@@ -344,26 +343,26 @@
     justify-content: flex-start;
 }
 
-.container-reset-button{
+.container-reset-button {
     margin: auto 0;
     height: 100%;
     display: inline-flex;
     align-items: center;
 }
 
-.reset-icon{
+.reset-icon {
     width: 20px;
     height: 20px;
 }
 
-.custom-name-card:hover{
-    color : #1F1F1F;
+.custom-name-card:hover {
+    color: #1F1F1F;
     text-decoration: underline;
     text-decoration-color: #1F1F1F;
 }
 
-.container-buttons-export{
-    gap:16px;
+.container-buttons-export {
+    gap: 16px;
 }
 
 
@@ -392,39 +391,39 @@
     border: 2px solid #2E6831;
 }
 
-.white-button:hover{
-    color:#2E6831;
+.white-button:hover {
+    color: #2E6831;
 }
 
 table.dataTable {
-    margin-bottom:0px!important;
+    margin-bottom: 0px !important;
 }
 
-.collapse-title{
-    display:flex;
+.collapse-title {
+    display: flex;
     flex-direction: row;
     align-items: center;
 }
 
-.remove-filter{
+.remove-filter {
     height: 22px;
     width: 22px;
 }
 
-.remove-filter:hover{
-    color:#536254;
+.remove-filter:hover {
+    color: #536254;
 }
 
-.remove-filter:active{
-    color:#7F877F;
+.remove-filter:active {
+    color: #7F877F;
 }
 
-.custom-swal-button{
-    border:none;
-    outline:none;
-    box-shadow:none!important;
-    padding : 16px;
-    border-radius:16px;
+.custom-swal-button {
+    border: none;
+    outline: none;
+    box-shadow: none !important;
+    padding: 16px;
+    border-radius: 16px;
 
     font-family: "Inter Tight", sans-serif;
     font-weight: 500;
@@ -436,10 +435,10 @@ table.dataTable {
     border-radius: 16px;
 }
 
-.swal2-html-container{
-    display: flex!important;
+.swal2-html-container {
+    display: flex !important;
     flex-direction: column;
-    gap:16px;
+    gap: 16px;
 }
 
 .background-red-caret {
@@ -451,10 +450,92 @@ table.dataTable {
     border-radius: 50%;
     background-color: #FFE3E4;
     transition: transform 0.3s ease, background-color 0.3s ease;
-  }
+}
 
-  .background-red-caret.rotate {
+.background-red-caret.rotate {
     transform: rotate(180deg);
     background-color: transparent; /* Retire le fond rouge */
-  }
-  
+}
+
+:root {
+    --selected-filters-container-height: 0px;
+}
+
+.inner-container-custom {
+    --topbar-height: 64px;
+    --resetbar-height: 64px;
+}
+
+.search-results-container {
+    width: 70%;
+    overflow: hidden;
+}
+
+.filters-container {
+    width: 30%;
+}
+
+.badge-category {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #007bff;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.8em; /* Taille des lettres du badge */
+    cursor: pointer;
+    z-index: 1; /* S'assurer que le badge est au-dessus du texte */
+    width: 15rem;
+}
+
+.category-dropdown {
+    display: none;
+    position: absolute;
+    top: 30px;
+    right: 10px;
+    background-color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+    width: 15rem;
+    padding: 10px;
+    border-radius: 3px;
+    max-height: calc(100% - 40px); /* Limite à la hauteur de la carte parent, en laissant 40px de marge */
+    overflow-y: auto; /* Scroll si nécessaire */
+}
+
+.category-item {
+    padding: 5px;
+    font-size: 0.75em; /* Réduit la taille du texte dans les catégories */
+}
+
+.highlight-category {
+    background-color: rgba(255, 70, 78, 0.15);
+    font-weight: bold;
+}
+
+.category-dropdown a {
+    display: block;
+    padding: 5px;
+    text-decoration: none;
+    color: black;
+    font-size: 0.75em; /* Réduit la taille du texte dans les liens */
+}
+
+.category-dropdown a:hover {
+    background-color: #f1f1f1;
+}
+
+.card {
+    position: relative; /* Important pour confiner le dropdown à la carte */
+    margin-bottom: 20px;
+    overflow: hidden; /* Empêche le dépassement du contenu */
+}
+
+.bootstrap-select .btn {
+    max-width: 200px;
+    max-height: 40px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

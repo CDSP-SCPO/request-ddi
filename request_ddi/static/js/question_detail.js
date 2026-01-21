@@ -1,17 +1,6 @@
-const {exportUrl, questionId} = window.request_question_detail;
+const {exportUrl, questionId} = JSON.parse(sessionStorage.getItem('request_question_detail'));
 
-function toggleCategories(categoryId) {
-    var categoriesDiv = document.getElementById(categoryId);
-    var caretIcon = event.currentTarget.querySelector('.icon-caret');
 
-    if (categoriesDiv.style.display === "none" || !categoriesDiv.style.display) {
-        categoriesDiv.style.display = "block";
-        caretIcon.classList.add('rotated');
-    } else {
-        categoriesDiv.style.display = "none";
-        caretIcon.classList.remove('rotated');
-    }
-}
 function exportMetadata() {
     const query = `ids=${questionId}`;
     window.location.href = `${exportUrl}?${query}`;
