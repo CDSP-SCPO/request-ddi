@@ -1,26 +1,28 @@
 # -- STDLIB
 import csv
+import io
 import logging
 import re
 from datetime import datetime
+
+import requests
 
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
 
 # -- DJANGO
 from django import forms
-from django.contrib import messages
 from django.db import IntegrityError, transaction
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic.edit import FormView
 
 # -- LOCAL
 from request_ddi.core.data_importer import DataImporter
-from request_ddi.core.forms import CSVUploadFormCollection, XMLUploadForm
+from request_ddi.core.forms import CSVUploadFormCollection
 from request_ddi.core.models import (
     BindingSurveyRepresentedVariable,
     Collection,
@@ -38,133 +40,71 @@ perf_logger = logging.getLogger("performance")
 
 
 @method_decorator(log_time, name="dispatch")
-class XMLUploadView(StaffRequiredMixin, FormView):
-    template_name = "upload_xml.html"
-    form_class = XMLUploadForm
-    success_url = reverse_lazy("request_ddi:representedvariable_search")
+class CSVUploadViewCollection(StaffRequiredMixin, View):
+    template_name = "upload.html"
+    form_class = CSVUploadFormCollection
+    success_url = reverse_lazy("request_ddi:upload_csv_collection")
 
-    def handle_error(self, message, form=None):
-        self.errors = getattr(self, "errors", [])
-        self.errors.append(message)
-        messages.error(self.request, message, extra_tags="safe")
-        if form:
-            return self.form_invalid(form)
-        return None
+    def get(self, request, *args, **kwargs):
+        context = {"csv_form": self.form_class()}
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST, request.FILES)
+
+        if not form.is_valid():
+            error_messages = []
+            for field, errors in form.errors.items():
+                for error in errors:
+                    error_messages.append(f"{field}: {error}")
+
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": " | ".join(error_messages)
+                    if error_messages
+                    else "Le formulaire est invalide.",
+                },
+                status=400,
+            )
+
+        # Formulaire valide, traiter les données
+        return self.form_valid(form)
 
     @timed
     @transaction.atomic
     def form_valid(self, form):
-        self.errors = []  # Initialiser la liste des erreurs
-        data = self.get_data(form)
-        question_datas = list(self.convert_data(data))
-
-        if self.errors:
-            return self.form_invalid(form)
-
-        importer = DataImporter()
-
-        try:
-            num_records, num_new_variables, num_new_bindings = importer.import_data(question_datas)
-
-            # Récupérer les erreurs éventuelles après l'import
-            if importer.errors:
-                self.errors.extend(importer.errors)
-                return self.form_invalid(form)
-
-            messages.success(
-                self.request,
-                "Le fichier a été traité avec succès :<br/>"
-                "<ul>"
-                f"<li>{num_records} lignes ont été analysées.</li>"
-                f"<li>{num_new_variables} nouvelles variables représentées créées.</li>"
-                f"<li>{num_new_bindings} nouveaux bindings créés.</li>"
-                "</ul>",
-                extra_tags="safe",
-            )
-            return super().form_valid(form)
-
-        except ValueError as ve:
-            return self.handle_error(f"{ve}", form)
-
-        except Exception as e:
-            return self.handle_error(f"Erreur inattendue : {e!s}", form)
-
-    def form_invalid(self, form):
-        error_messages = []
-
-        # 1. Erreurs Django du formulaire
-        for field, field_errors in form.errors.items():  # noqa: B007
-            for error in field_errors:
-                cleaned_error = str(error)
-                error_messages.append(cleaned_error)
-
-        # 2. Erreurs collectées par self.errors (parser, import, etc.)
-        error_messages.extend(getattr(self, "errors", []))
-
-        if error_messages:
-            messages.error(self.request, "<br/>".join(error_messages), extra_tags="safe")
-
-        return super().form_invalid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        self.add_form_to_context(context)
-        return context
-
-    def add_form_to_context(self, context):
-        context["xml_form"] = XMLUploadForm()
-
-    def get_data(self, form):
-        files = self.request.FILES.getlist("xml_file")
-        self.errors = []
-        return files
-
-    def convert_data(self, files):
-        results = []
-        seen_invalid_dois = set()
-        for file in files:
-            perf_logger.debug(f"Début du traitement du fichier : {file.name}")
-            try:
-                parser = XMLParser()
-                result = parser.parse_file(file, seen_invalid_dois)
-                self.errors.extend(parser.errors)
-                if result:
-                    logger.info(f"{len(result)} variables extraites du fichier {file.name}")
-                    results.extend(result)
-            except Exception as e:
-                error_msg = f"Erreur lors de la lecture du fichier {file.name}: {e!s}"
-                self.errors.append(error_msg)
-                logger.error(error_msg, exc_info=True)
-
-        return results
-
-
-@method_decorator(log_time, name="dispatch")
-class CSVUploadViewCollection(StaffRequiredMixin, View):
-    form_class = CSVUploadFormCollection
-
-    def post(self, request, *args, **kwargs):
-        form = self.form_class(request.POST, request.FILES)
-        if form.is_valid():
-            return self.form_valid(form)
-        else:
-            return JsonResponse({"status": "error", "message": form.errors}, status=400)
-
-    def form_valid(self, form):
+        """Traite le CSV et les XMLs associés - RETOURNE TOUJOURS JSON"""
         try:
             data = self.get_data(form)
             delimiter = form.cleaned_data["delimiter"]
             survey_datas = list(self.convert_data(data, delimiter))
-            self.process_data(survey_datas)
+            num_surveys, num_variables, num_bindings = self.process_data(survey_datas, self.request)
+
             return JsonResponse(
                 {
                     "status": "success",
-                    "message": "Le fichier CSV a été importé avec succès.",
+                    "message": f"Le fichier CSV a été importé avec succès. "
+                    f"{num_surveys} enquête(s), {num_variables} variable(s), "
+                    f"{num_bindings} binding(s) créé(s).",
+                    "num_surveys": num_surveys,
+                    "num_variables": num_variables,
+                    "num_bindings": num_bindings,
                 }
             )
+
         except forms.ValidationError as ve:
             logger.error("Validation error: %s", ve.messages)
-            return JsonResponse({"status": "error", "message": ve.messages})
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": " | ".join(ve.messages)
+                    if isinstance(ve.messages, list)
+                    else str(ve.messages),
+                },
+                status=400,
+            )
+
         except IntegrityError as ie:
             doi = self.extract_doi_from_error(str(ie))
             if "unique constraint" in str(ie).lower():
@@ -172,21 +112,25 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                     {
                         "status": "error",
                         "message": f"Une enquête avec le DOI {doi} existe déjà dans la base de données.",
-                    }
+                    },
+                    status=400,
                 )
-        except ValueError as ve:
-            return JsonResponse({"status": "error", "message": str(ve)})
-        except Exception as e:
             return JsonResponse(
-                {"status": "error", "message": "Le formulaire est invalide.", "errors": str(e)}
+                {"status": "error", "message": f"Erreur d'intégrité de base de données: {ie!s}"},
+                status=400,
             )
 
-    def get(self, request, *args, **kwargs):
-        # Bloquer toute tentative d'accès GET, cette vue est POST uniquement
-        return JsonResponse({"error": "Méthode non autorisée"}, status=405)
+        except ValueError as ve:
+            logger.error("ValueError: %s", str(ve))
+            return JsonResponse({"status": "error", "message": str(ve)}, status=400)
+
+        except Exception as e:
+            logger.exception("Erreur inattendue lors de l'import")
+            return JsonResponse(
+                {"status": "error", "message": f"Erreur inattendue : {e!s}"}, status=500
+            )
 
     def get_data(self, form):
-        # Utilisez les données décodées du formulaire
         return form.cleaned_data["decoded_csv"]
 
     def convert_data(self, content, delimiter):
@@ -198,7 +142,15 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
         return match.group(1) if match else "inconnu"
 
     @transaction.atomic
-    def process_data(self, survey_datas):
+    def process_data(self, survey_datas, request):  # noqa: PLR0915, PLR0912, C901
+        importer = DataImporter()
+        xml_parser = XMLParser()
+        errors = []
+        num_surveys = 0
+        total_variables = 0
+        total_bindings = 0
+        xml_contents = request.session.get("xml_contents", {})
+
         for line_number, row in enumerate(survey_datas, start=1):
             distributor_name = row["distributor"]
             distributor, created = Distributor.objects.get_or_create(name=distributor_name)
@@ -209,7 +161,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
             )
 
             subcollection_name = row["sous-collection"]
-            subcollection, created = Subcollection.objects.get_or_create(  # noqa: RUF059
+            subcollection, created = Subcollection.objects.get_or_create(
                 name=subcollection_name, collection=collection
             )
 
@@ -217,7 +169,6 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
             if not survey_doi.startswith("doi:"):
                 msg = f"Le DOI à la ligne {line_number} n'est pas dans le bon format : {survey_doi}"
                 raise ValueError(msg)
-
             survey_name = row["title"]
             survey_language = row["xml_lang"]
             survey_author = row["author"]
@@ -248,7 +199,6 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
 
             else:
                 survey_start_date = None
-
             # Vérification et formatage de survey_date_last_version
             if survey_date_last_version:
                 len_format_yyyy_mm = 7
@@ -265,65 +215,143 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
             else:
                 survey_date_last_version = None
 
-            Survey.objects.get_or_create(
+            survey, created = Survey.objects.get_or_create(  # noqa: RUF059
                 external_ref=survey_doi,
-                name=survey_name,
-                subcollection=subcollection,
-                language=survey_language,
-                author=survey_author,
-                producer=survey_producer,
-                start_date=survey_start_date,
-                geographic_coverage=survey_geographic_coverage,
-                geographic_unit=survey_geographic_unit,
-                unit_of_analysis=survey_unit_of_analysis,
-                contact=survey_contact,
-                date_last_version=survey_date_last_version,
+                defaults={
+                    "name": survey_name,
+                    "subcollection": subcollection,
+                    "language": survey_language,
+                    "author": survey_author,
+                    "producer": survey_producer,
+                    "start_date": survey_start_date,
+                    "geographic_coverage": survey_geographic_coverage,
+                    "geographic_unit": survey_geographic_unit,
+                    "unit_of_analysis": survey_unit_of_analysis,
+                    "contact": survey_contact,
+                    "date_last_version": survey_date_last_version,
+                },
             )
+            if created:
+                num_surveys += 1
+            doi_formatted = survey_doi.replace("doi:", "", 1)
+            xml_content = xml_contents.get(doi_formatted)
+            if not xml_content:
+                errors.append(f"Aucun XML fourni pour le DOI {survey_doi}")
+                continue
+
+            uploaded_file = io.BytesIO(xml_content.encode("utf-8"))
+
+            try:
+                question_data = xml_parser.parse_file(uploaded_file, seen_invalid_dois=set())
+                if question_data:
+                    num_records, num_variables, num_bindings = importer.import_data(question_data)  # noqa: RUF059
+                    total_variables += num_variables
+                    total_bindings += num_bindings
+            except Exception as e:
+                errors.append(f"Erreur à la ligne {line_number} ({survey_doi}): {e}")
+
+        if "xml_contents" in request.session:
+            del request.session["xml_contents"]
+
+        if errors:
+            raise ValueError(" \n".join(errors))
+
+        return num_surveys, total_variables, total_bindings
 
 
 @log_time
 @csrf_exempt
 @staff_required_json
-def check_duplicates(request):
-    if request.method == "POST":
-        # Récupérer uniquement le fichier XML
-        file = request.FILES.get("xml_file")
+def check_duplicates(request):  # noqa: C901
+    if request.method != "POST":
+        return JsonResponse({"error": "Requête invalide"}, status=400)
 
-        if not file:
-            return JsonResponse({"error": "Aucun fichier XML fourni"}, status=400)
+    file = request.FILES.get("csv_file")
+    if not file:
+        return JsonResponse({"error": "Aucun fichier CSV fourni"}, status=400)
 
-        if not file.name.endswith(".xml"):
-            return JsonResponse(
-                {"error": "Format de fichier non supporté (seul le XML est accepté)"},
-                status=400,
-            )
+    if not file.name.endswith(".csv"):
+        return JsonResponse(
+            {"error": "Format de fichier non supporté (CSV attendu)"},
+            status=400,
+        )
 
-        # Lecture et parsing du fichier XML
-        decoded_file = file.read().decode("utf-8", errors="replace").splitlines()
-        soup = BeautifulSoup("\n".join(decoded_file), "xml")
-        existing_variables = []
+    decoded_file = file.read().decode("utf-8", errors="replace").splitlines()
+    sample = "\n".join(decoded_file[:2])  # Prendre les 2 premières lignes
+    sniffer = csv.Sniffer()
+    delimiter = sniffer.sniff(sample).delimiter
+    reader = csv.DictReader(decoded_file, delimiter=delimiter)
+    duplicates = {}
+    xml_contents = {}
 
-        # Récupération du DOI / ID de l’enquête # noqa: RUF003
-        id_tag = soup.find("IDNo", attrs={"agency": "DataCite"}) or soup.find("IDNo")
-        if not id_tag or not id_tag.text.strip():
-            return JsonResponse({"error": "IDNo manquant dans le fichier XML"}, status=400)
+    for row in reader:
+        survey_doi = row.get("doi", "").strip()
+        if not survey_doi.startswith("doi:"):
+            continue
 
-        variable_survey_id = id_tag.text.strip()
+        doi_formatted = survey_doi.replace("doi:", "", 1)
 
-        # Recherche des doublons
-        for var in soup.find_all("var"):
-            variable_name = var.get("name", "").strip()
-            if not variable_name:
-                continue
-            existing_bindings = BindingSurveyRepresentedVariable.objects.filter(
-                variable_name=variable_name, survey__external_ref=variable_survey_id
-            )
-            if existing_bindings.exists():
-                existing_variables.append(variable_name)
+        try:
+            file_id = find_xml_file_id(doi_formatted)
+            if not file_id:
+                continue  # pas de XML, on skip
 
-        if existing_variables:
-            return JsonResponse({"status": "exists", "existing_variables": existing_variables})
-        else:
-            return JsonResponse({"status": "no_duplicates"})
+            xml_content = download_xml_file(file_id)
+            xml_contents[doi_formatted] = xml_content
 
-    return JsonResponse({"error": "Requête invalide"}, status=400)
+            soup = BeautifulSoup(xml_content, "xml")
+            variable_names = []
+            for var in soup.find_all("var"):
+                variable_name = var.get("name", "").strip()
+                if not variable_name:
+                    continue
+                variable_names.append(variable_name)
+
+            duplicates[survey_doi] = BindingSurveyRepresentedVariable.objects.filter(
+                variable_name__in=variable_names, survey__external_ref__in=[survey_doi]
+            ).exists()
+
+        except Exception as e:
+            logger.error("Erreur récupération XML %s: %s", survey_doi, e)
+            continue
+    request.session["xml_contents"] = xml_contents
+    if duplicates:
+        return JsonResponse(
+            {
+                "status": "duplicates",
+                "duplicates": duplicates,
+            }
+        )
+
+    return JsonResponse({"status": "ok"})
+
+
+def find_xml_file_id(doi):
+    url = "https://data.sciencespo.fr/api/datasets/:persistentId"
+    params = {"persistentId": f"doi:{doi}"}
+
+    r = requests.get(url, params=params, timeout=30)
+    r.raise_for_status()
+
+    files = r.json()["data"]["latestVersion"]["files"]
+
+    for f in files:
+        df = f["dataFile"]
+
+        if (
+            df.get("contentType") == "application/xml"
+            or df.get("originalFileFormat", "").lower() == "ddi"
+            or df.get("filename", "").lower().endswith(".xml")
+        ):
+            return df["id"]
+
+    return None
+
+
+def download_xml_file(file_id):
+    url = f"https://data.sciencespo.fr/api/access/datafile/{file_id}"
+
+    r = requests.get(url, timeout=30)
+    r.raise_for_status()
+
+    return r.text

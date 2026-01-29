@@ -12,7 +12,7 @@ from .views.search_views import (
 )
 
 # -- REQUEST_DDI (LOCAL)
-from .views.upload_views import CSVUploadViewCollection, XMLUploadView, check_duplicates
+from .views.upload_views import CSVUploadViewCollection, check_duplicates
 
 API_VERSION = getattr(settings, "API_VERSION", "v1")
 
@@ -20,7 +20,6 @@ app_name = "request_ddi"
 
 urlpatterns = [
     # === Upload de fichiers ===
-    path("upload-xml/", XMLUploadView.as_view(), name="upload_xml"),
     path(
         "upload-csv-collection/",
         CSVUploadViewCollection.as_view(),

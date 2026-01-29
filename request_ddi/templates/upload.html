@@ -1,56 +1,58 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block content %}
     <div class="container-custom mt-4">
         <div class="text-center mb-3">
-            <h1 class="mb-2">Import de fichier XML</h1>
-            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Créer une nouvelle
-                série</a>
+            <h1 class="mb-2">Import de fichier</h1>
+            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Importer un fichier csv</a>
         </div>
 
         <!-- Section XML -->
         <div class="col-md-8 mx-auto">
             <div class="help-box">
-                <h2>Balises attendues pour le XML</h2>
-                <ul>
-                    <li>var
+                <div class="row">
+                    <div class="col-md-6">
+                        <h3>Colonnes attendues pour le CSV</h3>
                         <ul>
-                            <li>catValu</li>
-                            <li>labl</li>
-                            <li>catgry</li>
-                            <li>qstnLit</li>
-                            <li>universe</li>
-                            <li>notes</li>
+                            <li>doi</li>
+                            <li>xml_lang</li>
+                            <li>title</li>
+                            <li>author</li>
+                            <li>producer</li>
+                            <li>distributor</li>
+                            <li>start_date</li>
+                            <li>geographic_coverage</li>
+                            <li>geographic_unit</li>
+                            <li>unit_of_analysis</li>
+                            <li>contact</li>
+                            <li>date_last_version</li>
+                            <li>collection</li>
+                            <li>sous-collection</li>
                         </ul>
-                    </li>
-                    <li>IDNo</li>
-                    <li>titl</li>
-                </ul>
-                <p>Assurez-vous que ces balises sont présentes dans votre fichier XML pour garantir une structure
-                    valide.</p>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h3>Balises attendues pour le XML</h3>
+                        <ul>
+                            <li>var 
+                                <ul> 
+                                    <li>catValu</li> 
+                                    <li>labl</li> 
+                                    <li>catgry</li> 
+                                    <li>qstnLit</li> 
+                                    <li>universe</li> 
+                                    <li>notes</li> 
+                                </ul> 
+                            </li> 
+                            <li>IDNo</li> 
+                            <li>titl</li>
+                        </ul>
+                    </div>
+                    <p class="text-center px-3">Assurez-vous que ces balises sont présentes dans votre fichier CSV ainsi que dans vos fichiers XML associés, pour garantir une structure valide.</p>
+                </div>
             </div>
 
-            <h2>Uploader un fichier XML</h2>
-            <form method="POST" enctype="multipart/form-data" id="xmlUploadForm" action="{% url 'request_ddi:upload_xml' %}">
-                {% csrf_token %}
-                <div class="mb-3">
-                    {{ xml_form.collection.label_tag }}
-                    {{ xml_form.collection }}
-                </div>
-
-                <div class="mb-3">
-
-                    <label for="xml_file">Sélectionnez un fichier XML :</label>
-                    <input type="file" name="xml_file" id="xml_file" class="form-control" accept=".xml" multiple>
-                </div>
-                <!-- Zone d'affichage des fichiers sélectionnés -->
-                <div id="file-list-container" class="mt-2">
-                    <h4>Fichiers sélectionnés :</h4>
-                    <ul id="file-list" class="list-group"></ul>
-                </div>
-                <button type="submit" class="btn btn-success mt-3">Envoyer le fichier XML</button>
-            </form>
+            
         </div>
     </div>
 
@@ -91,6 +93,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{% static 'js/upload_csv_collection.js' %}"></script>
     <script>
+        const CHECK_DUPLICATES_URL = "{% url 'request_ddi:check_duplicates' %}";
         document.addEventListener("DOMContentLoaded", function () {
             const fileInput = document.getElementById("xml_file");
             const fileList = document.getElementById("file-list");
@@ -99,40 +102,6 @@
             // Stocke les fichiers sélectionnés
             let selectedFiles = [];
 
-            fileInput.addEventListener("change", function (event) {
-                // Ajoute les nouveaux fichiers à la liste
-                for (let file of event.target.files) {
-                    dataTransfer.items.add(file);
-                }
-                fileInput.files = dataTransfer.files;
-                updateFileList();
-            });
-
-            function updateFileList() {
-                fileList.innerHTML = ""; // Nettoie la liste
-                if (dataTransfer.files.length === 0) {
-                    fileList.innerHTML = "<li class='list-group-item text-muted'>Aucun fichier sélectionné</li>";
-                } else {
-                    [...dataTransfer.files].forEach((file, index) => {
-                        let listItem = document.createElement("li");
-                        listItem.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
-                        listItem.innerHTML = `
-                            ${file.name} <span class="badge bg-danger text-white delete-file" data-index="${index}" style="cursor:pointer;">Supprimer</span>
-                        `;
-                        fileList.appendChild(listItem);
-                    });
-                }
-            }
-
-            // Supprimer un fichier de la liste
-            fileList.addEventListener("click", function (event) {
-                if (event.target.classList.contains("delete-file")) {
-                    const index = event.target.getAttribute("data-index");
-                    dataTransfer.items.remove(index);
-                    updateFileList();
-                    fileInput.files = dataTransfer.files;
-                }
-            });
             uploadForm.addEventListener('submit', function (event) {
                 event.preventDefault();  // Empêche l'envoi immédiat du formulaire
 
@@ -241,7 +210,7 @@
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 999;
+            z-index: 2000;
         }
 
         .overlay.show {
