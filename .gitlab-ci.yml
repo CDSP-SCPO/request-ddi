@@ -29,12 +29,24 @@ push-to-dockerhub:
   rules:
     - if: $CI_COMMIT_TAG
 
+# For pytest job, we need to add npm and nodejs to be able to install package
+.pytest-extends:
+  before_script:
+    - apk add npm nodejs
+
 include:
   # Lint Python packages using Ruff
   - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/ruff-lint@main
+
+  # Lint JS packages using ESLint
+  - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/nodejs-lint@main
+    inputs:
+      package_json_dir: js
 
   # Build container image
   - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/build-image@main
   
   # Unit tests
   - component: $CI_SERVER_FQDN/cdspit/ci-utilities/ci-templates/pytest@main
+    inputs:
+      job_extends: [".pytest-extends"]

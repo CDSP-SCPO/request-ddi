@@ -22,7 +22,7 @@
                 {% endif %}
             </div>
             <div class="export-access-container">
-                <div class="white-button custom-text-white-buttons" type="button" onclick="exportMetadata()">
+                <div class="white-button custom-text-white-buttons" type="button">
                     <img src="{% static 'svg/icons/export.svg' %}">
                     <span>{% trans "Exporter les métadonnées" %}</span>
                 </div>
@@ -276,13 +276,13 @@
 
 {% block extra_js %}
     <script>
-        sessionStorage.setItem('request_question_detail', JSON.stringify({
+        sessionStorage.setItem('request_ddi_question_detail', JSON.stringify({
             exportUrl: "{% url 'export_questions_csv' %}",
             questionId: "{{ question.id }}"
         }));
     </script>
 
-    <script src="{% static 'js/question_detail.js' %}"></script>
+    <script src="{% static 'js/questionDetail.bundle.js' %}"></script>
 
 {% endblock %}
 

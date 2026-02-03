@@ -51,8 +51,6 @@
                     <p class="text-center px-3">Assurez-vous que ces balises sont présentes dans votre fichier CSV ainsi que dans vos fichiers XML associés, pour garantir une structure valide.</p>
                 </div>
             </div>
-
-            
         </div>
     </div>
 
@@ -91,96 +89,8 @@
 
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{% static 'js/upload_csv_collection.js' %}"></script>
-    <script>
-        const CHECK_DUPLICATES_URL = "{% url 'request_ddi:check_duplicates' %}";
-        document.addEventListener("DOMContentLoaded", function () {
-            const fileInput = document.getElementById("xml_file");
-            const fileList = document.getElementById("file-list");
-            const uploadForm = document.getElementById("xmlUploadForm");
-            let dataTransfer = new DataTransfer();
-            // Stocke les fichiers sélectionnés
-            let selectedFiles = [];
-
-            uploadForm.addEventListener('submit', function (event) {
-                event.preventDefault();  // Empêche l'envoi immédiat du formulaire
-
-                if (dataTransfer.files.length === 0) {
-                    Swal.fire({
-                        icon: "warning",
-                        title: "Aucun fichier sélectionné",
-                        text: "Veuillez sélectionner au moins un fichier avant d'envoyer."
-                    });
-                    return;
-                }
-                var formData = new FormData(this);
-                for (let file of dataTransfer.files) {
-                    formData.append("xml_file", file);
-                }
-
-                // Affiche l'overlay de chargement
-                document.getElementById('overlay').classList.add('show');
-
-                // Vérification des doublons
-                fetch("{% url 'request_ddi:check_duplicates' %}", {
-                    method: 'POST',
-                    body: formData,
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'exists') {
-                            Swal.fire({
-                                title: 'Doublons détectés',
-                                text: 'Certaines variables de ce document existent déjà. Voulez-vous les mettre à jour ?',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: 'Oui, mettre à jour',
-                                cancelButtonText: 'Annuler',
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    // Confirme l'envoi final du formulaire
-                                    document.getElementById('xmlUploadForm').submit();
-                                } else {
-                                    document.getElementById('overlay').classList.remove('show');
-                                }
-                            });
-                        } else {
-                            document.getElementById('xmlUploadForm').submit();
-                        }
-                    })
-                    .catch(error => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Erreur',
-                            text: 'Une erreur s\'est produite lors de la vérification des doublons.'
-                        });
-                        document.getElementById('overlay').classList.remove('show');
-                    });
-            });
-
-
-            // Gestion des erreurs passées via les messages Django
-            {% if messages %}
-                {% for message in messages %}
-                    {% if 'error' in message.tags %}
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Erreur lors de l\'import',
-                            html: "{{ message|escapejs }}"
-                        });
-                    {% else %}
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Succès',
-                            html: "{{ message|escapejs }}"
-                        });
-                    {% endif %}
-                {% endfor %}
-            {% endif %}
-
-        });
-
-    </script>
+    <script type=module src="{% static 'js/uploadCsv.bundle.js' %}"></script>
+    <script type=module src="{% static 'js/uploadXml.bundle.js' %}"></script>
 {% endblock %}
 
 

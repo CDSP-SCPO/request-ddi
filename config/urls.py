@@ -19,6 +19,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from django.views.i18n import set_language
+from health_check.views import HealthCheckView
 
 # -- REQUEST_DDI
 from request_ddi.views.export_views import ExportQuestionsCSVView
@@ -33,7 +34,17 @@ urlpatterns = [
         ExportQuestionsCSVView.as_view(),
         name="export_questions_csv",
     ),
-    path("health/", include("health_check.urls")),
+    path(
+        "health/",
+        HealthCheckView.as_view(
+            checks=[
+                "health_check.Cache",
+                "health_check.Database",
+                "health_check.Memory",
+                "health_check.Storage",
+            ]
+        ),
+    ),
     # -------------------
     # API versionnée
     # -------------------

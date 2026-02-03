@@ -281,7 +281,7 @@ def check_duplicates(request):  # noqa: C901
     sniffer = csv.Sniffer()
     delimiter = sniffer.sniff(sample).delimiter
     reader = csv.DictReader(decoded_file, delimiter=delimiter)
-    duplicates = {}
+    duplicates = []
     xml_contents = {}
 
     for row in reader:
@@ -307,10 +307,11 @@ def check_duplicates(request):  # noqa: C901
                     continue
                 variable_names.append(variable_name)
 
-            duplicates[survey_doi] = BindingSurveyRepresentedVariable.objects.filter(
+            bindings_exists = BindingSurveyRepresentedVariable.objects.filter(
                 variable_name__in=variable_names, survey__external_ref__in=[survey_doi]
             ).exists()
-
+            if bindings_exists:
+                duplicates.append(survey_doi)
         except Exception as e:
             logger.error("Erreur récupération XML %s: %s", survey_doi, e)
             continue

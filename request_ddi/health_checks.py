@@ -1,10 +1,10 @@
 from django.conf import settings
 from elasticsearch import Elasticsearch
-from health_check.backends import BaseHealthCheckBackend
+from health_check.backends import HealthCheck
 from health_check.exceptions import ServiceUnavailable
 
 
-class ElasticsearchHealthCheck(BaseHealthCheckBackend):
+class ElasticsearchHealthCheck(HealthCheck):
     """
     Checks if the Elasticsearch cluster is reachable from Django.
     """

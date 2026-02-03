@@ -70,9 +70,6 @@ INSTALLED_APPS = [
     "django_extensions",
     "django_elasticsearch_dsl",
     "health_check",
-    "health_check.db",
-    "health_check.cache",
-    "health_check.storage",
     "request_ddi",
 ]
 
@@ -142,6 +139,7 @@ LOCALE_PATHS = (
 # ---------------------------------------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "collect_static")
+
 
 STATICFILES_STORAGE = (
     "django.contrib.staticfiles.storage.StaticFilesStorage"

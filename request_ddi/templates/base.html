@@ -183,14 +183,15 @@
 
 {% endblock %}
 
-<script src="{% static 'js/base.js' %}"></script>
+<script type="module" src="{% static 'js/base.bundle.js' %}"></script>
+
 
 <link rel="stylesheet" href="{% static 'css/base.css' %}">
 
 {% block extra_css %}
 {% endblock %}
 <script>
-    window.requestdata = {api_version: "{{ API_VERSION }}"}
+    window.requestDdiData = {apiVersion: "{{ API_VERSION }}", checkDuplicatesUrl: "{% url 'request_ddi:check_duplicates' %}"}
 </script>
 
 <!-- Matomo -->

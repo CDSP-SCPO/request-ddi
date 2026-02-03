@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.21.1", "hatch-vcs"]
+requires = ["hatchling>=1.21.1", "hatch-vcs", "hatch-jupyter-builder>=0.5"]
 build-backend = "hatchling.build"
 
 [project]
@@ -53,7 +53,7 @@ dependencies = [
   "gunicorn==23.0.0",
   "whitenoise==6.4.0",
   "django-extensions>=3.3",
-  "django-health-check",
+  "django-health-check==3.21.0",
   "python-dotenv",
   "requests",
 ]
@@ -104,6 +104,31 @@ packages = ["request_ddi"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "share/locale" = "share/request_ddi/locale"
+
+[tool.hatch.build.hooks.jupyter-builder]
+build-function = "hatch_jupyter_builder.npm_builder"
+dependencies = ["hatch-jupyter-builder>=0.5"]
+# Files that must be created to validate the build
+ensured-targets = [
+    "request_ddi/static/js/base.bundle.js",
+    "request_ddi/static/js/export.bundle.js",
+    "request_ddi/static/js/questionDetail.bundle.js",
+    "request_ddi/static/js/searchResults.bundle.js",
+    "request_ddi/static/js/uploadCsv.bundle.js",
+    "request_ddi/static/js/uploadXml.bundle.js",
+]
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+path = "js"
+build_cmd = "build"
+npm = ["npm"]
+
+[tool.hatch.build.hooks.jupyter-builder.editable-build-kwargs]
+path = "js"
+build_cmd = "build"
+npm = ["npm"]
+source_dir = "js/src"
+build_dir = "request_ddi/static/js"
 
 [tool.pytest]
 DJANGO_SETTINGS_MODULE = "config.test_settings"

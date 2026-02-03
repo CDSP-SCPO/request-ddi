@@ -223,3 +223,12 @@ collect_static
 
 # Version file
 request_ddi/_version.py
+
+# Node
+node_modules/
+
+# Ignore mimified js
+request_ddi/static/js
+
+# Ignore eslintcache
+js/.eslintcache

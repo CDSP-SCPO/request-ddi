@@ -1,5 +1,7 @@
 import json
 import os
+import subprocess
+import sys
 import time
 
 import psycopg2
@@ -195,21 +197,30 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Collected static assets from apps successfully"))
 
         self.stdout.write(self.style.SUCCESS("request_ddi bootstraped successfully"))
+
+        # For backwards compatbility we create a symlink to manage.py
+        try:
+            os.symlink(
+                os.path.join(os.getcwd(), "request_ddi", "manage.py"),
+                os.path.join(os.getcwd(), "manage.py"),
+            )
+        except FileExistsError:
+            pass
+        except Exception as e:
+            msg = "Failed to create symlink to request_ddi/manage.py"
+            raise CommandError(msg) from e
+
         # Start web server
         if options["startserver"]:
             if os.environ.get("DJANGO_DEBUG", "false").lower() == "false":
                 self.stdout.write(self.style.NOTICE("Starting gunicorn server..."))
                 self.run_gunicorn_server()
             else:
-                # For backwards compatbility we create a symlink to manage.py
-                try:
-                    os.symlink(
-                        os.path.join(os.getcwd(), "request_ddi", "manage.py"),
-                        os.path.join(os.getcwd(), "manage.py"),
-                    )
-                except FileExistsError:
-                    pass
-                except Exception as e:
-                    msg = "Failed to create symlink to request_ddi/manage.py"
-                    raise CommandError(msg) from e
+                self.stdout.write(self.style.NOTICE("Watching changes in js folder..."))
+                subprocess.Popen(
+                    ["npm", "run", "watch"],  # noqa: S607
+                    stdout=sys.stdout,
+                    stderr=sys.stderr,
+                    cwd="js",
+                )
                 execute_from_command_line(["manage", "runserver", "0.0.0.0:8000"])

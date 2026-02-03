@@ -10,7 +10,7 @@ ENV PYTHONPATH=/app
 RUN adduser -u 1000 --disabled-password --gecos "" appuser
 
 # Installe curl pour les vérifications de connexion
-RUN apk add --no-cache git
+RUN apk add --no-cache git nodejs npm
 RUN if [ "${development}" = "True" ]; then apk add --no-cache bash gettext; fi;
 
 # Définit le répertoire de travail
@@ -19,9 +19,10 @@ WORKDIR /app
 # Copie le reste du code de l'application
 COPY --chown=appuser:appuser . .
 
+
 # Installe l'application
 RUN if [ "${development}" = "False" ]; then \
-        pip install --no-cache-dir .; rm -rf /app/; apk del git; \
+        pip install --no-cache-dir .; rm -rf /app/; apk del git nodejs npm; \
     else \
         pip install --no-cache-dir -e '.[dev]'; apk del git; \
     fi

@@ -189,27 +189,15 @@
 {% block extra_js %}
 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-
-    <script src="{% static 'js/search_results/utils.js' %}"></script>
-    <script src="{% static 'js/search_results/filters.js' %}"></script>
-    <script src="{% static 'js/search_results/decades.js' %}"></script>
-    <script src="{% static 'js/search_results/datatable.js' %}"></script>
-    <script src="{% static 'js/search_results/events.js' %}"></script>
-    <script src="{% static 'js/search_results/init.js' %}"></script>
-    <script src="{% static 'js/search_results/filtersAPI.js' %}"></script>
-    <script src="{% static 'js/search_results/handleFilters.js' %}"></script>
-    <script src="{% static 'js/search_results/applyFiltersFromURL.js' %}"></script>
-
+    <script type="module" src="{% static 'js/searchResults.bundle.js' %}"></script>
     <script>
-
-        window.translations = {
+        sessionStorage.setItem('request_ddi_search_translations', JSON.stringify({
             enquete: "{% trans 'Enquête : ' %}",
             nomVariable: "{% trans 'Nom de la variable : ' %}",
             libelleVariable: "{% trans 'Libellé de la variable : ' %}",
             modalites: "{% trans 'Modalités' %}",
             accederAuxDonnees: "{% trans 'Accéder aux données' %}",
             resultats: "{% trans ' résultats' %}",
-        };
-
+        }));
     </script>
 {% endblock %}
