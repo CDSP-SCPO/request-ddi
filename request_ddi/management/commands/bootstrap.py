@@ -216,11 +216,22 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.NOTICE("Starting gunicorn server..."))
                 self.run_gunicorn_server()
             else:
-                self.stdout.write(self.style.NOTICE("Watching changes in js folder..."))
-                subprocess.Popen(
-                    ["npm", "run", "watch"],  # noqa: S607
-                    stdout=sys.stdout,
-                    stderr=sys.stderr,
-                    cwd="js",
-                )
+                try:
+                    self.stdout.write(self.style.NOTICE("Installing node dependencies..."))
+                    subprocess.check_call(
+                        ["npm", "install"],  # noqa: S607
+                        stdout=sys.stdout,
+                        stderr=sys.stderr,
+                        cwd="js",
+                    )
+                    self.stdout.write(self.style.NOTICE("Watching changes in js folder..."))
+                    subprocess.Popen(
+                        ["npm", "run", "watch"],  # noqa: S607
+                        stdout=sys.stdout,
+                        stderr=sys.stderr,
+                        cwd="js",
+                    )
+                except Exception as e:
+                    msg = "Failed to watch js changes using vite"
+                    raise CommandError(msg) from e
                 execute_from_command_line(["manage", "runserver", "0.0.0.0:8000"])

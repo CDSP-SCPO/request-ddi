@@ -56,7 +56,6 @@ services:
       - "8000:8000"
     volumes:
       - ./:/app
-      - /app/request_ddi/static/js
     depends_on:
       db:
         condition: service_healthy
