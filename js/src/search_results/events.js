@@ -1,5 +1,5 @@
 import Swal from "sweetalert2";
-import { selectedIds, updateCheckboxes, updateTableContainerHeight, incrementLimit } from "./utils.js";
+import { selectedIds, updateCheckboxes, updateTableContainerHeight, incrementLimit, clearCache, resetCurrentLimit } from "./utils.js";
 import {
   filterState,
   updateFiltersDisplay,
@@ -9,7 +9,7 @@ import {
 import { handleFilterChange } from "./handleFilters.js";
 import { updateSubcollections, updateSurveys } from "./filtersAPI.js";
 import { loadDecades } from "./decades.js";
-
+import { loadInitialData } from "./datatable.js";
 
 export function attachDynamicCheckboxEvents() {
   $(".subcollection-checkbox, .survey-checkbox")
@@ -45,7 +45,9 @@ export function attachDynamicCheckboxEvents() {
       }
 
       // 🔁 Recharger le tableau
-      $("#survey-table").DataTable().ajax.reload();
+      clearCache();
+      resetCurrentLimit();
+      loadInitialData();
     });
 }
 
@@ -75,6 +77,9 @@ export function attachStaticEventListeners() {
         const selectedCollections = Array.from(filterState.collections);
         updateSubcollections(selectedCollections);
       }
+      clearCache();
+      resetCurrentLimit();
+      loadInitialData();
     });
 
   // Reset filtres
@@ -88,15 +93,19 @@ export function attachStaticEventListeners() {
     updateFiltersDisplay();
     updateFilterCounts();
 
+    clearCache();
+    resetCurrentLimit();
     await loadDecades();
-    $("#survey-table").DataTable().ajax.reload();
+    loadInitialData();
     updateURLWithFilters();
   });
 
   // Load more
   $("#load-more").off("click").on("click", function () {
     incrementLimit();
-    $("#survey-table").DataTable().ajax.reload(updateCheckboxes, false);
+    $("#survey-table").DataTable().ajax.reload(function() {
+      updateCheckboxes();
+    }, false);  // false = n'efface pas les lignes existantes
   });
 
   // Export all

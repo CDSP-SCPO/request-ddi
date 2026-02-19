@@ -3,18 +3,21 @@ import {
   getFilterValues,
   getSearchLocation,
   getCurrentLimit,
-  setTable
+  setTable,
+  getCachedResults,
+  setCachedResults,
+  appendCachedResults,
 } from "./utils.js";
 import { getYearsFilter } from "./filters.js";
 
+
 let totalRecords = 0;
-let currentRecords = 0;
 
 export function initializeDataTable() {
   var translations = JSON.parse(sessionStorage.getItem("request_ddi_search_translations"));
   const table = $("#survey-table").DataTable({
-    "processing": true,
-    "serverSide": true,
+    "processing": false,
+    "serverSide": false,
     "paging": false,
     "dom": "rt",
     "info": false,
@@ -26,27 +29,37 @@ export function initializeDataTable() {
       url: `/api/${window.requestDdiData.apiVersion}/search-results/`,
       "type": "POST",
       "async": true,
-      "data": function (d) {
-        d.start = d.start || 0;
-        d.limit = getCurrentLimit();
-        d.q = $("input[name='q']").val();
-        d.survey = getFilterValues("survey-checkbox");
-        d.collections = getFilterValues("collection-checkbox");
-        d.sub_collections = getFilterValues("subcollection-checkbox");
-        d.search_location = getSearchLocation();
-        d.years = getYearsFilter();
+      "data": function () {
+        const currentLimit = getCurrentLimit();
+        const cachedLength = getCachedResults().length;
+        return {
+          start: cachedLength,
+          limit: currentLimit - cachedLength,
+          q: $("input[name='q']").val(),
+          survey: getFilterValues("survey-checkbox"),
+          collections: getFilterValues("collection-checkbox"),
+          sub_collections: getFilterValues("subcollection-checkbox"),
+          search_location: getSearchLocation(),
+          years: getYearsFilter()
+        };
       },
       "headers": {"X-CSRFToken": $("input[name=csrfmiddlewaretoken]").val()},
       "dataSrc": function (json) {
+  
         totalRecords = json.recordsTotal;
-        currentRecords = json.data.length;
+        
+        appendCachedResults(json.data);
+        const allCachedResults = getCachedResults();
+        
         $("#results-count").text(totalRecords + translations.resultats);
-        if (currentRecords < totalRecords) {
+        
+        if (allCachedResults.length < totalRecords) {
           $("#load-more").show();
         } else {
           $("#load-more").hide();
         }
-        return json.data;
+        
+        return allCachedResults;
       },
       "error": function (jqXHR, textStatus, errorThrown) {
         console.error("DataTables AJAX Error:", textStatus, errorThrown);
@@ -121,4 +134,35 @@ export function initializeDataTable() {
 
   // Sauvegarder la référence de table
   setTable(table);
+}
+
+export function loadInitialData() {
+  const table = $("#survey-table").DataTable();
+  $.ajax({
+    url: `/api/${window.requestDdiData.apiVersion}/search-results/`,
+    type: "POST",
+    data: {
+      start: 0,
+      limit: getCurrentLimit(),
+      q: $("input[name='q']").val(),
+      survey: getFilterValues("survey-checkbox"),
+      collections: getFilterValues("collection-checkbox"),
+      sub_collections: getFilterValues("subcollection-checkbox"),
+      search_location: getSearchLocation(),
+      years: getYearsFilter()
+    },
+    headers: {"X-CSRFToken": $("input[name=csrfmiddlewaretoken]").val()},
+    success: function(json) {
+      setCachedResults(json.data);
+      table.clear();
+      table.rows.add(json.data).draw();
+      
+      const translations = JSON.parse(sessionStorage.getItem("request_ddi_search_translations"));
+      $("#results-count").text(json.recordsTotal + translations.resultats);
+      
+      if (json.data.length < json.recordsTotal) {
+        $("#load-more").show();
+      }
+    }
+  });
 }

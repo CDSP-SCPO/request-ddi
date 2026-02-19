@@ -145,6 +145,7 @@ class CSVUploadFormCollection(forms.Form):
     ]
     validate_duplicates = True
 
+    # https://docs.djangoproject.com/en/6.0/ref/forms/validation/
     def clean_csv_file(self):
         csv_file = self.cleaned_data["csv_file"]
         if not csv_file.name.endswith(".csv"):

@@ -1,4 +1,4 @@
-import { updateTableContainerHeight } from "./utils.js";
+import { updateTableContainerHeight, resetCurrentLimit, clearCache } from "./utils.js";
 import { updateFiltersDisplay, updateFilterCounts } from "./filters.js";
 import { initializeDataTable } from "./datatable.js";
 import { attachStaticEventListeners, attachDynamicCheckboxEvents, updateURLWithFilters } from "./events.js";
@@ -8,6 +8,8 @@ import { applyFiltersFromURL } from "./applyFiltersFromURL.js";
 
 $(document).ready(async function () {
   document.documentElement.style.setProperty("--selected-filters-container-height", "0px");
+  resetCurrentLimit();
+  clearCache();
   updateTableContainerHeight();
   initializeDataTable();
   attachStaticEventListeners();

@@ -63,5 +63,4 @@ export async function applyFiltersFromURL() {
   updateFiltersDisplay();
   updateFilterCounts();
   updateURLWithFilters();
-  $("#survey-table").DataTable().ajax.reload();
 }

@@ -1,5 +1,6 @@
 export let selectedIds = new Set();
 export let table;
+export let cachedResults = [];
 
 
 export const state = {
@@ -18,6 +19,26 @@ export function incrementLimit() {
 
 export function getCurrentLimit() {
   return state.currentLimit;
+}
+
+export function resetCurrentLimit() {
+  state.currentLimit = 10;
+}
+
+export function getCachedResults() {
+  return cachedResults;
+}
+
+export function setCachedResults(results) {
+  cachedResults = results;
+}
+
+export function appendCachedResults(newResults) {
+  cachedResults.push(...newResults);
+}
+
+export function clearCache() {
+  cachedResults = [];
 }
 
 // Getters de filtres
