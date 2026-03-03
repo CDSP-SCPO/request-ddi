@@ -2,6 +2,8 @@
 import logging
 import time
 
+from django.db.models import Count
+
 from request_ddi.utils.normalize_string import (
     normalize_string_for_comparison,
     normalize_string_for_database,
@@ -19,101 +21,42 @@ from .models import (
 )
 
 logger = logging.getLogger("performance")
-batch_size = 50
 
 
 class DataImporter:
     def __init__(self):
         self.errors = []
 
-    def import_data(self, question_datas):  # noqa: PLR0912, C901, PLR0915
-        batch_size = 50
+    def import_data(self, question_datas):
         num_records = 0
         num_new_variables = 0
         num_new_bindings = 0
-        bindings_to_index = []
 
         data_by_doi = {}
         for question_data in question_datas:
             doi = question_data[0]
             data_by_doi.setdefault(doi, []).append(question_data)
 
-        cleaned_questions = RepresentedVariable.get_cleaned_question_texts()
         dois = list(data_by_doi.keys())
         existing_surveys = Survey.objects.filter(external_ref__in=dois)
         surveys_dict = {survey.external_ref: survey for survey in existing_surveys}
         missing_dois = set(dois) - set(surveys_dict.keys())
-
         for doi, questions in data_by_doi.items():
+            num_questions = len(questions)
             start_time = time.time()
             try:
                 if doi in missing_dois:
                     msg = f"Survey with DOI {doi} not found"
+                    survey = "N/A"
                     raise Survey.DoesNotExist(msg)
 
                 survey = surveys_dict[doi]
-                for question_data in questions:
-                    (
-                        variable_name,
-                        variable_label,
-                        question_text,
-                        category_label,
-                        universe,
-                        notes,
-                    ) = question_data[1:]
-                    placeholder_rv = None
-                    binding = BindingSurveyRepresentedVariable.objects.filter(
-                        survey=survey, variable_name=variable_name
-                    ).first()
-                    if not binding:
-                        placeholder_rv = self.create_placeholder_rv(variable_label)
-                        binding = BindingSurveyRepresentedVariable.objects.create(
-                            survey=survey,
-                            variable=placeholder_rv,
-                            variable_name=variable_name,
-                            universe=universe,
-                            notes=notes,
-                        )
-                    represented_variable, created_variable = (
-                        self.get_or_create_represented_variable(
-                            variable_name,
-                            question_text,
-                            category_label,
-                            variable_label,
-                            survey,
-                            binding,
-                            cleaned_questions,
-                        )
-                    )
-                    binding.variable = represented_variable
-                    binding.save()
-
-                    if placeholder_rv:
-                        conceptual = placeholder_rv.conceptual_var
-                        placeholder_rv.delete()
-                        if conceptual.representedvariable_set.count() == 0:
-                            conceptual.delete()
-
-                    if created_variable:
-                        num_new_variables += 1
-
-                    binding, created_or_changed_binding = self.get_or_create_binding(
-                        survey, represented_variable, variable_name, universe, notes
-                    )
-
-                    if created_or_changed_binding:
-                        num_new_bindings += 1
-                        bindings_to_index.append(binding)
-
-                        if len(bindings_to_index) >= batch_size:
-                            BindingSurveyDocument().update(bindings_to_index)
-                            BindingSurveyRepresentedVariable.objects.filter(
-                                pk__in=[b.pk for b in bindings_to_index]
-                            ).update(is_indexed=True)
-                            bindings_to_index = []
-
-                    num_records += 1
-
+                new_represented_vars_survey, new_bindings_survey = self._import_survey_data(
+                    survey, questions
+                )
+                num_new_variables += new_represented_vars_survey
+                num_new_bindings += new_bindings_survey
+                num_records += num_questions
             except Survey.DoesNotExist:
                 self.errors.append(f"DOI '{doi}' non trouvé dans la base de données.")
             except ValueError as ve:
@@ -123,17 +66,13 @@ class DataImporter:
             finally:
                 duration = time.time() - start_time
                 logger.debug(
-                    "⏱ Temps d'import — Survey '%s', DOI '%s' : %.2f s",
+                    "⏱ Temps d'import — Survey '%s', DOI '%s', %d Variables : Total %.2f s, Temps per question %.2f s",
                     survey,
                     doi,
+                    num_questions,
                     duration,
+                    duration / num_questions,
                 )
-
-        if bindings_to_index:
-            BindingSurveyDocument().update(bindings_to_index)
-            BindingSurveyRepresentedVariable.objects.filter(
-                pk__in=[b.pk for b in bindings_to_index]
-            ).update(is_indexed=True)
 
         if self.errors:
             error_summary = "<br/>".join(self.errors)
@@ -142,54 +81,62 @@ class DataImporter:
 
         return num_records, num_new_variables, num_new_bindings
 
-    def get_or_create_binding(self, survey, represented_variable, variable_name, universe, notes):
-        # Étape 1 : on cherche un binding existant via survey + variable_name
-        binding = BindingSurveyRepresentedVariable.objects.filter(
-            survey=survey, variable_name=variable_name
-        ).first()
+    def _import_survey_data(self, survey, questions):
+        batch_size = 200
+        num_new_variables = 0
+        num_new_bindings = 0
+        bindings_to_index = []
+        for question_data in questions:
+            (
+                variable_name,
+                variable_label,
+                question_text,
+                category_label,
+                universe,
+                notes,
+            ) = question_data[1:]
 
-        if binding:
-            changed = (
-                binding.variable != represented_variable
-                or binding.universe != universe
-                or binding.notes != notes
+            # Always create categories as it is the most primitive model
+            categories, stats = self.get_or_create_categories(category_label)
+
+            # Get or create RepresentedVariable which is second most primitive model
+            represented_variable, represented_variable_created = (
+                self.get_or_create_represented_variable(question_text, variable_label, categories)
             )
-            if changed:
-                binding.variable = represented_variable
-                binding.universe = universe
-                binding.notes = notes
-                binding.save()
-        else:
-            # Sinon, on le crée
-            binding = BindingSurveyRepresentedVariable.objects.create(
-                survey=survey,
-                variable=represented_variable,
-                variable_name=variable_name,
-                universe=universe,
-                notes=notes,
+
+            # If no represented variable created, ignore
+            if not represented_variable:
+                continue
+
+            # If a new represented variable created, increase the counter
+            if represented_variable_created:
+                num_new_variables += 1
+
+            # Now get or create BindingSurveyVariable which depends on RepresentedVariable
+            binding_survey_variable, binding_created = self.get_or_create_binding_survey_variable(
+                survey, variable_name, universe, notes, represented_variable
             )
-            changed = True
 
-        return binding, changed
+            # If a new binding variable created, increase the counter
+            if binding_created:
+                num_new_bindings += 1
 
-    def check_category(self, category_string, existing_categories):
-        csv_categories = (
-            [
-                (
-                    code,
-                    normalize_string_for_comparison(normalize_string_for_database(label)),
-                )
-                for code, label, stat, missing in self.parse_categories(category_string)
-            ]
-            if category_string
-            else []
-        )
-        existing_categories_list = [
-            (category.code, normalize_string_for_comparison(category.category_label))
-            for category in existing_categories.all()
-        ]
+            # Finally once we have BindingSurveyVariable variable, get or create BindingVariableCategoryStat for each
+            # category
+            self.get_or_create_binding_variable_category_stat(
+                categories, stats, binding_survey_variable
+            )
 
-        return set(csv_categories) == set(existing_categories_list)
+            # Index to elastic search for a given batch size so we avoid making
+            # round trips for each variable
+            bindings_to_index.append(binding_survey_variable)
+
+        # Index on ES at the end of each survey
+        BindingSurveyDocument().update(bindings_to_index, batch_size)
+        BindingSurveyRepresentedVariable.objects.filter(
+            pk__in=[b.pk for b in bindings_to_index]
+        ).update(is_indexed=True)
+        return num_new_variables, num_new_bindings
 
     def parse_categories(self, category_string):
         categories = []
@@ -200,8 +147,9 @@ class DataImporter:
             categories.append((code.strip(), label.strip(), stat.strip(), missing))
         return categories
 
-    def create_new_categories(self, category_string, binding):
+    def get_or_create_categories(self, category_string):
         categories = []
+        stats = []
         if category_string:
             parsed_categories = self.parse_categories(category_string)
             for code, label, stat, missing in parsed_categories:
@@ -213,107 +161,103 @@ class DataImporter:
                     category.missing = missing
                     category.save()
                 categories.append(category)
-                binding_stat, _ = BindingVariableCategoryStat.objects.get_or_create(
-                    binding=binding, category=category
-                )
-                binding_stat.stat = stat
-                binding_stat.save()
-        return categories
+                stats.append(stat)
+        return categories, stats
 
-    def create_new_represented_variable(
-        self,
-        conceptual_var,
-        name_question_normalized,
-        category_label,
-        variable_label,
-        binding,
-        is_unique: bool = False,
-    ):
-        new_represented_var = RepresentedVariable.objects.create(
-            conceptual_var=conceptual_var,
-            question_text=name_question_normalized,
-            internal_label=variable_label,
-            is_unique=is_unique,
-        )
-        new_categories = self.create_new_categories(category_label, binding)
-        new_represented_var.categories.set(new_categories)
+    def get_or_create_represented_variable(self, question_text, variable_label, categories):
+        represented_variable_created = False
 
-        return new_represented_var
+        # Get normalized question text
+        name_question_normalized = normalize_string_for_database(question_text)
 
-    def get_or_create_represented_variable(
-        self,
-        variable_name,
-        question_text,
-        category_label,
-        variable_label,
-        survey,
-        binding,
-        cleaned_questions,
-    ):
-        name_question_for_database = normalize_string_for_database(question_text)
-        name_question_for_comparison = normalize_string_for_comparison(name_question_for_database)
+        # Get list of categories IDs
+        category_ids = [c.id for c in categories]
 
-        if not name_question_for_comparison:
-            # Cas particulier : pas de texte de question → on regarde si déjà lié par nom
-            existing_binding = (
-                BindingSurveyRepresentedVariable.objects.filter(
-                    variable_name=variable_name, survey=survey
-                )
-                .exclude(variable__question_text=None)
-                .first()
+        # Initialise query dict
+        query = {}
+
+        # Assemble query variables
+        if variable_label:
+            query.update({"internal_label": variable_label})
+
+        # If question_text is not empty add it to query
+        if name_question_normalized:
+            query.update(
+                {"question_text": normalize_string_for_comparison(name_question_normalized)}
             )
-            if existing_binding:
-                self.maj_stats_categories(
-                    existing_binding, category_label, existing_binding.variable
-                )
-                return existing_binding.variable, False
-            else:
-                conceptual_var = ConceptualVariable.objects.create(is_unique=True)
-                return self.create_new_represented_variable(
-                    conceptual_var,
-                    name_question_for_database,
-                    category_label,
-                    variable_label,
-                    binding,
-                    is_unique=True,
-                ), True
 
-        if name_question_for_comparison in cleaned_questions:
-            var_represented_list = cleaned_questions[name_question_for_comparison]
+        # If there are categories, add it to query
+        if category_ids:
+            query.update({"categories__in": category_ids})
 
-            for var in var_represented_list:
-                if self.check_category(category_label, var.categories):
-                    self.maj_stats_categories(binding, category_label, var)
-                    return var, False  # ✅ Variable existante avec mêmes catégories
+        # If query is empty, ignore this variable
+        if not query:
+            return None, False
 
-            # Aucun match exact sur les catégories → on crée une nouvelle liée à
-            # la même conceptuelle
-            var = var_represented_list[0]  # Pour attacher à la même conceptuelle et logguer
-
-            return self.create_new_represented_variable(
-                var.conceptual_var,
-                name_question_for_database,
-                category_label,
-                variable_label,
-                binding,
-            ), True
-
-        # ❌ Texte inconnu → nouvelle variable conceptuelle + représentée
-        conceptual_var = ConceptualVariable.objects.create()
-        return self.create_new_represented_variable(
-            conceptual_var, name_question_for_database, category_label, variable_label, binding
-        ), True
-
-    def create_placeholder_rv(self, variable_label):
-        conceptual = ConceptualVariable.objects.create(is_unique=True)
-        return RepresentedVariable.objects.create(
-            conceptual_var=conceptual,
-            question_text=None,
-            internal_label=variable_label,
-            type="question",
-            type_categories="text",
-            is_unique=True,
+        # Now get a represented variable based on question text, categories and internal_label
+        # The following query returns the represented variables with exactly same categories
+        # as in category_ids.
+        # Without this query, we will get ALL the represented variables where category_ids
+        # partially present.
+        represented_variables = (
+            RepresentedVariable.objects.filter(**query)
+            .annotate(num_categories=Count("categories"))
+            .filter(num_categories=len(category_ids))
         )
+        represented_variable = None
+        if represented_variables:
+            represented_variable = represented_variables[0]
 
-    def maj_stats_categories(self, binding, category_label, rv=None):
-        self.create_new_categories(category_label, binding)
+        # If no represented variable found, create one
+        # Set is_unique based on the existence of question text
+        if not represented_variable:
+            conceptual_var = ConceptualVariable.objects.create(
+                is_unique=not bool(name_question_normalized)
+            )
+            represented_variable = RepresentedVariable.objects.create(
+                conceptual_var=conceptual_var,
+                question_text=name_question_normalized,
+                internal_label=variable_label,
+                is_unique=not bool(name_question_normalized),
+            )
+            represented_variable_created = True
+
+        # ALWAYS update the categories of the existant or created represented variable
+        represented_variable.categories.set(categories)
+        return represented_variable, represented_variable_created
+
+    def get_or_create_binding_survey_variable(
+        self, survey, variable_name, universe, notes, represented_variable
+    ):
+        binding_created = False
+
+        # Now attempt to get existant binding variable based on unique fields
+        binding = BindingSurveyRepresentedVariable.objects.filter(
+            survey=survey, variable_name=variable_name
+        ).first()
+
+        # If binding variable exists, update all the relevant fields
+        # else create a new one
+        if binding:
+            binding.variable = represented_variable
+            binding.universe = universe
+            binding.notes = notes
+            binding.save()
+        else:
+            binding = BindingSurveyRepresentedVariable.objects.create(
+                survey=survey,
+                variable=represented_variable,
+                variable_name=variable_name,
+                universe=universe,
+                notes=notes,
+            )
+            binding_created = True
+        return binding, binding_created
+
+    def get_or_create_binding_variable_category_stat(self, categories, stats, binding):
+        for category, stat in zip(categories, stats):
+            binding_stat, _ = BindingVariableCategoryStat.objects.get_or_create(
+                binding=binding, category=category
+            )
+            binding_stat.stat = stat
+            binding_stat.save()

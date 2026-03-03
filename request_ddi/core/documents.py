@@ -94,7 +94,7 @@ class BindingSurveyDocument(Document):
             "universe",
         ]
 
-    def update(self, instances, **kwargs):
+    def update(self, instances, batch_size, **kwargs):
         """Met à jour des documents dans l'index Elasticsearch."""
         # Uniformiser : transformer en liste si c'est un seul objet
         if isinstance(instances, BindingSurveyRepresentedVariable):
@@ -102,17 +102,21 @@ class BindingSurveyDocument(Document):
         elif not isinstance(instances, list):
             instances = list(instances)
 
-        actions = [
-            {
-                "_op_type": "index",
-                "_index": self._index._name,
-                "_id": instance.pk,
-                "_source": self.serialize(instance),
-            }
-            for instance in instances
-        ]
-
-        bulk(self._get_connection(), actions, refresh=True)
+        # Update ES index in batches of batch_size
+        for i in range(0, len(instances), batch_size):
+            try:
+                actions = [
+                    {
+                        "_op_type": "index",
+                        "_index": self._index._name,
+                        "_id": instance.pk,
+                        "_source": self.serialize(instance),
+                    }
+                    for instance in instances[i : i + batch_size]
+                ]
+                bulk(self._get_connection(), actions, refresh=True)
+            except Exception as ex:
+                logger.exception("Erreur lors de l'update: %s", ex)
 
     def delete(self, instance):
         """Supprime un document de l'index Elasticsearch."""

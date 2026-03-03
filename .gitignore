@@ -232,3 +232,7 @@ request_ddi/static/js
 
 # Ignore eslintcache
 js/.eslintcache
+
+# Ignore nb
+*.ipynb
+*.json

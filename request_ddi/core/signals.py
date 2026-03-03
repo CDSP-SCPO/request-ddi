@@ -1,7 +1,7 @@
 # -- DJANGO
 import logging
 
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
 # -- THIRDPARTY
@@ -16,11 +16,13 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
-
-@receiver(post_save, sender=BindingSurveyRepresentedVariable)
-def update_index(sender, instance, **kwargs):
-    """Met à jour Elasticsearch à chaque sauvegarde d’un binding."""  # noqa: RUF002
-    BindingSurveyDocument().update(instance)
+# DO NOT USE THIS SIGNAL AS IT WILL FIRE AN API REQUEST FOR EVERY OBJECT ADDED
+# TO DB WHICH IS COSTLY
+#
+# @receiver(post_save, sender=BindingSurveyRepresentedVariable)
+# def update_index(sender, instance, **kwargs):
+#     """Met à jour Elasticsearch à chaque sauvegarde d'un binding."""
+#     BindingSurveyDocument().update(instance)
 
 
 @receiver(post_delete, sender=BindingSurveyRepresentedVariable)

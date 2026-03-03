@@ -56,6 +56,14 @@ ELASTICSEARCH_DSL = {
     "auto_sync": False,
 }
 
+# DO NOT ENABLE AUTO SYNC. By enabling auto sync there will be a API request fired
+# for every object we add to the SQL DB. This means too many roundtrips which is
+# very costly.
+#
+# We can manage the syncronization manually by pushing the object to ES at the end
+# of each survey import which translates to one API call using bulk API of ES.
+ELASTICSEARCH_DSL_AUTOSYNC = False
+
 
 # ---------------------------------------------------------
 # APPLICATIONS & MIDDLEWARE

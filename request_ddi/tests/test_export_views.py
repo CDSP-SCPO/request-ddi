@@ -1,5 +1,4 @@
 import csv
-import unittest
 from datetime import date
 from io import StringIO
 
@@ -14,10 +13,7 @@ from request_ddi.core.models import (
     Survey,
 )
 
-from . import is_elasticsearch_available
 
-
-@unittest.skipIf(not is_elasticsearch_available(), "elastic search is required for this test")
 class ExportQuestionsCSVViewTest(TestCase):
     """Tests de la vue d'export CSV des questions."""
 

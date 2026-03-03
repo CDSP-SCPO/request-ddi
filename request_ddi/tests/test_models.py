@@ -1,5 +1,3 @@
-import unittest
-
 from django.db import IntegrityError
 from django.test import TestCase
 
@@ -15,8 +13,6 @@ from request_ddi.core.models import (
     Subcollection,
     Survey,
 )
-
-from . import is_elasticsearch_available
 
 
 class ModelStrTests(TestCase):
@@ -97,7 +93,6 @@ class ModelConstraintTests(TestCase):
         with self.assertRaises(IntegrityError):
             BindingConcept.objects.create(parent=parent, child=child)
 
-    @unittest.skipIf(not is_elasticsearch_available(), "elastic search is required for this test")
     def test_binding_survey_variable_unique_constraint(self):
         survey = Survey.objects.create(name="ESS", external_ref="doi:12345")
         conceptual = ConceptualVariable.objects.create(internal_label="var")

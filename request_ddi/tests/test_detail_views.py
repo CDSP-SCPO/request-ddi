@@ -1,5 +1,3 @@
-import unittest
-
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -11,10 +9,7 @@ from request_ddi.core.models import (
     Survey,
 )
 
-from . import is_elasticsearch_available
 
-
-@unittest.skipIf(not is_elasticsearch_available(), "elastic search is required for this test")
 class QuestionDetailViewTest(TestCase):
     """Tests de la vue de détail des questions et de leurs catégories."""
 
@@ -80,7 +75,7 @@ class QuestionDetailViewTest(TestCase):
         content = response.content.decode("utf-8")
 
         # Check that the JS variable is present
-        self.assertIn("window.request_question_detail", content)
+        self.assertIn("request_ddi_question_detail", content)
 
         # Check that the export URL is correctly included in the template
         self.assertIn(reverse("export_questions_csv"), content)

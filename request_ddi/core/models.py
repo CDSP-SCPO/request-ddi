@@ -86,7 +86,7 @@ class Category(models.Model):
     class Meta:
         constraints = [  # noqa: RUF012
             models.UniqueConstraint(
-                fields=["code", "category_label"], name="unique_code_category_link"
+                fields=["code", "category_label"], name="request_ddi_unique_code_category_link"
             )
         ]
 
@@ -156,7 +156,7 @@ class BindingSurveyRepresentedVariable(models.Model):
         constraints = [  # noqa: RUF012
             models.UniqueConstraint(
                 fields=["survey", "variable_name"],
-                name="unique_variable_name_per_survey",
+                name="request_ddi_unique_variable_name_per_survey",
             )
         ]
 

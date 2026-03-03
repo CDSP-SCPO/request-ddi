@@ -38,7 +38,6 @@ class BaseUploadTest(TestCase):
         self.client.force_login(self.user)
 
 
-@unittest.skipIf(not is_elasticsearch_available(), "elastic search is required for this test")
 class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
     def test_form_valid_with_valid_csv_and_xml(self):
         self.login()
@@ -64,12 +63,21 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
             </var>
         </root>
         """
+
+        s = self.client.session
+        s.update(
+            {
+                "xml_contents": {
+                    "1234/test": xml_content,
+                }
+            }
+        )
+        s.save()
         response = self.client.post(
             reverse("request_ddi:upload_csv_collection"),
             {
                 "csv_file": csv_file,
                 "delimiter": ",",
-                "xml_for_1234/test": xml_content,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -134,12 +142,20 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         </root>
         """
 
+        s = self.client.session
+        s.update(
+            {
+                "xml_contents": {
+                    "1234/test": xml_content,
+                }
+            }
+        )
+        s.save()
         response = self.client.post(
             reverse("request_ddi:upload_csv_collection"),
             {
                 "csv_file": csv_file,
                 "delimiter": ",",
-                "xml_for_1234/test": xml_content,
             },
         )
 
@@ -261,13 +277,21 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         </root>
         """
 
+        s = self.client.session
+        s.update(
+            {
+                "xml_contents": {
+                    "1234/test": xml_content_1,
+                    "5678/test": xml_content_2,
+                }
+            }
+        )
+        s.save()
         response = self.client.post(
             reverse("request_ddi:upload_csv_collection"),
             {
                 "csv_file": csv_file,
                 "delimiter": ",",
-                "xml_for_1234/test": xml_content_1,
-                "xml_for_5678/test": xml_content_2,
             },
         )
 
@@ -279,6 +303,8 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertTrue(Survey.objects.filter(external_ref="doi:5678/test").exists())
 
 
+# TODO: This needs to be rewritten once we change the upload process using a direct URL
+# in the CSV file.
 @unittest.skipIf(not is_elasticsearch_available(), "elastic search is required for this test")
 class CheckDuplicatesTest(BaseUploadTest):
     @classmethod
