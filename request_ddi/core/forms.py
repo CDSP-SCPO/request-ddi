@@ -142,6 +142,7 @@ class CSVUploadFormCollection(forms.Form):
         "date_last_version",
         "collection",
         "sous-collection",
+        "url",
     ]
     validate_duplicates = True
 

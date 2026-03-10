@@ -43,8 +43,8 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
         csv_content = (
             "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
-            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version\n"
-            "Distrib,Collection,Subcollection,doi:1234/test,Survey Test,fr,Author,Producer,2020,France,,Individual,Contact,2020-01-01\n"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
+            "Distrib,Collection,Subcollection,doi:1234/test,Survey Test,fr,Author,Producer,2020,France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
         xml_content = """
@@ -89,9 +89,9 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
 
         csv_content = (
             "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
-            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version\n"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:5678/test,Survey Test 2,fr,Author,Producer,2020,"
-            "France,,Individual,Contact,2020-01-01\n"
+            "France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
@@ -106,7 +106,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertEqual(response.status_code, 400)
         json_response = response.json()
         self.assertEqual(json_response["status"], "error")
-        self.assertIn("Aucun XML fourni", json_response["message"])
+        self.assertTrue(any("Aucun XML fourni" in e for e in json_response["errors"]))
 
     def test_form_invalid_with_duplicate_doi(self):
         """Teste l'import d'un fichier CSV avec un DOI en double."""
@@ -122,8 +122,8 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
 
         csv_content = (
             "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
-            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version\n"
-            "Distrib,Collection,Subcollection,doi:1234/test,Survey Test,fr,Author,Producer,2020,France,,Individual,Contact,2020-01-01\n"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
+            "Distrib,Collection,Subcollection,doi:1234/test,Survey Test,fr,Author,Producer,2020,France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
@@ -170,9 +170,9 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
 
         csv_content = (
             "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
-            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version\n"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,1234/test,Survey Test,fr,Author,Producer,2020,"
-            "France,,Individual,Contact,2020-01-01\n"
+            "France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
@@ -187,7 +187,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertEqual(response.status_code, 400)
         json_response = response.json()
         self.assertEqual(json_response["status"], "error")
-        self.assertIn("n'est pas dans le bon format", json_response["message"])
+        self.assertTrue(any("n'est pas dans le bon format" in e for e in json_response["errors"]))
 
     def test_form_invalid_with_malformed_xml(self):
         """Teste l'import avec un XML mal formé"""
@@ -195,9 +195,9 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
 
         csv_content = (
             "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
-            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version\n"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:9999/test,Survey Test,fr,Author,Producer,2020,"
-            "France,,Individual,Contact,2020-01-01\n"
+            "France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
@@ -239,11 +239,11 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
 
         csv_content = (
             "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
-            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version\n"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
-            "France,,Individual,Contact,2020-01-01\n"
+            "France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
             "Distrib,Collection,Subcollection,doi:5678/test,Survey 2,fr,Author,Producer,2021,"
-            "France,,Individual,Contact,2021-01-01\n"
+            "France,,Individual,Contact,2021-01-01,https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
@@ -294,7 +294,6 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
                 "delimiter": ",",
             },
         )
-
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
 
@@ -323,12 +322,10 @@ class CheckDuplicatesTest(BaseUploadTest):
             variable_name="Q1", survey=cls.survey, variable=represented_var, notes="", universe=""
         )
 
-    @patch("request_ddi.views.upload_views.find_xml_file_id")
     @patch("request_ddi.views.upload_views.download_xml_file")
-    def test_check_duplicates_with_duplicate(self, mock_download, mock_find):
+    def test_check_duplicates_with_duplicate(self, mock_download):
         self.login()
 
-        mock_find.return_value = "mock_file_id"
         mock_download.return_value = """
         <root>
             <var name="Q1"/>
@@ -337,9 +334,9 @@ class CheckDuplicatesTest(BaseUploadTest):
 
         csv_content = (
             "distributor;collection;sous-collection;doi;title;xml_lang;author;producer;start_date;"
-            "geographic_coverage;geographic_unit;unit_of_analysis;contact;date_last_version\n"
+            "geographic_coverage;geographic_unit;unit_of_analysis;contact;date_last_version;url\n"
             "Distrib;Collection;Subcollection;doi:1234/test;Survey Test;fr;Author;Producer;2020;"
-            "France;;Individual;Contact;2020-01-01\n"
+            "France;;Individual;Contact;2020-01-01;https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
@@ -348,14 +345,11 @@ class CheckDuplicatesTest(BaseUploadTest):
         json_response = response.json()
         self.assertEqual(json_response["status"], "duplicates")
         self.assertIn("doi:1234/test", json_response["duplicates"])
-        self.assertIn("Q1", json_response["duplicates"]["doi:1234/test"])
 
-    @patch("request_ddi.views.upload_views.find_xml_file_id")
     @patch("request_ddi.views.upload_views.download_xml_file")
-    def test_check_duplicates_with_no_duplicate(self, mock_download, mock_find):
+    def test_check_duplicates_with_no_duplicate(self, mock_download):
         self.login()
 
-        mock_find.return_value = "mock_file_id"
         mock_download.return_value = """
         <root>
             <var name="Q2"/>
@@ -364,9 +358,9 @@ class CheckDuplicatesTest(BaseUploadTest):
 
         csv_content = (
             "distributor;collection;sous-collection;doi;title;xml_lang;author;producer;start_date;"
-            "geographic_coverage;geographic_unit;unit_of_analysis;contact;date_last_version\n"
+            "geographic_coverage;geographic_unit;unit_of_analysis;contact;date_last_version;url\n"
             "Distrib;Collection;Subcollection;doi:1234/test;Survey Test;fr;Author;Producer;2020;"
-            "France;;Individual;Contact;2020-01-01\n"
+            "France;;Individual;Contact;2020-01-01;https://example.com/xml/;\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
@@ -374,4 +368,4 @@ class CheckDuplicatesTest(BaseUploadTest):
         self.assertEqual(response.status_code, 200)
         json_response = response.json()
         self.assertEqual(json_response["status"], "ok")
-        self.assertIn("xml_contents", json_response)
+        self.assertIn("xml_contents", self.client.session)

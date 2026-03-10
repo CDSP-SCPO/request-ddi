@@ -89,22 +89,36 @@ function submitFinalImport(csvForm, formData, overlay, csrfToken) {
           icon: "success",
           title: "Succès",
           text: data.message,
+        }).then(() => {
+          $("#csvUploadModal").modal("hide");
+          location.reload();
         });
-
-        $("#csvUploadModal").modal("hide");
-        location.reload();
+      } else if (data.status === "partial_success") {
+        Swal.fire({
+          icon: "warning",
+          title: "Import partiel",
+          html: `
+            <strong>${data.message}</strong><br><br>
+            <strong>Enquêtes importées :</strong> ${data.data[0].successful_surveys.join(", ")}<br><br>
+            <strong> ${data.data[0].num_surveys} enquête(s), ${data.data[0].total_variables} variable(s), ${data.data[0].total_bindings} binding(s) créé(s).<br><br>
+            <strong>Erreurs :</strong><br>${data.errors.join("<br>")}
+            `,
+        });
       } else {
+        $("#csvUploadModal").off("hidden.bs.modal");
         overlay.classList.remove("show");
-        throw new Error(data.message);
+        const errorDetails = data.errors?.join("<br>") ?? data.message;
+        Swal.fire({
+          icon: "error",
+          title: "Erreur",
+          html: `<strong>${data.message}</strong><br><br><strong>Erreurs :</strong><br>${errorDetails}`,
+        });
       }
     })
     .catch(error => {
       overlay.classList.remove("show");
-      Swal.fire({
-        icon: "error",
-        title: "Erreur",
-        text: error.message || "Erreur lors de l’import",
-      });
+      Swal.fire({ icon: "error", title: "Erreur réseau", text: error.message });
+
     });
 }
 
