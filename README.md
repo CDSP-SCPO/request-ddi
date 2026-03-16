@@ -10,21 +10,21 @@
 
 ## Background
 
-In the context of the increasing amount of research data available in the last years and 
-the European and national efforts around the FAIR principles, 
-this project aims to built a system to gather and harmonise Social Science and Humanities (SSH) surveys metadata 
+In the context of the increasing amount of research data available in the last years and
+the European and national efforts around the FAIR principles,
+this project aims to built a system to gather and harmonise Social Science and Humanities (SSH) surveys metadata
 from different sources to facilitate data reusability by the academic sphere and beyond.
 
 ## Description
 
 re{quest – reuse questionnaire data – is an open-source web application designed by the
 [Centre des Données Socio-Politiques (CDSP) - Sciences Po, CNRS](https://www.sciencespo.fr/cdsp/fr/).
-It combines a PostgreSQL database for structured metadata storage with an Elasticsearch index for efficient full-text and similarity search. 
+It combines a PostgreSQL database for structured metadata storage with an Elasticsearch index for efficient full-text and similarity search.
 Together, they support the discovery, comparison, and reuse of social science survey metadata.
-The database stores structured information on questionnaires, including question texts, response categories, 
+The database stores structured information on questionnaires, including question texts, response categories,
 and variable information mappings across studies and waves. 
 Built on the ETL process, re{quest's pipeline uses standardised metadata schemas using the [Data Documentation International (DDI)](https://ddialliance.org/) norm.
-To date, [request.sciencespo.fr](https://request.sciencespo.fr) provides an online access to a centralised, searchable and reusable database 
+To date, [request.sciencespo.fr](https://request.sciencespo.fr) provides an online access to a centralised, searchable and reusable database
 of 65,000 questions and variables across more than 250 quantitative surveys of the
 [CDSP's Data Bank](https://data.sciencespo.fr/dataverse/cdsp)
 
@@ -197,6 +197,16 @@ docker exec -it request-ddi bash
 # Run all tests with pytest
 pytest
 ```
+
+## Usage
+
+The first step to use the application is to upload survey data. A sample data is
+provided in the [data](./data) folder of the repository. Please consult
+[UPLOAD](./docs/UPLOAD.md) document on detailed instructions on how to upload
+the provided sample data into the application.
+
+A more detailed documentation on how to use the application can be found in the
+[documentation](https://request.sciencespo.fr/docs).
 
 ## Versioning
 
