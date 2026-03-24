@@ -1,5 +1,6 @@
 import { filterState, updateDecadeCheckboxes, updateFiltersDisplay, updateFilterCounts, dataForDecades } from "./filters.js";
 import { updateURLWithFilters } from "./events.js";
+import { clearCache, resetCurrentLimit } from "./utils.js";
 
 export function loadDecades() {
   return new Promise((resolve, reject) => {
@@ -64,6 +65,8 @@ export function loadDecades() {
             updateFiltersDisplay();
             updateFilterCounts();
             updateURLWithFilters();
+            clearCache();
+            resetCurrentLimit();
             $("#survey-table").DataTable().ajax.reload();
           });
 
@@ -129,6 +132,8 @@ function loadYears(decade) {
           updateFiltersDisplay();
           updateFilterCounts();
           updateURLWithFilters();
+          clearCache();
+          resetCurrentLimit();
           $("#survey-table").DataTable().ajax.reload();
         });
       });

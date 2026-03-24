@@ -41,6 +41,8 @@ export async function handleFilterChange(filterType, filterValue) {
   updateFiltersDisplay();
   updateFilterCounts();
   updateURLWithFilters();
+  clearCache();
+  resetCurrentLimit();
 
   // Reload table
   $("#survey-table").DataTable().ajax.reload();
