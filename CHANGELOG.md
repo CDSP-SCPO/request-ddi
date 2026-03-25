@@ -2,6 +2,38 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## v1.1.0-rc.1
+
+([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/3fa8c1d63af4676680be285c6e9d8adb56d0f510...None?from_project_id=766&straight=false))
+
+### New features added
+
+- docs: Add instructions on how to import data [!462](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/462) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+- Change column Url in Import / Change transaction atomic for import [!460](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/460) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- feat: Optimize the import process [!459](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/459) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- perf: :zap: Improve datatable performance [!458](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/458) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- feat: :sparkles: Change Import behaviour [!455](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/455) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@lucie.marie2](https://gitlab.sciences-po.fr/lucie.marie2), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+
+### Bugs fixed
+
+- fix: Run `npm install` in bootstrap management command [!457](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/457) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- Resolve "Add Elasticsearch index reset to data cleardb command" [!454](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/454) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+- feat(elasticsearch): reset index in data cleardb command [!452](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/452) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- refactor(filters): centralize state management and simplify checkbox events [!451](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/451) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+
+### Documentation improvements
+
+- docs: Add instructions on how to import data [!462](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/462) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+
+### Unlabelled Merged MRs
+
+- fix: :bug: Cache bug fixed [!464](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/464) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- feat(frontend): integrate Vite and refactor JS files for modular consistency [!456](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/456) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+
+### [Contributors to this release](https://mahendrapaipuri.gitlab.io/gitlab-activity/usage#contributors-list)
+
+[@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon) | [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri) | [@lucie.marie2](https://gitlab.sciences-po.fr/lucie.marie2) | [@william.feraux](https://gitlab.sciences-po.fr/william.feraux)
+
 ## v1.0.0
 
 ([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/c8c5828d57d87fea252d9b74bcb0e7d5f351b5b8...None?from_project_id=766&straight=false))
