@@ -186,15 +186,19 @@ class DataImporter:
         # Assemble query variables
         # ALWAYS use the custom case accent insensitive collation that we defined
         # in the DB for variable_label, question_text and category labels.
-        if variable_label_normalized:
-            query.update(
-                {
-                    "internal_label": Collate(
-                        Value(variable_label_normalized),
-                        settings.DB_COLLATION,
-                    )
-                }
-            )
+
+        # We don't use the internal label nor the variable name to determine whether two variables
+        # are similar or identical. We have to stick with the question text and the categories only.
+        # if variable_label_normalized:
+        #     print("test variable_label_normalized")
+        #     query.update(
+        #         {
+        #             "internal_label": Collate(
+        #                 Value(variable_label_normalized),
+        #                 settings.DB_COLLATION,
+        #             )
+        #         }
+        #     )
 
         # If question_text is not empty add it to query
         if name_question_normalized:
@@ -225,9 +229,19 @@ class DataImporter:
             .annotate(num_categories=Count("categories"))
             .filter(num_categories=len(category_ids))
         )
+
         represented_variable = None
-        if represented_variables:
-            represented_variable = represented_variables[0]
+        category_ids_set = set(category_ids)
+
+        # Even after filtering categories based on count, we might end up in a situation
+        # where our queried categories are [1, 2] and found represented variable categories
+        # are [2, 3]. As the length of categories in both cases is 2, they will be matched
+        # and returned. To avoid this case, we finally compare the category IDs of queried
+        # variable and found variables and break the loop when IDs are matched.
+        for rvar in represented_variables:
+            if set(rvar.categories.all().values_list("id", flat=True)) == category_ids_set:
+                represented_variable = rvar
+                break
 
         # If no represented variable found, create one
         # Set is_unique based on the existence of question text
