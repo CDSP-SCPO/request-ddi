@@ -80,7 +80,6 @@ class SearchResultsDataView(ListView):
             int(collection_id) for collection_id in collections_filter if collection_id.isdigit()
         ]
         years = [int(year) for year in years if year.isdigit()]
-
         search = BindingSurveyDocument.search()
 
         if search_value:

@@ -1,4 +1,7 @@
+from django.conf import settings
 from django.db import IntegrityError
+from django.db.models import Value
+from django.db.models.functions import Collate
 from django.test import TestCase
 
 from request_ddi.core.models import (
@@ -55,6 +58,33 @@ class ModelStrTests(TestCase):
 
 class RepresentedVariableTests(TestCase):
     """Tests de la logique des RepresentedVariable, notamment le regroupement de questions similaires."""
+
+    def test_get_same_question_based_on_custom_collation(self):
+        conceptual = ConceptualVariable.objects.create(internal_label="TestVar")
+
+        RepresentedVariable.objects.create(
+            conceptual_var=conceptual,
+            type="question",
+            question_text="Combien possédez-vous d'enfants ?",
+            internal_label="labêl",
+            type_categories="text",
+        )
+
+        question_rep_vars = RepresentedVariable.objects.filter(
+            question_text=Collate(
+                Value("Combien possedez-vous d'enfants ?"),
+                settings.DB_COLLATION,
+            ),  # même question sans accent
+        )
+
+        label_rep_vars = RepresentedVariable.objects.filter(
+            internal_label=Collate(
+                Value("label"),
+                settings.DB_COLLATION,
+            ),  # même label sans accent
+        )
+        self.assertEqual(len(question_rep_vars), 1)
+        self.assertEqual(len(label_rep_vars), 1)
 
     def test_get_cleaned_question_texts_groups_similar_questions(self):
         conceptual = ConceptualVariable.objects.create(internal_label="TestVar")

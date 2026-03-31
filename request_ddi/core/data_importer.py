@@ -2,10 +2,11 @@
 import logging
 import time
 
-from django.db.models import Count
+from django.conf import settings
+from django.db.models import Count, Value
+from django.db.models.functions import Collate
 
 from request_ddi.utils.normalize_string import (
-    normalize_string_for_comparison,
     normalize_string_for_database,
 )
 
@@ -136,6 +137,8 @@ class DataImporter:
         BindingSurveyRepresentedVariable.objects.filter(
             pk__in=[b.pk for b in bindings_to_index]
         ).update(is_indexed=True)
+        BindingSurveyDocument._index.refresh()
+
         return num_new_variables, num_new_bindings
 
     def parse_categories(self, category_string):
@@ -155,7 +158,10 @@ class DataImporter:
             for code, label, stat, missing in parsed_categories:
                 category, _ = Category.objects.get_or_create(
                     code=code,
-                    category_label=normalize_string_for_database(label),
+                    category_label=Collate(
+                        Value(normalize_string_for_database(label)),
+                        settings.DB_COLLATION,
+                    ),
                 )
                 if category.missing != missing:
                     category.missing = missing
@@ -167,8 +173,9 @@ class DataImporter:
     def get_or_create_represented_variable(self, question_text, variable_label, categories):
         represented_variable_created = False
 
-        # Get normalized question text
+        # Get normalized question text and variable label
         name_question_normalized = normalize_string_for_database(question_text)
+        variable_label_normalized = normalize_string_for_database(variable_label)
 
         # Get list of categories IDs
         category_ids = [c.id for c in categories]
@@ -177,13 +184,27 @@ class DataImporter:
         query = {}
 
         # Assemble query variables
-        if variable_label:
-            query.update({"internal_label": variable_label})
+        # ALWAYS use the custom case accent insensitive collation that we defined
+        # in the DB for variable_label, question_text and category labels.
+        if variable_label_normalized:
+            query.update(
+                {
+                    "internal_label": Collate(
+                        Value(variable_label_normalized),
+                        settings.DB_COLLATION,
+                    )
+                }
+            )
 
         # If question_text is not empty add it to query
         if name_question_normalized:
             query.update(
-                {"question_text": normalize_string_for_comparison(name_question_normalized)}
+                {
+                    "question_text": Collate(
+                        Value(name_question_normalized),
+                        settings.DB_COLLATION,
+                    )
+                }
             )
 
         # If there are categories, add it to query
@@ -217,7 +238,7 @@ class DataImporter:
             represented_variable = RepresentedVariable.objects.create(
                 conceptual_var=conceptual_var,
                 question_text=name_question_normalized,
-                internal_label=variable_label,
+                internal_label=variable_label_normalized,
                 is_unique=not bool(name_question_normalized),
             )
             represented_variable_created = True

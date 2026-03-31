@@ -77,7 +77,9 @@ class Category(models.Model):
     """careful when editing a category, most of the time we should be creating a new one instead"""
 
     code = models.CharField(max_length=255)
-    category_label = models.TextField(null=True)
+    category_label = models.TextField(
+        null=True, db_collation="request_ddi_case_accent_insensitive_collation"
+    )
     missing = models.BooleanField(default=False)
 
     def __str__(self):
@@ -106,9 +108,11 @@ class RepresentedVariable(models.Model):
     # hidden = models.BooleanField(default=True)  # probablement a changer pour avoir plus de niveau
 
     conceptual_var = models.ForeignKey(ConceptualVariable, on_delete=models.CASCADE)
-    question_text = models.TextField(null=True)  # uniquement pour les questions, sinon a none
+    question_text = models.TextField(
+        null=True, db_collation="request_ddi_case_accent_insensitive_collation"
+    )  # uniquement pour les questions, sinon a none
     internal_label = models.CharField(
-        null=True, max_length=510
+        null=True, max_length=510, db_collation="request_ddi_case_accent_insensitive_collation"
     )  # init a variable_label le plus recent?
 
     categories = models.ManyToManyField(

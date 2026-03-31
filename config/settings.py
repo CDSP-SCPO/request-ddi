@@ -40,6 +40,9 @@ DATABASES = {
     }
 }
 
+# In order to compare strings ignoring accents and cases, we define a new collation
+DB_COLLATION = "request_ddi_case_accent_insensitive_collation"
+
 # ---------------------------------------------------------
 # ELASTICSEARCH
 # ---------------------------------------------------------

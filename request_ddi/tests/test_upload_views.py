@@ -39,7 +39,8 @@ class BaseUploadTest(TestCase):
 
 
 class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
-    def test_form_valid_with_valid_csv_and_xml(self):
+    @patch("request_ddi.views.upload_views.download_xml_file")
+    def test_form_valid_with_valid_csv_and_xml(self, mock_download):
         self.login()
         csv_content = (
             "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
@@ -64,21 +65,10 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         </root>
         """
 
-        s = self.client.session
-        s.update(
-            {
-                "xml_contents": {
-                    "1234/test": xml_content,
-                }
-            }
-        )
-        s.save()
+        mock_download.return_value = xml_content
         response = self.client.post(
             reverse("request_ddi:upload_csv_collection"),
-            {
-                "csv_file": csv_file,
-                "delimiter": ",",
-            },
+            {"csv_file": csv_file, "delimiter": ","},
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
@@ -127,41 +117,13 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
-        xml_content = """
-        <root>
-            <IDNo agency="DataCite">doi:1234/test</IDNo>
-            <var name="Q1">
-                <labl>Test</labl>
-                <qstn><qstnLit>Test question</qstnLit></qstn>
-                <catgry>
-                    <catValu>1</catValu>
-                    <labl>Test</labl>
-                    <catStat type="freq">1</catStat>
-                </catgry>
-            </var>
-        </root>
-        """
-
-        s = self.client.session
-        s.update(
-            {
-                "xml_contents": {
-                    "1234/test": xml_content,
-                }
-            }
-        )
-        s.save()
         response = self.client.post(
             reverse("request_ddi:upload_csv_collection"),
-            {
-                "csv_file": csv_file,
-                "delimiter": ",",
-            },
+            {"csv_file": csv_file, "delimiter": ","},
         )
-
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 207)
         json_response = response.json()
-        self.assertEqual(json_response["status"], "success")
+        self.assertEqual(json_response["status"], "partial_success")
         self.assertEqual(Survey.objects.filter(external_ref="doi:1234/test").count(), 1)
 
     def test_form_invalid_with_invalid_doi_format(self):
@@ -233,7 +195,8 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         json_response = response.json()
         self.assertEqual(json_response["status"], "error")
 
-    def test_csv_with_multiple_surveys_and_xmls(self):
+    @patch("request_ddi.views.upload_views.download_xml_file")
+    def test_csv_with_multiple_surveys_and_xmls(self, mock_download):
         """Teste l'import de plusieurs surveys avec leurs XMLs respectifs"""
         self.login()
 
@@ -241,9 +204,9 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
             "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
-            "France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
+            "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
             "Distrib,Collection,Subcollection,doi:5678/test,Survey 2,fr,Author,Producer,2021,"
-            "France,,Individual,Contact,2021-01-01,https://example.com/xml/\n"
+            "France,,Individual,Contact,2021-01-01,https://example.com/xml/5678\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
@@ -277,27 +240,14 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         </root>
         """
 
-        s = self.client.session
-        s.update(
-            {
-                "xml_contents": {
-                    "1234/test": xml_content_1,
-                    "5678/test": xml_content_2,
-                }
-            }
-        )
-        s.save()
+        mock_download.side_effect = lambda url: xml_content_1 if "1234" in url else xml_content_2
+
         response = self.client.post(
             reverse("request_ddi:upload_csv_collection"),
-            {
-                "csv_file": csv_file,
-                "delimiter": ",",
-            },
+            {"csv_file": csv_file, "delimiter": ","},
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
-
-        # Vérifier que les deux surveys ont été créées
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
         self.assertTrue(Survey.objects.filter(external_ref="doi:5678/test").exists())
 
@@ -340,32 +290,36 @@ class CheckDuplicatesTest(BaseUploadTest):
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
-        response = self.client.post(reverse("request_ddi:check_duplicates"), {"csv_file": csv_file})
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(
+            reverse("request_ddi:upload_csv_collection"), {"csv_file": csv_file}
+        )
+        self.assertEqual(response.status_code, 207)
         json_response = response.json()
-        self.assertEqual(json_response["status"], "duplicates")
-        self.assertIn("doi:1234/test", json_response["duplicates"])
+        self.assertEqual(json_response["status"], "partial_success")
+        self.assertTrue(any("doi:1234/test" in e for e in json_response["errors"]))
 
     @patch("request_ddi.views.upload_views.download_xml_file")
     def test_check_duplicates_with_no_duplicate(self, mock_download):
         self.login()
 
         mock_download.return_value = """
-        <root>
-            <var name="Q2"/>
-        </root>
-        """
+            <root>
+                <IDNo agency="DataCite">doi:9999/test</IDNo>
+                <var name="Q1"/>
+            </root>
+            """
 
         csv_content = (
             "distributor;collection;sous-collection;doi;title;xml_lang;author;producer;start_date;"
             "geographic_coverage;geographic_unit;unit_of_analysis;contact;date_last_version;url\n"
-            "Distrib;Collection;Subcollection;doi:1234/test;Survey Test;fr;Author;Producer;2020;"
-            "France;;Individual;Contact;2020-01-01;https://example.com/xml/;\n"
+            "Distrib;Collection;Subcollection;doi:9999/test;Survey Test;fr;Author;Producer;2020;"
+            "France;;Individual;Contact;2020-01-01;https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
-
-        response = self.client.post(reverse("request_ddi:check_duplicates"), {"csv_file": csv_file})
+        response = self.client.post(
+            reverse("request_ddi:upload_csv_collection"), {"csv_file": csv_file, "delimiter": ";"}
+        )
         self.assertEqual(response.status_code, 200)
         json_response = response.json()
-        self.assertEqual(json_response["status"], "ok")
-        self.assertIn("xml_contents", self.client.session)
+        self.assertEqual(json_response["status"], "success")
+        self.assertEqual(Survey.objects.filter(external_ref="doi:9999/test").count(), 1)

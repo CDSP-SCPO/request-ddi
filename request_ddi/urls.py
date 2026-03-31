@@ -12,7 +12,7 @@ from .views.search_views import (
 )
 
 # -- REQUEST_DDI (LOCAL)
-from .views.upload_views import CSVUploadViewCollection, check_duplicates
+from .views.upload_views import CSVUploadViewCollection
 
 API_VERSION = getattr(settings, "API_VERSION", "v1")
 
@@ -25,7 +25,6 @@ urlpatterns = [
         CSVUploadViewCollection.as_view(),
         name="upload_csv_collection",
     ),
-    path("check-duplicates/", check_duplicates, name="check_duplicates"),
     # === Recherche de variables représentées ===
     path("", RepresentedVariableSearchView.as_view(), name="representedvariable_search"),
     path("search-results/", search_results, name="search_results"),

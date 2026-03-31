@@ -8,8 +8,6 @@ from datetime import datetime
 import requests
 
 # -- THIRDPARTY
-from bs4 import BeautifulSoup
-
 # -- DJANGO
 from django import forms
 from django.db import IntegrityError, transaction
@@ -18,14 +16,12 @@ from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 
 # -- LOCAL
 from request_ddi.core.data_importer import DataImporter
 from request_ddi.core.exceptions import DataImportError, PartialDataImportError
 from request_ddi.core.forms import CSVUploadFormCollection
 from request_ddi.core.models import (
-    BindingSurveyRepresentedVariable,
     Collection,
     Distributor,
     Subcollection,
@@ -34,7 +30,7 @@ from request_ddi.core.models import (
 from request_ddi.core.parser import XMLParser
 from request_ddi.utils.timer import log_time
 from request_ddi.utils.timing import timed
-from request_ddi.views.mixins import StaffRequiredMixin, staff_required_json
+from request_ddi.views.mixins import StaffRequiredMixin
 
 logger = logging.getLogger(__name__)
 perf_logger = logging.getLogger("performance")
@@ -76,10 +72,34 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
     def form_valid(self, form):  # noqa: PLR0911
         """Traite le CSV et les XMLs associés - RETOURNE TOUJOURS JSON"""
         try:
+            force_import = self.request.POST.get("force_import") == "on"
             data = self.get_data(form)
             delimiter = form.cleaned_data["delimiter"]
             survey_datas = list(self.convert_data(data, delimiter))
-            num_surveys, num_variables, num_bindings = self.process_data(survey_datas, self.request)
+            xml_contents = self.load_xml_contents(survey_datas)
+
+            duplicates = set()
+            if not force_import:
+                duplicates = self.check_duplicates(survey_datas)
+
+            num_surveys, num_variables, num_bindings, skipped_dois = self.process_data(
+                survey_datas, xml_contents, skip_dois=duplicates
+            )
+            if skipped_dois:
+                all_skipped = num_surveys == 0 and num_variables == 0
+                raise PartialDataImportError(
+                    "Toutes les enquêtes existent déjà en base, aucun import effectué."
+                    if all_skipped
+                    else "Certaines enquêtes ont été ignorées car elles existent déjà.",
+                    data=[
+                        {
+                            "num_surveys": num_surveys,
+                            "total_variables": num_variables,
+                            "total_bindings": num_bindings,
+                        }
+                    ],
+                    errors=[f"Doublon ignoré : {doi}" for doi in skipped_dois],
+                )
             return JsonResponse(
                 {
                     "status": "success",
@@ -93,18 +113,6 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                     ],
                 }
             )
-
-        # except forms.ValidationError as ve:
-        #     logger.error("Validation error: %s", ve.messages)
-        #     return JsonResponse(
-        #         {
-        #             "status": "error",
-        #             "message": " | ".join(ve.messages)
-        #             if isinstance(ve.messages, list)
-        #             else str(ve.messages),
-        #         },
-        #         status=400,
-        #     )
         except PartialDataImportError as pe:
             return JsonResponse(
                 {
@@ -180,15 +188,16 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
         match = re.search(r"\(external_ref\)=\((.*?)\)", error_message)
         return match.group(1) if match else "inconnu"
 
-    def process_data(self, survey_datas, request):  # noqa: PLR0915, PLR0912, C901
+    def process_data(self, survey_datas, xml_contents, skip_dois=None):  # noqa: PLR0915, PLR0912, C901
+        skip_dois = skip_dois or set()
         importer = DataImporter()
         xml_parser = XMLParser()
         errors = []
         successful_surveys = []
+        skipped_surveys = []
         num_surveys = 0
         total_variables = 0
         total_bindings = 0
-        xml_contents = request.session.get("xml_contents", {})
 
         for line_number, row in enumerate(survey_datas, start=1):
             try:
@@ -196,6 +205,9 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                 if not survey_doi.startswith("doi:"):
                     msg = f"Le DOI à la ligne {line_number} n'est pas dans le bon format"
                     raise ValueError(msg)
+                if survey_doi in skip_dois:
+                    skipped_surveys.append(survey_doi)
+                    continue
                 survey_name = row["title"]
                 survey_language = row["xml_lang"]
                 survey_author = row["author"]
@@ -307,9 +319,6 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                     f"Ligne {line_number}, erreur pour l'enquête de DOI {survey_doi} : {e}"
                 )
 
-        if "xml_contents" in request.session:
-            del request.session["xml_contents"]
-
         if errors:
             if successful_surveys:
                 msg = "Certaines enquêtes n'ont pas pu être importées"
@@ -332,100 +341,36 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                     errors=errors,
                 )
 
-        return num_surveys, total_variables, total_bindings
+        return num_surveys, total_variables, total_bindings, skipped_surveys
 
+    def check_duplicates(self, survey_datas):
+        """Vérifie si des enquêtes du CSV existent déjà en base."""
+        duplicates = []
+        for row in survey_datas:
+            survey_doi = row.get("doi", "").strip()
+            if not survey_doi.startswith("doi:"):
+                continue
+            try:
+                if Survey.objects.filter(external_ref=survey_doi).exists():
+                    duplicates.append(survey_doi)
+            except Exception as e:
+                logger.error("Erreur récupération XML %s: %s", survey_doi, e)
+                continue
+        return duplicates
 
-@log_time
-@csrf_exempt
-@staff_required_json
-def check_duplicates(request):  # noqa: C901
-    if request.method != "POST":
-        return JsonResponse({"error": "Requête invalide"}, status=400)
-
-    file = request.FILES.get("csv_file")
-    if not file:
-        return JsonResponse({"error": "Aucun fichier CSV fourni"}, status=400)
-
-    if not file.name.endswith(".csv"):
-        return JsonResponse(
-            {"error": "Format de fichier non supporté (CSV attendu)"},
-            status=400,
-        )
-
-    decoded_file = file.read().decode("utf-8", errors="replace").splitlines()
-    sample = "\n".join(decoded_file[:2])  # Prendre les 2 premières lignes
-    sniffer = csv.Sniffer()
-    delimiter = sniffer.sniff(sample).delimiter
-    reader = csv.DictReader(decoded_file, delimiter=delimiter)
-    duplicates = []
-    xml_contents = {}
-
-    for row in reader:
-        survey_doi = row.get("doi", "").strip()
-        survey_url = row.get("url", "").strip()
-        if not survey_doi.startswith("doi:"):
-            continue
-
-        if not survey_url:
-            msg = f"L'URL est manquante pour le DOI {survey_doi}"
-            raise ValueError(msg)
-
-        doi_formatted = survey_doi.replace("doi:", "", 1)
-
-        try:
-            xml_content = download_xml_file(survey_url)
-            if not xml_content:
-                continue  # pas de XML, on skip
-            xml_contents[doi_formatted] = xml_content
-
-            soup = BeautifulSoup(xml_content, "xml")
-            variable_names = []
-            for var in soup.find_all("var"):
-                variable_name = var.get("name", "").strip()
-                if not variable_name:
-                    continue
-                variable_names.append(variable_name)
-
-            bindings_exists = BindingSurveyRepresentedVariable.objects.filter(
-                variable_name__in=variable_names, survey__external_ref__in=[survey_doi]
-            ).exists()
-            if bindings_exists:
-                duplicates.append(survey_doi)
-        except Exception as e:
-            logger.error("Erreur récupération XML %s: %s", survey_doi, e)
-            continue
-    request.session["xml_contents"] = xml_contents
-    if duplicates:
-        return JsonResponse(
-            {
-                "status": "duplicates",
-                "duplicates": duplicates,
-            }
-        )
-
-    return JsonResponse({"status": "ok"})
-
-
-# def find_xml_file_id(doi):
-#     url = "https://data.sciencespo.fr/api/datasets/:persistentId"
-#     params = {"persistentId": f"doi:{doi}"}
-
-#     r = requests.get(url, params=params, timeout=30)
-#     r.raise_for_status()
-
-#     files = r.json()["data"]["latestVersion"]["files"]
-
-#     for f in files:
-#         df = f["dataFile"]
-
-#         if (
-#             df.get("contentType") == "application/xml"
-#             or df.get("originalFileFormat", "").lower() == "ddi"
-#             or df.get("filename", "").lower().endswith(".xml")
-#         ):
-#             return df["id"]
-
-#     return None
+    def load_xml_contents(self, survey_datas):
+        xml_contents = {}
+        for row in survey_datas:
+            survey_doi = row.get("doi", "").strip()
+            doi_formatted = survey_doi.replace("doi:", "", 1)
+            survey_url = row.get("url", "").strip()
+            if not survey_url:
+                continue
+            try:
+                xml_contents[doi_formatted] = download_xml_file(survey_url)
+            except Exception as e:
+                logger.error("Erreur téléchargement XML %s: %s", survey_doi, e)
+        return xml_contents
 
 
 def download_xml_file(survey_url):

@@ -32,4 +32,4 @@ function initQuestionDetailPage() {
 document.addEventListener("DOMContentLoaded", initQuestionDetailPage);
 
 // 👉 On rend la fonction accessible au HTML (onclick, etc.)
-document.getElementsByClassName("export-access-container")[0].addEventListener("click", exportMetadata);
+document.getElementsByClassName("export-button")[0].addEventListener("click", exportMetadata);

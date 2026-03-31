@@ -79,6 +79,12 @@
                             <label for="csv_file">Sélectionnez un fichier CSV :</label>
                             <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv">
                         </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="force_import" id="force_import" class="form-check-input">
+                            <label class="form-check-label" for="force_import">
+                                Ignorer les doublons et mettre à jour les variables
+                            </label>
+                        </div>
                         <button type="submit" class="btn btn-primary">Importer le fichier CSV</button>
                     </form>
                 </div>

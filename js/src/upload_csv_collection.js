@@ -5,8 +5,6 @@ function initCsvUploadCollection() {
   if (!csvForm) return;
 
   const overlay = document.getElementById("overlay");
-
-  const checkDuplicatesUrl = window.requestDdiData.checkDuplicatesUrl; // <-- récupère l'URL ici
   
   csvForm.addEventListener("submit", function(event) {
     event.preventDefault();  // Prevent the default form submission
@@ -21,44 +19,51 @@ function initCsvUploadCollection() {
       });
       return;
     }
-
     const formData = new FormData(csvForm);
-    const csrfToken = csvForm.querySelector("[name=csrfmiddlewaretoken]").value;
     overlay.classList.add("show");
 
-    fetch(checkDuplicatesUrl, {
+    fetch(csvForm.action, {
       method: "POST",
       body: formData
     })
       .then(response => response.json())
       .then(data => {
+        overlay.classList.remove("show");
         if (data.status === "duplicates") {
-          overlay.classList.remove("show");
           Swal.fire({
             title: "Doublons détectés",
             html: formatDuplicatesHtml(data.duplicates),
             icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Mettre à jour",
-            cancelButtonText: "Annuler",
-          }).then(result => {
-            overlay.classList.remove("show");
-
-            if (result.isConfirmed) {
-              $("#csvUploadModal").modal("hide");
-              $("#csvUploadModal").one("hidden.bs.modal", function () {
-                overlay.classList.add("show");
-              });
-              submitFinalImport(this, formData, overlay, csrfToken)
-            }
           });
-        } else {
-          $("#csvUploadModal").modal("hide");
-
-          $("#csvUploadModal").one("hidden.bs.modal", function () {
-            overlay.classList.add("show");
+        } else if (data.status === "success") {
+          Swal.fire({ icon: "success", title: "Succès", text: data.message })
+            .then(() => location.reload());
+        } else if (data.status === "partial_success") {
+          const allSkipped = data.data[0].num_surveys === 0 && data.data[0].total_variables === 0;
+          const skippedErrors = data.errors?.filter(e => e.startsWith("Doublon ignoré")) ?? [];
+          const otherErrors = data.errors?.filter(e => !e.startsWith("Doublon ignoré")) ?? [];
+          const successfulSurveys = data.data[0].successful_surveys ?? [];
+          Swal.fire({
+            icon: "warning",
+            title: allSkipped ? "Aucun import effectué" : "Import partiel",
+            html: `
+              <strong>${data.message}</strong><br><br>
+              ${successfulSurveys.length > 0 ? `<strong>Enquêtes importées :</strong> ${successfulSurveys.join(", ")}<br><br>` : ""}
+              <strong> ${data.data[0].num_surveys} enquête(s), ${data.data[0].total_variables} variable(s), ${data.data[0].total_bindings} binding(s) créé(s).<br><br></strong>
+              ${skippedErrors.length > 0 ? `<strong>⚠️ Doublons ignorés (cochez "Ignorer les doublons" pour forcer l'import) :</strong><br>${skippedErrors.map(e => e.replace("Doublon ignoré : ", "")).join("<br>")}<br><br>` : ""}
+              ${otherErrors.length > 0 ? `<strong>Erreurs :</strong><br>${otherErrors.join("<br>")}` : ""}
+            `,
           });
-          submitFinalImport(this, formData, overlay, csrfToken)
+        }
+        else {
+          $("#csvUploadModal").off("hidden.bs.modal");
+          overlay.classList.remove("show");
+          const errorDetails = data.errors?.join("<br>") ?? data.message;
+          Swal.fire({
+            icon: "error",
+            title: "Erreur",
+            html: `<strong>${data.message}</strong><br><br><strong>Erreurs :</strong><br>${errorDetails}`,
+          });
         }
       })
     .catch((err) => { // eslint-disable-line
@@ -66,60 +71,10 @@ function initCsvUploadCollection() {
         Swal.fire({
           icon: "error",
           title: "Erreur",
-          text: "Impossible de vérifier les doublons."
+          text: `Impossible de vérifier les doublons : ${err}`
         });
-        overlay.classList.remove("show");
       });
   });
-}
-
-function submitFinalImport(csvForm, formData, overlay, csrfToken) {
-  fetch(csvForm.action + "?force_update=true", {
-    method: "POST",
-    body: formData,
-    headers: {
-      "X-CSRFToken": csrfToken,
-    },
-  })
-    .then(response => response.json())
-    .then(data => {
-      overlay.classList.remove("show");
-      if (data.status === "success") {
-        Swal.fire({
-          icon: "success",
-          title: "Succès",
-          text: data.message,
-        }).then(() => {
-          $("#csvUploadModal").modal("hide");
-          location.reload();
-        });
-      } else if (data.status === "partial_success") {
-        Swal.fire({
-          icon: "warning",
-          title: "Import partiel",
-          html: `
-            <strong>${data.message}</strong><br><br>
-            <strong>Enquêtes importées :</strong> ${data.data[0].successful_surveys.join(", ")}<br><br>
-            <strong> ${data.data[0].num_surveys} enquête(s), ${data.data[0].total_variables} variable(s), ${data.data[0].total_bindings} binding(s) créé(s).<br><br>
-            <strong>Erreurs :</strong><br>${data.errors.join("<br>")}
-            `,
-        });
-      } else {
-        $("#csvUploadModal").off("hidden.bs.modal");
-        overlay.classList.remove("show");
-        const errorDetails = data.errors?.join("<br>") ?? data.message;
-        Swal.fire({
-          icon: "error",
-          title: "Erreur",
-          html: `<strong>${data.message}</strong><br><br><strong>Erreurs :</strong><br>${errorDetails}`,
-        });
-      }
-    })
-    .catch(error => {
-      overlay.classList.remove("show");
-      Swal.fire({ icon: "error", title: "Erreur réseau", text: error.message });
-
-    });
 }
 
 function formatDuplicatesHtml(duplicates) {
@@ -134,3 +89,4 @@ function formatDuplicatesHtml(duplicates) {
 
 // 👉 Comme avant
 document.addEventListener("DOMContentLoaded", initCsvUploadCollection);
+
