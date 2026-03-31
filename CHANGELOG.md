@@ -2,6 +2,18 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## v1.1.0
+
+([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/0febdad6377b7bf627010a5ed81371bff1f9a011...None?from_project_id=766&straight=false))
+
+### New features added
+
+- feat: :sparkles: Join the check duplicates and the import process + test [!461](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/461) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+
+### [Contributors to this release](https://mahendrapaipuri.gitlab.io/gitlab-activity/usage#contributors-list)
+
+[@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon) | [@william.feraux](https://gitlab.sciences-po.fr/william.feraux) | [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri)
+
 ## v1.1.0-rc.1
 
 ([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/3fa8c1d63af4676680be285c6e9d8adb56d0f510...None?from_project_id=766&straight=false))
