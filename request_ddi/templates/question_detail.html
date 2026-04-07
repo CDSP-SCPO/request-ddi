@@ -139,11 +139,11 @@
                                             <div class="text-decoration-none card-link">
                                                 <div class="card-question-detail h-100">
                                                     <div class="custom-title-2">
-                                                        <div class="title-question" type="button"
-                                                             onclick="window.location.href='{% url 'request_ddi:question_detail' question.id %}'">
+                                                        <a class="title-question link-no-style"
+                                                             href="{% url 'request_ddi:question_detail' question.id %}?{{ search_params }}">
                                                             {% trans "Enquête : " %}<span
                                                                 class="ft-600">{{ question.survey }}</span>
-                                                        </div>
+                                                        </a>
                                                         <div class="">{% trans "Nom de la variable : " %}<span
                                                                 class="ft-600">{{ question.variable_name }}</span></div>
                                                     </div>
@@ -206,9 +206,9 @@
                                             <div class="text-decoration-none card-link">
                                                 <div class="card-question-detail h-100">
                                                     <div class="custom-title-2">
-                                                        <div class="title-question" type="button"
-                                                             onclick="window.location.href='{% url 'request_ddi:question_detail' question.id %}'">{% trans "Enquête : " %}<span
-                                                                class="ft-600">{{ question.survey }}</span></div>
+                                                        <a class="title-question link-no-style"
+                                                             href="{% url 'request_ddi:question_detail' question.id %}?{{ search_params }}">{% trans "Enquête : " %}<span
+                                                                class="ft-600">{{ question.survey }}</span></a>
                                                         <div>{% trans "Nom de la variable : " %}<span
                                                                 class="ft-600">{{ question.variable_name }}</span></div>
                                                     </div>

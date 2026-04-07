@@ -341,6 +341,7 @@
 
 .title-question:hover {
     text-decoration: underline;
+    color:#1F1F1F!important
 }
 
 .container-button-card{
@@ -370,3 +371,7 @@
     z-index: 1;
 }
 
+.link-no-style {
+    text-decoration: none;
+    color: inherit;
+}
