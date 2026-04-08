@@ -214,7 +214,7 @@
                                                     </div>
                                                     <div class="container-button-card">
                                                 <span type="button" id="toggle-categories"
-                                                      onclick="toggleCategories('categories-{{ question.id }}')"
+                                                      onclick="window.requestDdiJsHelpers.toggleCategories(this, 'categories-{{ question.id }}')"
                                                       class="button-card button-modalities-card"
                                                       onmouseover="this.querySelector('.icon-modalites').src='{% static 'svg/icons/modalites_green.svg' %}'; this.querySelector('.icon-caret').src='{% static 'svg/buttons/caret_down_green.svg' %}'"
                                                       onmouseout="this.querySelector('.icon-modalites').src='{% static 'svg/icons/modalites.svg' %}'; this.querySelector('.icon-caret').src='{% static 'svg/buttons/caret_down.svg' %}'">

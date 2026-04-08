@@ -1,5 +1,7 @@
 import $ from "jquery";
 
+import { toggleCategories } from "./search_results/utils.js";
+
 function initPopovers() {
   let $currentPopover = null;
 
@@ -49,3 +51,6 @@ function initPopovers() {
 }
 
 document.addEventListener("DOMContentLoaded", initPopovers);
+
+// Pour les onclick dans le HTML généré par DataTables
+window.requestDdiJsHelpers = {"toggleCategories": toggleCategories};

@@ -3,6 +3,7 @@ import { filterState, updateFiltersDisplay, updateFilterCounts } from "./filters
 import { updateSubcollections, updateSurveys } from "./filtersAPI.js";
 import { loadDecades } from "./decades.js";
 import { updateURLWithFilters } from "./events.js";
+import { clearCache, resetCurrentLimit } from "./utils.js";
 
 export async function handleFilterChange(filterType, filterValue) {
   selectedIds.clear();

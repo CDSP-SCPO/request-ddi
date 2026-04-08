@@ -29,7 +29,7 @@ keywords = [
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Framework :: Django",
-  "Framework :: Django :: 5",
+  "Framework :: Django :: 6",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
   "Intended Audience :: System Administrators",

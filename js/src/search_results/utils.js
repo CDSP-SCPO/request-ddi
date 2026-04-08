@@ -85,6 +85,3 @@ export function updateCheckboxes() {
 export function updateFilters() {
   $("#survey-table").DataTable().ajax.reload();
 }
-
-// Pour les onclick dans le HTML généré par DataTables
-window.toggleCategories = toggleCategories;

@@ -107,7 +107,7 @@ export function initializeDataTable() {
                         </div>
                         <div class="custom-card-second-part">
                             <div class="container-buttons-card">
-                                <span type="button" id="toggle-categories" onclick="window.toggleCategories(this, 'categories-${row.id}')" class="button-card button-modalities-card">
+                                <span type="button" id="toggle-categories" onclick="window.requestDdiJsHelpers.toggleCategories(this, 'categories-${row.id}')" class="button-card button-modalities-card">
                                     <img src="/static/svg/icons/modalites.svg" alt="Modalités" class="icon-modalites">
                                     <span>${translations.modalites}</span>
                                     ${caretIcon}
