@@ -3,7 +3,7 @@ import logging
 import time
 
 from django.conf import settings
-from django.db.models import Count, Value
+from django.db.models import Value
 from django.db.models.functions import Collate
 
 from request_ddi.utils.normalize_string import (
@@ -102,7 +102,9 @@ class DataImporter:
 
             # Get or create RepresentedVariable which is second most primitive model
             represented_variable, represented_variable_created = (
-                self.get_or_create_represented_variable(question_text, variable_label, categories)
+                self.get_or_create_represented_variable(
+                    question_text, variable_name, variable_label, categories
+                )
             )
 
             # If no represented variable created, ignore
@@ -170,18 +172,15 @@ class DataImporter:
                 stats.append(stat)
         return categories, stats
 
-    def get_or_create_represented_variable(self, question_text, variable_label, categories):
-        represented_variable_created = False
-
+    def get_or_create_represented_variable(
+        self, question_text, variable_name, variable_label, categories
+    ):
         # Get normalized question text and variable label
         name_question_normalized = normalize_string_for_database(question_text)
         variable_label_normalized = normalize_string_for_database(variable_label)
 
         # Get list of categories IDs
         category_ids = [c.id for c in categories]
-
-        # Initialise query dict
-        query = {}
 
         # Assemble query variables
         # ALWAYS use the custom case accent insensitive collation that we defined
@@ -200,66 +199,65 @@ class DataImporter:
         #         }
         #     )
 
-        # If question_text is not empty add it to query
-        if name_question_normalized:
-            query.update(
-                {
-                    "question_text": Collate(
-                        Value(name_question_normalized),
-                        settings.DB_COLLATION,
-                    )
-                }
-            )
-
-        # If there are categories, add it to query
-        if category_ids:
-            query.update({"categories__in": category_ids})
-
-        # If query is empty, ignore this variable
-        if not query:
+        # If there is no question text and categories, ignore that variable
+        if not name_question_normalized and not category_ids:
             return None, False
 
-        # Now get a represented variable based on question text, categories and internal_label
-        # The following query returns the represented variables with exactly same categories
-        # as in category_ids.
-        # Without this query, we will get ALL the represented variables where category_ids
-        # partially present.
-        represented_variables = (
-            RepresentedVariable.objects.filter(**query)
-            .annotate(num_categories=Count("categories"))
-            .filter(num_categories=len(category_ids))
-        )
+        # Now get all represented variables that have the same question text. The
+        # following query will return all the represented variables that have same
+        # question text but they might have different categories. These will be treated
+        # as similar variables.
+        #
+        # If there is no question text, check if there are binding variables that have
+        # same variable name
+        if name_question_normalized:
+            similar_represented_variables = RepresentedVariable.objects.filter(
+                question_text=Collate(
+                    Value(name_question_normalized),
+                    settings.DB_COLLATION,
+                )
+            )
+        elif variable_name:
+            similar_represented_variables = [
+                RepresentedVariable.objects.get(id=i)
+                for i in BindingSurveyRepresentedVariable.objects.filter(
+                    variable_name=variable_name
+                ).values_list("variable", flat=True)
+            ]
+        else:
+            similar_represented_variables = []
 
-        represented_variable = None
+        # Create a set of categories for comparison
         category_ids_set = set(category_ids)
 
-        # Even after filtering categories based on count, we might end up in a situation
-        # where our queried categories are [1, 2] and found represented variable categories
-        # are [2, 3]. As the length of categories in both cases is 2, they will be matched
-        # and returned. To avoid this case, we finally compare the category IDs of queried
-        # variable and found variables and break the loop when IDs are matched.
-        for rvar in represented_variables:
+        # Now check if the found similar represented variables have any "exact" match
+        # which means comparing categories as well.
+        # If found, return there is noting to do.
+        for rvar in similar_represented_variables:
             if set(rvar.categories.all().values_list("id", flat=True)) == category_ids_set:
-                represented_variable = rvar
-                break
+                return rvar, False
 
-        # If no represented variable found, create one
-        # Set is_unique based on the existence of question text
-        if not represented_variable:
+        # If no exact represented variable found, create a new one.
+        # If there are similar represented variables found, DO NOT CREATE new concept and
+        # use the concept of similar represented variables
+        if len(similar_represented_variables) > 0:
+            conceptual_var = similar_represented_variables[0].conceptual_var
+        else:
             conceptual_var = ConceptualVariable.objects.create(
                 is_unique=not bool(name_question_normalized)
             )
-            represented_variable = RepresentedVariable.objects.create(
-                conceptual_var=conceptual_var,
-                question_text=name_question_normalized,
-                internal_label=variable_label_normalized,
-                is_unique=not bool(name_question_normalized),
-            )
-            represented_variable_created = True
 
-        # ALWAYS update the categories of the existant or created represented variable
+        # Create new represented variable
+        represented_variable = RepresentedVariable.objects.create(
+            conceptual_var=conceptual_var,
+            question_text=name_question_normalized,
+            internal_label=variable_label_normalized,
+            is_unique=not bool(name_question_normalized),
+        )
+
+        # Update the categories of the existant or created represented variable
         represented_variable.categories.set(categories)
-        return represented_variable, represented_variable_created
+        return represented_variable, True
 
     def get_or_create_binding_survey_variable(
         self, survey, variable_name, universe, notes, represented_variable
