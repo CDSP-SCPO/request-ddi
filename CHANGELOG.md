@@ -1,6 +1,24 @@
 # Changelog
 
 <!-- <START NEW CHANGELOG ENTRY> -->
+<!-- <END NEW CHANGELOG ENTRY> -->
+
+## v1.1.1
+
+([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/a99dfc7fc8b6319418cbdb92fd5d767a601de7d2...None?from_project_id=766&straight=false))
+
+### Bugs fixed
+
+- fix: Make sure similar questions are accounted for before creating new concepts [!466](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/466) ([@william.feraux](https://gitlab.sciences-po.fr/william.feraux), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+- fix: :bug: Keep search query on question detail [!465](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/465) ([@william.feraux](https://gitlab.sciences-po.fr/william.feraux), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+
+### Maintenance and upkeep improvements
+
+- fix: Make sure similar questions are accounted for before creating new concepts [!466](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/466) ([@william.feraux](https://gitlab.sciences-po.fr/william.feraux), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+
+### [Contributors to this release](https://mahendrapaipuri.gitlab.io/gitlab-activity/usage#contributors-list)
+
+[@william.feraux](https://gitlab.sciences-po.fr/william.feraux) | [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri)
 
 ## v1.1.0
 
@@ -94,6 +112,3 @@
 ### [Contributors to this release](https://mahendrapaipuri.gitlab.io/gitlab-activity/usage#contributors-list)
 
 [@lucie.marie2](https://gitlab.sciences-po.fr/lucie.marie2) | [@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon) | [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri) | [@william.feraux](https://gitlab.sciences-po.fr/william.feraux)
-
-<!-- <END NEW CHANGELOG ENTRY> -->
-
