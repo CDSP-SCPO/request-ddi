@@ -8,6 +8,10 @@ from django_elasticsearch_dsl.registries import registry
 from elasticsearch.exceptions import NotFoundError
 from elasticsearch.helpers import bulk
 
+from request_ddi.views.utils_views import (
+    validate_search_locations,
+)
+
 # -- REQUEST_DDI (LOCAL)
 from .models import BindingSurveyRepresentedVariable
 
@@ -32,6 +36,7 @@ class BindingSurveyDocument(Document):
     )
     variable = fields.ObjectField(
         properties={
+            "id": fields.IntegerField(),
             "question_text": fields.TextField(analyzer="combined_analyzer"),
             "internal_label": fields.TextField(analyzer="combined_analyzer"),
             "categories": fields.NestedField(
@@ -94,7 +99,7 @@ class BindingSurveyDocument(Document):
             "universe",
         ]
 
-    def update(self, instances, batch_size, **kwargs):
+    def update(self, instances, batch_size=1000, **kwargs):
         """Met à jour des documents dans l'index Elasticsearch."""
         # Uniformiser : transformer en liste si c'est un seul objet
         if isinstance(instances, BindingSurveyRepresentedVariable):
@@ -155,6 +160,7 @@ class BindingSurveyDocument(Document):
                 },
             },
             "variable": {
+                "id": instance.variable.id,
                 "question_text": instance.variable.question_text,
                 "internal_label": instance.variable.internal_label,
                 "categories": categories,
@@ -235,3 +241,172 @@ class BindingSurveyDocument(Document):
                 orphan_id,
                 e,
             )
+
+    @classmethod
+    def search_with_filters(
+        cls,
+        *,
+        query="",
+        search_locations=None,
+        survey_ids=None,
+        collection_ids=None,
+        sub_collection_ids=None,
+        years=None,
+        selected_ids=None,
+    ):
+        search = cls.search()
+        search_locations = validate_search_locations(search_locations or [])
+
+        if query:
+            queries = cls._build_search_location_queries(query, search_locations)
+            if queries:
+                search = search.query("bool", should=queries, minimum_should_match=1)
+
+        if selected_ids:
+            search = search.filter("ids", values=selected_ids)
+
+        if survey_ids:
+            search = search.filter("terms", **{"survey.id": survey_ids})
+
+        if sub_collection_ids:
+            search = search.filter("terms", **{"survey.subcollection.id": sub_collection_ids})
+
+        if collection_ids:
+            search = search.filter(
+                "terms", **{"survey.subcollection.collection_id": collection_ids}
+            )
+
+        if years:
+            search = search.query(
+                "bool",
+                should=[
+                    {
+                        "range": {
+                            "survey.start_date": {"gte": f"{year}-01-01", "lt": f"{year + 1}-01-01"}
+                        }
+                    }
+                    for year in years
+                ],
+                minimum_should_match=1,
+            )
+
+        return search
+
+    @staticmethod
+    def _build_search_location_queries(query: str, search_locations: list[str]) -> list:
+        queries = []
+        terms = query.split()
+
+        for search_location in search_locations:
+            if search_location == "questions":
+                queries += [
+                    {
+                        "match_phrase_prefix": {
+                            "variable.question_text": {"query": query, "boost": 10}
+                        }
+                    },
+                    {
+                        "match": {
+                            "variable.question_text": {
+                                "query": query,
+                                "operator": "and",
+                                "boost": 5,
+                            }
+                        }
+                    },
+                    *[
+                        {
+                            "match": {
+                                "variable.question_text": {
+                                    "query": term,
+                                    "operator": "or",
+                                    "boost": 1,
+                                }
+                            }
+                        }
+                        for term in terms
+                    ],
+                ]
+            elif search_location == "categories":
+                queries.append(
+                    {
+                        "nested": {
+                            "path": "variable.categories",
+                            "query": {
+                                "bool": {
+                                    "should": [
+                                        {
+                                            "match_phrase_prefix": {
+                                                "variable.categories.category_label": {
+                                                    "query": query,
+                                                    "boost": 10,
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "match": {
+                                                "variable.categories.category_label": {
+                                                    "query": query,
+                                                    "operator": "and",
+                                                    "boost": 5,
+                                                }
+                                            }
+                                        },
+                                        *[
+                                            {
+                                                "match": {
+                                                    "variable.categories.category_label": {
+                                                        "query": term,
+                                                        "operator": "or",
+                                                        "boost": 1,
+                                                    }
+                                                }
+                                            }
+                                            for term in terms
+                                        ],
+                                    ],
+                                    "minimum_should_match": 1,
+                                }
+                            },
+                        }
+                    }
+                )
+            elif search_location == "variable_name":
+                queries += [
+                    {"match_phrase_prefix": {"variable_name": {"query": query, "boost": 10}}},
+                    *[
+                        {"match": {"variable_name": {"query": term, "operator": "or", "boost": 5}}}
+                        for term in terms
+                    ],
+                ]
+            elif search_location == "internal_label":
+                queries += [
+                    {
+                        "match_phrase_prefix": {
+                            "variable.internal_label": {"query": query, "boost": 10}
+                        }
+                    },
+                    {
+                        "match": {
+                            "variable.internal_label": {
+                                "query": query,
+                                "operator": "and",
+                                "boost": 5,
+                            }
+                        }
+                    },
+                    *[
+                        {
+                            "match": {
+                                "variable.internal_label": {
+                                    "query": term,
+                                    "operator": "or",
+                                    "boost": 1,
+                                }
+                            }
+                        }
+                        for term in terms
+                    ],
+                ]
+
+        return queries

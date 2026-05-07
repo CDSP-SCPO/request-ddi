@@ -11,12 +11,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView
 
 # -- THIRDPARTY
-from elasticsearch.dsl import Q
-
 # -- LOCAL
 from request_ddi.core.documents import BindingSurveyDocument
 from request_ddi.core.models import Collection, RepresentedVariable, Subcollection, Survey
 from request_ddi.utils.timer import log_time
+from request_ddi.views.utils_views import (
+    ALL_SEARCH_LOCATIONS,
+    validate_search_locations,
+)
 
 from .utils_views import remove_html_tags
 
@@ -49,43 +51,32 @@ class SearchResultsDataView(ListView):
             "search_location" not in self.request.session
             or not self.request.session["search_location"]
         ):
-            self.request.session["search_location"] = [
-                "questions",
-                "categories",
-                "variable_name",
-                "internal_label",
-            ]
+            self.request.session["search_location"] = ALL_SEARCH_LOCATIONS
         return super().dispatch(*args, **kwargs)
 
     def build_filtered_search(self):
-        search_value = self.request.POST.get("q", "").strip().lower()
-        search_value = unescape(search_value)
+        search_value = unescape(self.request.POST.get("q", "").strip().lower())
 
-        search_locations = self.request.POST.getlist(
-            "search_location[]",
-            ["questions", "categories", "variable_name", "internal_label"],
-        )
-        survey_filter = self.request.POST.getlist("survey[]", None)
-        subcollection_filter = self.request.POST.getlist("sub_collections[]", None)
-        collections_filter = self.request.POST.getlist("collections[]", None)
-        years = self.request.POST.getlist("years[]", [])
-
-        survey_filter = [int(survey_id) for survey_id in survey_filter if survey_id.isdigit()]
+        search_locations = validate_search_locations(self.request.POST.getlist("search_location"))
+        survey_filter = [int(i) for i in self.request.POST.getlist("survey") if i.isdigit()]
         subcollection_filter = [
-            int(subcollection_id)
-            for subcollection_id in subcollection_filter
-            if subcollection_id.isdigit()
+            int(i) for i in self.request.POST.getlist("sub_collections") if i.isdigit()
         ]
         collections_filter = [
-            int(collection_id) for collection_id in collections_filter if collection_id.isdigit()
+            int(i) for i in self.request.POST.getlist("collections") if i.isdigit()
         ]
-        years = [int(year) for year in years if year.isdigit()]
-        search = BindingSurveyDocument.search()
+        years = [int(i) for i in self.request.POST.getlist("years") if i.isdigit()]
 
-        if search_value:
-            search = self.apply_search_filters(search, search_value, search_locations)
+        search = BindingSurveyDocument.search_with_filters(
+            query=search_value,
+            search_locations=search_locations,
+            survey_ids=survey_filter,
+            collection_ids=collections_filter,
+            sub_collection_ids=subcollection_filter,
+            years=years,
+        )
 
-        search = (
+        return (
             search.highlight_options(
                 pre_tags=['<mark style="background-color: rgba(255, 70, 78, 0.15);">'],
                 post_tags=["</mark>"],
@@ -98,34 +89,6 @@ class SearchResultsDataView(ListView):
             .highlight("variable.internal_label", fragment_size=10000)
         )
 
-        if survey_filter:
-            search = search.filter("terms", **{"survey.id": survey_filter})
-        elif subcollection_filter:
-            search = search.filter("terms", **{"survey.subcollection.id": subcollection_filter})
-        elif collections_filter:
-            search = search.filter(
-                "terms", **{"survey.subcollection.collection_id": collections_filter}
-            )
-
-        if years:
-            # Construire des filtres de range pour chaque année sélectionnée
-            year_filters = [
-                Q(
-                    "range",
-                    **{
-                        "survey.start_date": {
-                            "gte": f"{year}-01-01",
-                            "lt": f"{year + 1}-01-01",
-                        }
-                    },
-                )
-                for year in years
-            ]
-            # Appliquer les filtres avec un bool should pour les combiner
-            search = search.query("bool", should=year_filters, minimum_should_match=1)
-
-        return search
-
     def get_queryset(self):
         search = self.build_filtered_search()
         start = int(self.request.POST.get("start", 0))
@@ -133,143 +96,6 @@ class SearchResultsDataView(ListView):
 
         response = search[start : start + limit].execute()
         return response
-
-    def apply_search_filters(self, search, search_value, search_locations):
-        queries = []
-        terms = search_value.split()
-
-        for search_location in search_locations:
-            if search_location == "questions":
-                queries.append(
-                    {
-                        "match_phrase_prefix": {
-                            "variable.question_text": {
-                                "query": search_value,
-                                "boost": 10,
-                            }
-                        }
-                    }
-                )
-                queries.append(
-                    {
-                        "match": {
-                            "variable.question_text": {
-                                "query": search_value,
-                                "operator": "and",
-                                "boost": 5,
-                            }
-                        }
-                    }
-                )
-                for term in terms:
-                    queries.append(
-                        {
-                            "match": {
-                                "variable.question_text": {
-                                    "query": term,
-                                    "operator": "or",
-                                    "boost": 1,
-                                }
-                            }
-                        }
-                    )
-            elif search_location == "categories":
-                queries.append(
-                    {
-                        "nested": {
-                            "path": "variable.categories",
-                            "query": {
-                                "bool": {
-                                    "should": [
-                                        {
-                                            "match_phrase_prefix": {
-                                                "variable.categories.category_label": {
-                                                    "query": search_value,
-                                                    "boost": 10,
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "match": {
-                                                "variable.categories.category_label": {
-                                                    "query": search_value,
-                                                    "operator": "and",
-                                                    "boost": 5,
-                                                }
-                                            }
-                                        },
-                                        *[
-                                            {
-                                                "match": {
-                                                    "variable.categories.category_label": {
-                                                        "query": term,
-                                                        "operator": "or",
-                                                        "boost": 1,
-                                                    }
-                                                }
-                                            }
-                                            for term in terms
-                                        ],
-                                    ],
-                                    "minimum_should_match": 1,
-                                }
-                            },
-                        }
-                    }
-                )
-            elif search_location == "variable_name":
-                queries.append(
-                    {"match_phrase_prefix": {"variable_name": {"query": search_value, "boost": 10}}}
-                )
-                for term in terms:
-                    queries.append(
-                        {
-                            "match": {
-                                "variable_name": {
-                                    "query": term,
-                                    "operator": "or",
-                                    "boost": 5,
-                                }
-                            }
-                        }
-                    )
-            elif search_location == "internal_label":
-                queries.append(
-                    {
-                        "match_phrase_prefix": {
-                            "variable.internal_label": {
-                                "query": search_value,
-                                "boost": 10,
-                            }
-                        }
-                    }
-                )
-                queries.append(
-                    {
-                        "match": {
-                            "variable.internal_label": {
-                                "query": search_value,
-                                "operator": "and",
-                                "boost": 5,
-                            }
-                        }
-                    }
-                )
-                for term in terms:
-                    queries.append(
-                        {
-                            "match": {
-                                "variable.internal_label": {
-                                    "query": term,
-                                    "operator": "or",
-                                    "boost": 1,
-                                }
-                            }
-                        }
-                    )
-        if queries:
-            search = search.query("bool", should=queries, minimum_should_match=1)
-        return search
 
     def format_search_results(self, response, search_locations):  # noqa: C901
         data = []
@@ -385,9 +211,10 @@ class SearchResultsDataView(ListView):
             response = self.get_queryset()
             total_records = self.build_filtered_search().count()
             filtered_records = response.hits.total.value
-            search_locations = request.POST.getlist(
-                "search_location[]",
-                ["questions", "categories", "variable_name", "internal_label"],
+            search_locations = validate_search_locations(
+                request.POST.getlist(
+                    "search_location",
+                )
             )
             data = self.format_search_results(response, search_locations)
             return JsonResponse(
@@ -409,17 +236,8 @@ def search_results(request):
     selected_surveys = request.GET.getlist("survey")
     selected_sub_collection = request.GET.getlist("subcollection")
     selected_collection = request.GET.getlist("collection")
-    search_locations = request.GET.getlist("search_location")
+    search_locations = validate_search_locations(request.GET.getlist("search_location"))
     search_query = request.GET.get("q", "")
-
-    # Initialiser search_location avec toutes les options si elle est vide
-    if not search_locations:
-        search_locations = [
-            "questions",
-            "categories",
-            "variable_name",
-            "internal_label",
-        ]
 
     request.session["selected_surveys"] = selected_surveys
     request.session["selected_sub_collection"] = selected_sub_collection

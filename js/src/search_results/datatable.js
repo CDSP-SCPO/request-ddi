@@ -27,6 +27,7 @@ export function initializeDataTable() {
     },
     "ajax": {
       url: `/api/${window.requestDdiData.apiVersion}/search-results/`,
+      traditional: true,
       "type": "POST",
       "async": true,
       "data": function () {
@@ -140,6 +141,7 @@ export function loadInitialData() {
   const table = $("#survey-table").DataTable();
   $.ajax({
     url: `/api/${window.requestDdiData.apiVersion}/search-results/`,
+    traditional: true,
     type: "POST",
     data: {
       start: 0,
