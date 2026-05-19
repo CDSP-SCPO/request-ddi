@@ -60,10 +60,10 @@ class SearchResultsDataView(ListView):
         search_locations = validate_search_locations(self.request.POST.getlist("search_location"))
         survey_filter = [int(i) for i in self.request.POST.getlist("survey") if i.isdigit()]
         subcollection_filter = [
-            int(i) for i in self.request.POST.getlist("sub_collections") if i.isdigit()
+            int(i) for i in self.request.POST.getlist("sub_collection") if i.isdigit()
         ]
         collections_filter = [
-            int(i) for i in self.request.POST.getlist("collections") if i.isdigit()
+            int(i) for i in self.request.POST.getlist("collection") if i.isdigit()
         ]
         years = [int(i) for i in self.request.POST.getlist("years") if i.isdigit()]
 
@@ -234,8 +234,8 @@ class SearchResultsDataView(ListView):
 @method_decorator(log_time, name="dispatch")
 def search_results(request):
     selected_surveys = request.GET.getlist("survey")
-    selected_sub_collection = request.GET.getlist("subcollection")
-    selected_collection = request.GET.getlist("collection")
+    selected_sub_collection = request.GET.getlist("sub_collections")
+    selected_collection = request.GET.getlist("collections")
     search_locations = validate_search_locations(request.GET.getlist("search_location"))
     search_query = request.GET.get("q", "")
 

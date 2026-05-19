@@ -24,7 +24,7 @@ export function attachDynamicCheckboxEvents() {
       let filterType = className.replace("-checkbox", "");
 
       // 🔧 Normalisation pour correspondre aux clés de filterState
-      if (filterType === "subcollection") filterType = "sub_collections";
+      if (filterType === "subcollection") filterType = "sub_collection";
       if (filterType === "survey") filterType = "survey";
 
       const filterValue = checkbox.val();
@@ -32,8 +32,8 @@ export function attachDynamicCheckboxEvents() {
       handleFilterChange(filterType, filterValue);
 
       // 🔁 Dépendances pour les subcollections
-      if (filterType === "sub_collections") {
-        const selectedSubcollections = Array.from(filterState.sub_collections);
+      if (filterType === "sub_collection") {
+        const selectedSubcollections = Array.from(filterState.sub_collection);
         if (selectedSubcollections.length === 0) {
           const allSubcollections = $(".subcollection-checkbox").map(function () {
             return this.value;
@@ -66,15 +66,15 @@ export function attachStaticEventListeners() {
 
       // 🔧 Normalisation pour correspondre aux clés de filterState
       if (filterType === "search-location") filterType = "search_location";
-      if (filterType === "collection") filterType = "collections";
+      if (filterType === "collection") filterType = "collection";
 
       const filterValue = checkbox.val();
 
       handleFilterChange(filterType, filterValue);
 
       // 🔁 Dépendances pour les collections
-      if (filterType === "collections") {
-        const selectedCollections = Array.from(filterState.collections);
+      if (filterType === "collection") {
+        const selectedCollections = Array.from(filterState.collection);
         updateSubcollections(selectedCollections);
       }
       clearCache();
@@ -113,8 +113,8 @@ export function attachStaticEventListeners() {
     const params = {
       q: $("input[name='q']").val(),
       survey: Array.from(filterState.survey),
-      collections: Array.from(filterState.collections),
-      sub_collections: Array.from(filterState.sub_collections),
+      collections: Array.from(filterState.collection),
+      sub_collections: Array.from(filterState.sub_collection),
       search_location: Array.from(filterState.search_location),
       years: Array.from(filterState.years),
     };
@@ -172,13 +172,13 @@ export function updateURLWithFilters() {
   });
 
   // Collections
-  filterState.collections.forEach(value => {
-    params.append("collections", value);
+  filterState.collection.forEach(value => {
+    params.append("collection", value);
   });
 
   // Sous-collections
-  filterState.sub_collections.forEach(value => {
-    params.append("sub_collections", value);
+  filterState.sub_collection.forEach(value => {
+    params.append("sub_collection", value);
   });
 
   // Surveys

@@ -17,25 +17,25 @@ export async function handleFilterChange(filterType, filterValue) {
     filterState[filterType].add(filterValue);
   }
 
-  if (filterType === "collections") {
-    const collectionIds = Array.from(filterState.collections);
+  if (filterType === "collection") {
+    const collectionIds = Array.from(filterState.collection);
     const subIds = await updateSubcollections(collectionIds);
 
     const subIdsForSurveys =
-      filterState.sub_collections.size > 0
-        ? Array.from(filterState.sub_collections)
+      filterState.sub_collection.size > 0
+        ? Array.from(filterState.sub_collection)
         : subIds;
 
     await updateSurveys(subIdsForSurveys);
   }
 
-  if (filterType === "sub_collections") {
-    const subIds = Array.from(filterState.sub_collections);
+  if (filterType === "sub_collection") {
+    const subIds = Array.from(filterState.sub_collection);
     await updateSurveys(subIds);
   }
 
   // 🔁 Recharger les années si les filtres parents changent
-  if (["collections", "sub_collections", "survey"].includes(filterType)) {
+  if (["collection", "sub_collection", "survey"].includes(filterType)) {
     await loadDecades();
   }
 

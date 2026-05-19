@@ -1,11 +1,12 @@
 import { filterState, updateDecadeCheckboxes, updateFiltersDisplay, updateFilterCounts, dataForDecades } from "./filters.js";
 import { updateURLWithFilters } from "./events.js";
 import { clearCache, resetCurrentLimit } from "./utils.js";
+import { loadInitialData } from "./datatable.js";
 
 export function loadDecades() {
   return new Promise((resolve, reject) => {
-    const collections = Array.from(filterState.collections);
-    const subcollections = Array.from(filterState.sub_collections);
+    const collections = Array.from(filterState.collection);
+    const subcollections = Array.from(filterState.sub_collection);
     const surveys = Array.from(filterState.survey);
 
     $.ajax({
@@ -50,9 +51,6 @@ export function loadDecades() {
           decadeDiv.append(checkboxAndLabel, chevronIcon);
           decadesFilter.append(decadeDiv);
 
-          // ✅ Initialiser l'état des checkboxes décennies
-          updateDecadeCheckboxes();
-
           // Coche / décoche toutes les années de la décennie
           decadeCheckbox.on("change", function () {
             if (this.checked) {
@@ -61,13 +59,12 @@ export function loadDecades() {
               yearsInDecade.forEach(y => filterState.years.delete(y));
             }
 
-            updateDecadeCheckboxes();
             updateFiltersDisplay();
             updateFilterCounts();
             updateURLWithFilters();
             clearCache();
             resetCurrentLimit();
-            $("#survey-table").DataTable().ajax.reload();
+            loadInitialData();
           });
 
           // Afficher les années de la décennie
@@ -75,7 +72,7 @@ export function loadDecades() {
             loadYears(decade);
           });
         });
-
+        updateDecadeCheckboxes();
         resolve();
       },
       error: function (err) {
@@ -87,8 +84,8 @@ export function loadDecades() {
 }
 
 function loadYears(decade) {
-  const collections = Array.from(filterState.collections);
-  const subcollections = Array.from(filterState.sub_collections);
+  const collections = Array.from(filterState.collection);
+  const subcollections = Array.from(filterState.sub_collection);
   const surveys = Array.from(filterState.survey);
 
   $.ajax({
@@ -134,7 +131,7 @@ function loadYears(decade) {
           updateURLWithFilters();
           clearCache();
           resetCurrentLimit();
-          $("#survey-table").DataTable().ajax.reload();
+          loadInitialData();
         });
       });
     },

@@ -6,8 +6,8 @@ import { updateURLWithFilters } from "./events.js";
 // ---------------------------
 export const filterState = {
   search_location: new Set(),
-  collections: new Set(),
-  sub_collections: new Set(),
+  collection: new Set(),
+  sub_collection: new Set(),
   survey: new Set(),
   years: new Set(),
 };
@@ -98,8 +98,8 @@ export function updateFiltersDisplay() {
 function getFilterLabel(filterType, value) {
   const filterClassMap = {
     search_location: "search-location-checkbox",
-    collections: "collection-checkbox",
-    sub_collections: "subcollection-checkbox",
+    collection: "collection-checkbox",
+    sub_collection: "subcollection-checkbox",
     survey: "survey-checkbox",
     years: "year-checkbox"
   };

@@ -38,8 +38,8 @@ export function initializeDataTable() {
           limit: currentLimit - cachedLength,
           q: $("input[name='q']").val(),
           survey: getFilterValues("survey-checkbox"),
-          collections: getFilterValues("collection-checkbox"),
-          sub_collections: getFilterValues("subcollection-checkbox"),
+          collection: getFilterValues("collection-checkbox"),
+          sub_collection: getFilterValues("subcollection-checkbox"),
           search_location: getSearchLocation(),
           years: getYearsFilter()
         };
@@ -76,8 +76,8 @@ export function initializeDataTable() {
             searchParams.set("q", searchInput.value);
           }
           getFilterValues("survey-checkbox").forEach(val => searchParams.append("survey", val));
-          getFilterValues("collection-checkbox").forEach(val => searchParams.append("collections", val));
-          getFilterValues("subcollection-checkbox").forEach(val => searchParams.append("sub_collections", val));
+          getFilterValues("collection-checkbox").forEach(val => searchParams.append("collection", val));
+          getFilterValues("subcollection-checkbox").forEach(val => searchParams.append("sub_collection", val));
           getYearsFilter().forEach(val => searchParams.append("years", val));
           getSearchLocation().forEach(val => searchParams.append("search_location", val));
           const url = "/question/" + row.id + "/?" + searchParams.toString();
@@ -148,8 +148,8 @@ export function loadInitialData() {
       limit: getCurrentLimit(),
       q: $("input[name='q']").val(),
       survey: getFilterValues("survey-checkbox"),
-      collections: getFilterValues("collection-checkbox"),
-      sub_collections: getFilterValues("subcollection-checkbox"),
+      collection: getFilterValues("collection-checkbox"),
+      sub_collection: getFilterValues("subcollection-checkbox"),
       search_location: getSearchLocation(),
       years: getYearsFilter()
     },

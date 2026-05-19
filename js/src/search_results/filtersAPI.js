@@ -18,7 +18,7 @@ export async function updateSubcollections(selectedCollections) {
   const subcollectionsFilter = $("#subcollections-filter");
   subcollectionsFilter.empty();
 
-  const availableIds = data.subcollections.map(sc => sc.id);
+  const availableIds = data.subcollections.map(sc => String(sc.id));
 
   data.subcollections.forEach(sc => {
     subcollectionsFilter.append(`
@@ -34,14 +34,14 @@ export async function updateSubcollections(selectedCollections) {
     `);
   });
 
-  filterState.sub_collections.forEach(id => {
+  filterState.sub_collection.forEach(id => {
     if (!availableIds.includes(id)) {
-      filterState.sub_collections.delete(id);
+      filterState.sub_collection.delete(id);
     }
   });
 
   $(".subcollection-checkbox").each(function () {
-    $(this).prop("checked", filterState.sub_collections.has(this.value));
+    $(this).prop("checked", filterState.sub_collection.has(String(this.value)));
   });
 
   attachDynamicCheckboxEvents();
@@ -67,7 +67,7 @@ export async function updateSurveys(selectedSubcollections) {
   const surveysFilter = $("#survey-filter");
   surveysFilter.empty();
 
-  const availableIds = data.surveys.map(s => s.id);
+  const availableIds = data.surveys.map(s => String(s.id));
 
   data.surveys.forEach(s => {
     surveysFilter.append(`
@@ -82,7 +82,6 @@ export async function updateSurveys(selectedSubcollections) {
         </div>
     `);
   });
-
   filterState.survey.forEach(id => {
     if (!availableIds.includes(id)) {
       filterState.survey.delete(id);
@@ -90,7 +89,7 @@ export async function updateSurveys(selectedSubcollections) {
   });
 
   $(".survey-checkbox").each(function () {
-    $(this).prop("checked", filterState.survey.has(this.value));
+    $(this).prop("checked", filterState.survey.has(String(this.value)));
   });
 
   attachDynamicCheckboxEvents();

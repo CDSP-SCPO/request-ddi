@@ -9,26 +9,26 @@ export async function applyFiltersFromURL() {
   const q = urlParams.get("q");
   if (q) $("input[name=\"q\"]").val(q);
 
-  const collections = urlParams.getAll("collections");
-  filterState.collections.clear();
-  collections.forEach(val => filterState.collections.add(val));
+  const collections = urlParams.getAll("collection");
+  filterState.collection.clear();
+  collections.forEach(val => filterState.collection.add(val));
 
   $(".collection-checkbox").each(function() {
-    $(this).prop("checked", filterState.collections.has(this.value));
+    $(this).prop("checked", filterState.collection.has(this.value));
   });
 
-  const subCollections = urlParams.getAll("sub_collections");
-  filterState.sub_collections.clear();
-  subCollections.forEach(val => filterState.sub_collections.add(val));
+  const subCollections = urlParams.getAll("sub_collection");
+  filterState.sub_collection.clear();
+  subCollections.forEach(val => filterState.sub_collection.add(val));
 
-  const collectionIds = filterState.collections.size > 0
-    ? Array.from(filterState.collections)
+  const collectionIds = filterState.collection.size > 0
+    ? Array.from(filterState.collection)
     : $(".collection-checkbox").map(function() { return this.value; }).get();
 
   const loadedSubcollections = await updateSubcollections(collectionIds);
 
   $(".subcollection-checkbox").each(function() {
-    $(this).prop("checked", filterState.sub_collections.has(this.value));
+    $(this).prop("checked", filterState.sub_collection.has(this.value));
   });
 
   const surveys = urlParams.getAll("survey");
@@ -40,6 +40,7 @@ export async function applyFiltersFromURL() {
     : $(".subcollection-checkbox").map(function() { return this.value; }).get();
 
   await updateSurveys(subIdsForSurvey);
+  surveys.forEach(val => filterState.survey.add(val));
 
   $(".survey-checkbox").each(function() {
     $(this).prop("checked", filterState.survey.has(this.value));
