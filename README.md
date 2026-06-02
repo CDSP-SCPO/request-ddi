@@ -45,7 +45,7 @@ of 65,000 questions and variables across more than 250 quantitative surveys of t
 
 ## Application overview
 
-[![Request Application](docs/imgs/request-screenshot.png)](https://request.sciencespo.fr)
+[![Request Application](docs/imgs/request-home.png)](https://request.sciencespo.fr)
 
 User documentation can be found at [docs](https://request.sciencespo.fr/docs)
 

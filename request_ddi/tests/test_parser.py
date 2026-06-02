@@ -2,13 +2,10 @@ from io import BytesIO
 
 from django.test import TestCase
 
-from request_ddi.core.parser import XMLParser  # adapte le chemin selon ton projet
+from request_ddi.core.parser import parse_codebook_xml_file
 
 
 class XMLParserTests(TestCase):
-    def setUp(self):
-        self.parser = XMLParser()
-
     def test_parse_valid_xml(self):
         xml_content = """
         <root>
@@ -25,12 +22,10 @@ class XMLParserTests(TestCase):
         file = BytesIO(xml_content)
         file.name = "valid.xml"
 
-        seen_invalid_dois = set()
-        data = self.parser.parse_file(file, seen_invalid_dois)
+        data = parse_codebook_xml_file(file)
         self.assertIsNotNone(data)
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0][0], "doi:10.1234/test")
-        self.assertEqual(self.parser.errors, [])
+        self.assertEqual(len(data["variables"]), 1)
+        self.assertEqual(data["doi"], "doi:10.1234/test")
 
     def test_parse_invalid_doi(self):
         xml_content = b"""
@@ -42,8 +37,6 @@ class XMLParserTests(TestCase):
         file = BytesIO(xml_content)
         file.name = "invalid.xml"
 
-        seen_invalid_dois = set()
-        data = self.parser.parse_file(file, seen_invalid_dois)
+        data = parse_codebook_xml_file(file)
 
         self.assertIsNone(data)
-        self.assertTrue(any("DOI invalide" in e for e in self.parser.errors))

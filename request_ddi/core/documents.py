@@ -122,6 +122,7 @@ class BindingSurveyDocument(Document):
                 bulk(self._get_connection(), actions, refresh=True)
             except Exception as ex:
                 logger.exception("Erreur lors de l'update: %s", ex)
+                raise ex  # Need to raise exception here so that it will be caught in the caller
 
     def delete(self, instance):
         """Supprime un document de l'index Elasticsearch."""
@@ -134,6 +135,7 @@ class BindingSurveyDocument(Document):
             logger.exception(
                 "Erreur lors de la suppression du document avec l'ID %s: %s", instance.pk, ex
             )
+            raise ex
 
     def serialize(self, instance):
         """Prépare les données du document pour Elasticsearch."""

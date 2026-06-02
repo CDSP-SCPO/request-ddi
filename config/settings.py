@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_extensions",
     "django_elasticsearch_dsl",
+    "django_tasks_db",
     "health_check",
     "request_ddi",
 ]
@@ -127,6 +128,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# ---------------------------------------------------------
+# BACKGROUND TASKS
+# ---------------------------------------------------------
+TASKS = {"default": {"BACKEND": "django_tasks_db.DatabaseBackend", "QUEUES": ["default"]}}
 
 # ---------------------------------------------------------
 # INTERNATIONALIZATION
@@ -201,6 +207,7 @@ LOGGING = {
     },
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO"},
+        "django_tasks_db": {"handlers": ["console"], "level": "INFO"},
         "request_ddi": {"handlers": ["console"], "level": "DEBUG"},
         "performance": {
             "handlers": ["performance_file", "console"],
@@ -227,9 +234,11 @@ if not DEBUG:
         "include_html": False,
     }
     LOGGING["loggers"]["django"]["handlers"] = ["file", "mail_admins"]
+    LOGGING["loggers"]["django_tasks_db"]["handlers"] = ["file", "mail_admins"]
     LOGGING["loggers"]["request_ddi"]["handlers"] = ["file", "mail_admins"]
     LOGGING["loggers"]["django"]["level"] = "ERROR"
     LOGGING["loggers"]["request_ddi"]["level"] = "ERROR"
+    LOGGING["loggers"]["django_tasks_db"]["level"] = "ERROR"
 
 # ---------------------------------------------------------
 # HEALTH CHECKS

@@ -4,13 +4,14 @@ import io
 import logging
 import re
 from datetime import datetime
+from functools import partial
 
 import requests
 
 # -- THIRDPARTY
 # -- DJANGO
 from django import forms
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import reverse_lazy
@@ -18,7 +19,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 # -- LOCAL
-from request_ddi.core.data_importer import DataImporter
+from request_ddi.core.data_importer import import_data
 from request_ddi.core.exceptions import DataImportError, PartialDataImportError
 from request_ddi.core.forms import CSVUploadFormCollection
 from request_ddi.core.models import (
@@ -27,7 +28,7 @@ from request_ddi.core.models import (
     Subcollection,
     Survey,
 )
-from request_ddi.core.parser import XMLParser
+from request_ddi.core.parser import parse_codebook_xml_file
 from request_ddi.utils.timer import log_time
 from request_ddi.utils.timing import timed
 from request_ddi.views.mixins import StaffRequiredMixin
@@ -40,7 +41,7 @@ perf_logger = logging.getLogger("performance")
 class CSVUploadViewCollection(StaffRequiredMixin, View):
     template_name = "upload.html"
     form_class = CSVUploadFormCollection
-    success_url = reverse_lazy("request_ddi:upload_csv_collection")
+    success_url = reverse_lazy("request_ddi:import")
 
     def get(self, request, *args, **kwargs):
         context = {"csv_form": self.form_class()}
@@ -69,7 +70,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
         return self.form_valid(form)
 
     @timed
-    def form_valid(self, form):  # noqa: PLR0911
+    def form_valid(self, form):
         """Traite le CSV et les XMLs associés - RETOURNE TOUJOURS JSON"""
         try:
             force_import = self.request.POST.get("force_import") == "on"
@@ -82,11 +83,11 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
             if not force_import:
                 duplicates = self.check_duplicates(survey_datas)
 
-            num_surveys, num_variables, num_bindings, skipped_dois = self.process_data(
+            num_surveys, num_bindings, skipped_dois = self.process_data(
                 survey_datas, xml_contents, skip_dois=duplicates
             )
             if skipped_dois:
-                all_skipped = num_surveys == 0 and num_variables == 0
+                all_skipped = num_surveys == 0
                 raise PartialDataImportError(
                     "Toutes les enquêtes existent déjà en base, aucun import effectué."
                     if all_skipped
@@ -94,8 +95,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                     data=[
                         {
                             "num_surveys": num_surveys,
-                            "total_variables": num_variables,
-                            "total_bindings": num_bindings,
+                            "num_bindings": num_bindings,
                         }
                     ],
                     errors=[f"Doublon ignoré : {doi}" for doi in skipped_dois],
@@ -103,11 +103,10 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
             return JsonResponse(
                 {
                     "status": "success",
-                    "message": f"Le fichier CSV a été importé avec succès. {num_surveys} enquête(s), {num_variables} variable(s), {num_bindings} binding(s) créé(s).",
+                    "message": f"Le fichier CSV a été traité avec succès. {num_surveys} enquête(s) et {num_bindings} binding(s) seront importée(s).",
                     "data": [
                         {
                             "num_surveys": num_surveys,
-                            "num_variables": num_variables,
                             "num_bindings": num_bindings,
                         }
                     ],
@@ -144,28 +143,6 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                 status=400,
             )
 
-        except IntegrityError as ie:
-            doi = self.extract_doi_from_error(str(ie))
-            if "unique constraint" in str(ie).lower():
-                return JsonResponse(
-                    {
-                        "status": "error",
-                        "message": "Erreur d'ajout de l'enquête dans la DB",
-                        "errors": [
-                            f"Une enquête avec le DOI {doi} existe déjà dans la base de données."
-                        ],
-                    },
-                    status=400,
-                )
-            return JsonResponse(
-                {
-                    "status": "error",
-                    "message": "Erreur d'intégrité de base de données",
-                    "errors": [str(ie)],
-                },
-                status=400,
-            )
-
         except Exception as e:
             logger.exception("Erreur inattendue lors de l'import")
             return JsonResponse(
@@ -190,13 +167,10 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
 
     def process_data(self, survey_datas, xml_contents, skip_dois=None):  # noqa: PLR0915, PLR0912, C901
         skip_dois = skip_dois or set()
-        importer = DataImporter()
-        xml_parser = XMLParser()
         errors = []
         successful_surveys = []
         skipped_surveys = []
         num_surveys = 0
-        total_variables = 0
         total_bindings = 0
 
         for line_number, row in enumerate(survey_datas, start=1):
@@ -263,12 +237,10 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
 
                 uploaded_file = io.BytesIO(xml_content.encode("utf-8"))
 
-                question_data = xml_parser.parse_file(uploaded_file, seen_invalid_dois=set())
-                if question_data:
-                    doi_found_in_xml = question_data[0][0]
-                    expected_doi = survey_doi
-                    if doi_found_in_xml != expected_doi:
-                        msg = f"Le XML téléchargé ne correspond pas à cette enquête (DOIs trouvés dans le XML : {doi_found_in_xml})"
+                survey_data = parse_codebook_xml_file(uploaded_file)
+                if survey_data["variables"]:
+                    if survey_data["doi"] != survey_doi:
+                        msg = f"Le XML téléchargé ne correspond pas à cette enquête (DOIs trouvés dans le XML : {survey_data['doi']})"
                         raise ValueError(msg)
                 else:
                     msg = "Le XML est vide ou invalide"
@@ -288,7 +260,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                         name=subcollection_name, collection=collection
                     )
 
-                    survey, created = Survey.objects.get_or_create(  # noqa: RUF059
+                    _, created = Survey.objects.get_or_create(
                         external_ref=survey_doi,
                         defaults={
                             "name": survey_name,
@@ -306,12 +278,11 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
                     )
                     if created:
                         num_surveys += 1
+                        # Increment total bindings only when survey is created
+                        total_bindings += len(survey_data["variables"])
 
-                    num_records, num_variables, num_bindings = importer.import_data(  # noqa: RUF059
-                        question_data,
-                    )
-                    total_variables += num_variables
-                    total_bindings += num_bindings
+                    # Submit tasks to background worker
+                    transaction.on_commit(partial(import_data.enqueue, survey_data))
                     successful_surveys.append(survey_doi)
 
             except Exception as e:
@@ -321,27 +292,26 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
 
         if errors:
             if successful_surveys:
-                msg = "Certaines enquêtes n'ont pas pu être importées"
+                msg = "Certaines enquêtes n'ont pas pu être traitées"
                 raise PartialDataImportError(
                     msg,
                     data=[
                         {
                             "successful_surveys": successful_surveys,
                             "num_surveys": num_surveys,
-                            "total_variables": total_variables,
                             "total_bindings": total_bindings,
                         }
                     ],
                     errors=errors,
                 )
             else:
-                msg = "Aucune enquête n'a pu être importée"
+                msg = "Aucune enquête n'a pu être traitée"
                 raise DataImportError(
                     msg,
                     errors=errors,
                 )
 
-        return num_surveys, total_variables, total_bindings, skipped_surveys
+        return num_surveys, total_bindings, skipped_surveys
 
     def check_duplicates(self, survey_datas):
         """Vérifie si des enquêtes du CSV existent déjà en base."""
@@ -374,9 +344,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
 
 
 def download_xml_file(survey_url):
-    url = f"{survey_url}"
-
-    r = requests.get(url, timeout=30)
+    r = requests.get(survey_url, timeout=30)
     r.raise_for_status()
 
     return r.text

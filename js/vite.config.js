@@ -14,8 +14,8 @@ export default defineConfig({
         export: resolve(__dirname, "src/export.js"),
         questionDetail: resolve(__dirname, "src/question_detail.js"),
         searchResults: resolve(__dirname, "src/search_results/init.js"),
-        uploadCsv: resolve(__dirname, "src/upload_csv_collection.js"),
-        uploadXml: resolve(__dirname, "src/upload_xml.js"),
+        importCsv: resolve(__dirname, "src/import.js"),
+        importStatus: resolve(__dirname, "src/import_status.js"),
       },
       output: {
         entryFileNames: "[name].bundle.js",

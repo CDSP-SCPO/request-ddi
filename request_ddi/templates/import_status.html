@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}Suivi des imports{% endblock %}
+
+{% block content %}
+<div class="import-status-page">
+
+  <header class="status-header">
+    <div class="status-header__left">
+      <h1 class="status-header__title">Suivi des imports</h1>
+      <p class="status-header__subtitle">Dernières 48 heures · actualisation automatique</p>
+    </div>
+    <div class="status-header__right">
+      <span class="refresh-indicator" id="refreshIndicator" aria-live="polite"></span>
+      <a href="{% url 'request_ddi:import' %}" class="btn-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Nouvel import
+      </a>
+    </div>
+  </header>
+
+  <div class="status-summary" id="statusSummary" aria-live="polite">
+    <!-- rempli par JS -->
+  </div>
+
+  <div class="task-list" id="taskList" role="list" aria-label="Liste des tâches d'import">
+    <div class="task-list__loading">
+      <span class="spinner" aria-hidden="true"></span>
+      Chargement…
+    </div>
+  </div>
+
+  <p class="status-footer" id="lastUpdated"></p>
+
+</div>
+
+{# ── Modal détail traceback ── #}
+<div class="traceback-modal" id="tracebackModal" role="dialog" aria-modal="true" aria-labelledby="tracebackTitle" hidden>
+  <div class="traceback-modal__backdrop" id="tracebackBackdrop"></div>
+  <div class="traceback-modal__box">
+    <div class="traceback-modal__header">
+      <h2 class="traceback-modal__title" id="tracebackTitle">Détail de l'erreur</h2>
+      <button class="traceback-modal__close" id="tracebackClose" aria-label="Fermer">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <p class="traceback-modal__doi" id="tracebackDoi"></p>
+    <pre class="traceback-modal__pre" id="tracebackContent"></pre>
+  </div>
+</div>
+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/import_status.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{% static 'js/importStatus.bundle.js' %}"></script>
+{% endblock %}

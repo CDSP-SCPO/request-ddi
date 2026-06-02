@@ -3,6 +3,8 @@ from django.conf import settings
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
+from request_ddi.views.import_status import ImportRetryView, ImportStatusView
+
 from .views.auth_views import CustomLoginView
 from .views.detail_views import QuestionDetailView
 from .views.export_views import export_page
@@ -21,9 +23,9 @@ app_name = "request_ddi"
 urlpatterns = [
     # === Upload de fichiers ===
     path(
-        "upload-csv-collection/",
+        "import/",
         CSVUploadViewCollection.as_view(),
-        name="upload_csv_collection",
+        name="import",
     ),
     # === Recherche de variables représentées ===
     path("", RepresentedVariableSearchView.as_view(), name="representedvariable_search"),
@@ -35,4 +37,6 @@ urlpatterns = [
     # === Authentification ===
     path("login/", CustomLoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
+    path("import/status/", ImportStatusView.as_view(), name="import_status"),
+    path("import/status/retry/", ImportRetryView.as_view(), name="import_retry"),
 ]

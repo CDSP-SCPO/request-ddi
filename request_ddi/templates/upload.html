@@ -28,6 +28,7 @@
                             <li>date_last_version</li>
                             <li>collection</li>
                             <li>sous-collection</li>
+                            <li>url</li>
                         </ul>
                     </div>
                     
@@ -73,7 +74,7 @@
                 </div>
                 <div class="modal-body">
                     <form method="POST" enctype="multipart/form-data" id="csvUploadFormCollection"
-                          action="{% url 'request_ddi:upload_csv_collection' %}">
+                          action="{% url 'request_ddi:import' %}">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="csv_file">Sélectionnez un fichier CSV :</label>
@@ -95,8 +96,7 @@
 
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script type=module src="{% static 'js/uploadCsv.bundle.js' %}"></script>
-    <script type=module src="{% static 'js/uploadXml.bundle.js' %}"></script>
+    <script type=module src="{% static 'js/importCsv.bundle.js' %}"></script>
 {% endblock %}
 
 

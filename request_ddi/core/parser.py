@@ -1,60 +1,53 @@
+# -- STDLIB
+import logging
+
 # -- THIRDPARTY
 from bs4 import BeautifulSoup
 
+from request_ddi.utils.timing import timed
 
-class XMLParser:
-    def __init__(self):
-        self.errors = []
+logger = logging.getLogger(__name__)
 
-    def parse_file(self, file, seen_invalid_dois):
-        """Parse un fichier XML et retourne les données extraites ou None s’il y a une erreur."""  # noqa: RUF002
-        try:
-            file.seek(0)
-            content = file.read().decode("utf-8")
-            soup = BeautifulSoup(content, "xml")
 
-            doi_tag = soup.find("IDNo", attrs={"agency": "DataCite"}) or soup.find("IDNo")
-            doi = doi_tag.text.strip() if doi_tag else None
+@timed
+def parse_codebook_xml_file(file):
+    """Parse un fichier XML et retourne les données extraites ou None s'il y a une erreur."""
+    try:
+        file.seek(0)
+        content = file.read().decode("utf-8")
+        soup = BeautifulSoup(content, "xml")
 
-            if not doi or not doi.startswith("doi:"):
-                if doi not in seen_invalid_dois:
-                    seen_invalid_dois.add(doi)
-                    self.errors.append(
-                        f"<strong>{file.name}</strong> : DOI invalide '<strong>{doi}</strong>' "
-                        + "(doit commencer par 'doi:')."
-                    )
-                return None
+        doi_tag = soup.find("IDNo", attrs={"agency": "DataCite"}) or soup.find("IDNo")
+        doi = doi_tag.text.strip() if doi_tag else None
 
-            data = []
-            for line in soup.find_all("var"):
-                categories = " | ".join(
-                    [
-                        r" \ ".join(
-                            [
-                                cat.find("catStat").text.strip() if cat.find("catStat") else "0",
-                                cat.find("catValu").text.strip() if cat.find("catValu") else "",
-                                cat.find("labl").text.strip() if cat.find("labl") else "",
-                                "missing" if cat.get("missing") == "Y" else "",
-                            ]
-                        )
-                        for cat in line.find_all("catgry")
-                    ]
-                )
-
-                data.append(
-                    [
-                        doi,
-                        line["name"].strip(),
-                        line.find("labl").text.strip() if line.find("labl") else "",
-                        line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
-                        categories,
-                        line.find("universe").text.strip() if line.find("universe") else "",
-                        line.find("notes").text.strip() if line.find("notes") else "",
-                    ]
-                )
-
-            return data
-
-        except Exception as e:
-            self.errors.append(f"Erreur lors du parsing du fichier {file.name}: {e!s}")
+        if not doi or not doi.startswith("doi:"):
+            logger.error("DOI %s invalide (doit commencer par 'doi:')", doi)
             return None
+
+        data = {"doi": doi, "variables": []}
+        for line in soup.find_all("var"):
+            categories = [
+                {
+                    "label": cat.find("labl").text.strip() if cat.find("labl") else "",
+                    "code": cat.find("catValu").text.strip() if cat.find("catValu") else "",
+                    "stat": cat.find("catStat").text.strip() if cat.find("catStat") else 0,
+                    "missing": bool(cat.get("missing") == "Y"),
+                }
+                for cat in line.find_all("catgry")
+            ]
+
+            data["variables"].append(
+                {
+                    "name": line["name"].strip(),
+                    "label": line.find("labl").text.strip() if line.find("labl") else "",
+                    "text": line.find("qstnLit").text.strip() if line.find("qstnLit") else "",
+                    "categories": categories,
+                    "universe": line.find("universe").text.strip() if line.find("universe") else "",
+                    "notes": line.find("notes").text.strip() if line.find("notes") else "",
+                }
+            )
+
+        return data
+    except Exception as e:
+        logger.error("Erreur lors du parsing du fichier %s: %s", file.name, str(e))
+        raise e

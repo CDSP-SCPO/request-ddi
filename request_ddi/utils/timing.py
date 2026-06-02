@@ -3,7 +3,7 @@ import functools
 import logging
 import time
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("performance")
 
 
 def timed(func):

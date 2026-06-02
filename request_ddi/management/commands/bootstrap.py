@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import execute_from_command_line
 from django.core.management.base import BaseCommand, CommandError
 from django.core.wsgi import get_wsgi_application
+from django.utils.autoreload import DJANGO_AUTORELOAD_ENV
 from gunicorn.app.wsgiapp import WSGIApplication
 from requests.auth import HTTPBasicAuth
 
@@ -52,6 +53,21 @@ class Command(BaseCommand):
         os.environ["ELASTICSEARCH_ADMIN_PASSWORD"],
     )
 
+    @staticmethod
+    def run_only_on_main_process(func):
+        """Ensures that we run the class method only on main process"""
+
+        def wrap(self, *args, **kwargs):
+            # A very good postmortem of why this is necessary can be found in
+            # https://stackoverflow.com/questions/73435965/why-django-runserver-command-starts-2-processes-what-are-they-for-and-how-to-d
+            #
+            # Basically it only applies in local dev environment and irrespective of this
+            # condition, production should work as expected.
+            if not os.environ.get(DJANGO_AUTORELOAD_ENV):
+                func(self, *args, **kwargs)
+
+        return wrap
+
     def add_arguments(self, parser):
         parser.add_argument(
             "--timeout",
@@ -91,6 +107,7 @@ class Command(BaseCommand):
         except:  # noqa: E722
             return False
 
+    @run_only_on_main_process
     def bootstrap_postgres(self):
         # Wait for postgres
         while not self.is_postgres_up() and (time.time() - self.start_time < self.timeout):
@@ -115,6 +132,7 @@ class Command(BaseCommand):
         except:  # noqa: E722
             return False
 
+    @run_only_on_main_process
     def bootstrap_elasticsearch(self, force_index):
         # Wait for elastic
         while not self.is_elasticsearch_up() and (time.time() - self.start_time < self.timeout):
@@ -167,6 +185,76 @@ class Command(BaseCommand):
         }
         RequestDDIApplication(get_wsgi_application(), options).run()
 
+    @run_only_on_main_process
+    def create_super_user(self):
+        user = get_user_model()
+        if not user.objects.filter(username=os.environ["DJANGO_SUPERUSER_USERNAME"]).exists():
+            user.objects.create_superuser(
+                username=os.environ["DJANGO_SUPERUSER_USERNAME"],
+                email=os.environ["DJANGO_SUPERUSER_EMAIL"],
+                password=os.environ["DJANGO_SUPERUSER_PASSWORD"],
+            )
+            self.stdout.write(self.style.SUCCESS("Super user created successfully"))
+
+    @run_only_on_main_process
+    def create_symlinks(self):
+        try:
+            os.symlink(
+                os.path.join(os.getcwd(), "request_ddi", "manage.py"),
+                os.path.join(os.getcwd(), "manage.py"),
+            )
+            self.stdout.write(self.style.NOTICE("Created symlink to manage.py"))
+        except FileExistsError:
+            pass
+        except Exception as e:
+            msg = "Failed to create symlink to request_ddi/manage.py"
+            raise CommandError(msg) from e
+
+    @run_only_on_main_process
+    def watch_js_files(self):
+        try:
+            self.stdout.write(self.style.NOTICE("Installing node dependencies..."))
+            subprocess.check_call(
+                ["npm", "install"],  # noqa: S607
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+                cwd="js",
+            )
+            self.stdout.write(self.style.NOTICE("Watching changes in js folder..."))
+            subprocess.Popen(
+                ["npm", "run", "watch"],  # noqa: S607
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+                cwd="js",
+            )
+        except Exception as e:
+            msg = "Failed to watch js changes using vite"
+            raise CommandError(msg) from e
+
+    @run_only_on_main_process
+    def start_bg_task_worker(self):
+        # The objective of this is to have a SINGLE WORKER at any given time. We dont
+        # want multiple workers running which means multiple surveys will be imported
+        # concurrently. This can impact our core logic where similar and identical questions
+        # will not be detected properly.
+        #
+        # We do not need to reload task worker and without --no-reload we get an error
+        # in dev environment saying port is already in use. Too many StatReloaders?!
+        #
+        # Use a generous interval of 30s to avoid looping too fast. In the worst case
+        # scenario, we will need to wait for 30s after import endpoint is hit for actual
+        # importing to start.
+        try:
+            self.stdout.write(self.style.NOTICE("Starting background task worker..."))
+            subprocess.Popen(
+                ["request_ddi_manage", "db_worker", "--interval", "30"],  # noqa: S607
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            )
+        except Exception as e:
+            msg = "Failed to start background task worker"
+            raise CommandError(msg) from e
+
     def handle(self, *args, **options):
         try:
             self.timeout = int(options["timeout"])
@@ -183,55 +271,26 @@ class Command(BaseCommand):
         self.bootstrap_elasticsearch(options["createelasticsearchindex"])
         # Ensure to create superuser
         if options["ensuresuperuser"]:
-            user = get_user_model()
-            if not user.objects.filter(username=os.environ["DJANGO_SUPERUSER_USERNAME"]).exists():
-                user.objects.create_superuser(
-                    username=os.environ["DJANGO_SUPERUSER_USERNAME"],
-                    email=os.environ["DJANGO_SUPERUSER_EMAIL"],
-                    password=os.environ["DJANGO_SUPERUSER_PASSWORD"],
-                )
-                self.stdout.write(self.style.SUCCESS("Super user created successfully"))
-        # For production collect static
-        if os.environ.get("DJANGO_DEBUG", "false").lower() == "false":
-            execute_from_command_line(["manage", "collectstatic", "--noinput"])
-            self.stdout.write(self.style.SUCCESS("Collected static assets from apps successfully"))
-
-        self.stdout.write(self.style.SUCCESS("request_ddi bootstraped successfully"))
+            self.create_super_user()
 
         # For backwards compatbility we create a symlink to manage.py
-        try:
-            os.symlink(
-                os.path.join(os.getcwd(), "request_ddi", "manage.py"),
-                os.path.join(os.getcwd(), "manage.py"),
-            )
-        except FileExistsError:
-            pass
-        except Exception as e:
-            msg = "Failed to create symlink to request_ddi/manage.py"
-            raise CommandError(msg) from e
+        self.create_symlinks()
+
+        # Start background task worker
+        self.start_bg_task_worker()
+
+        self.stdout.write(self.style.SUCCESS("request_ddi bootstraped successfully"))
 
         # Start web server
         if options["startserver"]:
             if os.environ.get("DJANGO_DEBUG", "false").lower() == "false":
+                execute_from_command_line(["manage", "collectstatic", "--noinput"])
+                self.stdout.write(
+                    self.style.SUCCESS("Collected static assets from apps successfully")
+                )
+
                 self.stdout.write(self.style.NOTICE("Starting gunicorn server..."))
                 self.run_gunicorn_server()
             else:
-                try:
-                    self.stdout.write(self.style.NOTICE("Installing node dependencies..."))
-                    subprocess.check_call(
-                        ["npm", "install"],  # noqa: S607
-                        stdout=sys.stdout,
-                        stderr=sys.stderr,
-                        cwd="js",
-                    )
-                    self.stdout.write(self.style.NOTICE("Watching changes in js folder..."))
-                    subprocess.Popen(
-                        ["npm", "run", "watch"],  # noqa: S607
-                        stdout=sys.stdout,
-                        stderr=sys.stderr,
-                        cwd="js",
-                    )
-                except Exception as e:
-                    msg = "Failed to watch js changes using vite"
-                    raise CommandError(msg) from e
+                self.watch_js_files()
                 execute_from_command_line(["manage", "runserver", "0.0.0.0:8000"])

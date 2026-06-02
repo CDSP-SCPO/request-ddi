@@ -55,14 +55,25 @@ This page will request the admin credentials and for the default Docker environm
 username and password are `request-ddi` and `request-ddi-secret`. Once the user has been
 successfully authenticated, following page will be rendered:
 
-![Upload CSV Collection](../docs/imgs/request-upload-screenshot.png)
+![Import CSV](../docs/imgs/request-import.png)
 
 By clicking `Importer un fichier CSV` and choosing the [surveys.csv](../data/surveys.csv)
 file provided in the repo, survey data can be imported into the application. At the
 end of import process, a dialogue appears showing the stats of imported surveys as
 shown below:
 
-![Upload CSV Collection Success](../docs/imgs/request-upload-success-screenshot.png)
+![Import CSV Success](../docs/imgs/request-import-success.png)
+
+The import process is asynchronous which means the application will create a background
+task for each survey in the CSV file. When users click "Ok" in the above screenshot, they
+will be redirected to a status page that shows the progress of importing data.
+
+![Import Status](../docs/imgs/request-import-status.png)
+
+Each line in the above screenshot is a background task and each background task is
+a survey. If
+there are any errors encountered during the import process, the detailed view of the
+task will contain the error and relevant traceback which can be used to debug the issue.
 
 More details on each survey like number of variables, time taken to import each survey
 can be found in the server logs:

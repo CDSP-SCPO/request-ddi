@@ -1,4 +1,3 @@
-import unittest
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -16,7 +15,6 @@ from request_ddi.core.models import (
     Survey,
 )
 
-from . import is_elasticsearch_available
 from .mixins import MockElasticsearchMixin
 
 
@@ -67,7 +65,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
 
         mock_download.return_value = xml_content
         response = self.client.post(
-            reverse("request_ddi:upload_csv_collection"),
+            reverse("request_ddi:import"),
             {"csv_file": csv_file, "delimiter": ","},
         )
         self.assertEqual(response.status_code, 200)
@@ -86,7 +84,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
         response = self.client.post(
-            reverse("request_ddi:upload_csv_collection"),
+            reverse("request_ddi:import"),
             {
                 "csv_file": csv_file,
                 "delimiter": ",",
@@ -118,7 +116,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
         response = self.client.post(
-            reverse("request_ddi:upload_csv_collection"),
+            reverse("request_ddi:import"),
             {"csv_file": csv_file, "delimiter": ","},
         )
         self.assertEqual(response.status_code, 207)
@@ -139,7 +137,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
         response = self.client.post(
-            reverse("request_ddi:upload_csv_collection"),
+            reverse("request_ddi:import"),
             {
                 "csv_file": csv_file,
                 "delimiter": ",",
@@ -167,7 +165,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         xml_content = "<root><unclosed>"
 
         response = self.client.post(
-            reverse("request_ddi:upload_csv_collection"),
+            reverse("request_ddi:import"),
             {
                 "csv_file": csv_file,
                 "delimiter": ",",
@@ -187,7 +185,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
         response = self.client.post(
-            reverse("request_ddi:upload_csv_collection"),
+            reverse("request_ddi:import"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -243,7 +241,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         mock_download.side_effect = lambda url: xml_content_1 if "1234" in url else xml_content_2
 
         response = self.client.post(
-            reverse("request_ddi:upload_csv_collection"),
+            reverse("request_ddi:import"),
             {"csv_file": csv_file, "delimiter": ","},
         )
         self.assertEqual(response.status_code, 200)
@@ -252,9 +250,6 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertTrue(Survey.objects.filter(external_ref="doi:5678/test").exists())
 
 
-# TODO: This needs to be rewritten once we change the upload process using a direct URL
-# in the CSV file.
-@unittest.skipIf(not is_elasticsearch_available(), "elastic search is required for this test")
 class CheckDuplicatesTest(BaseUploadTest):
     @classmethod
     def setUpTestData(cls):
@@ -290,9 +285,7 @@ class CheckDuplicatesTest(BaseUploadTest):
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
-        response = self.client.post(
-            reverse("request_ddi:upload_csv_collection"), {"csv_file": csv_file}
-        )
+        response = self.client.post(reverse("request_ddi:import"), {"csv_file": csv_file})
         self.assertEqual(response.status_code, 207)
         json_response = response.json()
         self.assertEqual(json_response["status"], "partial_success")
@@ -317,7 +310,7 @@ class CheckDuplicatesTest(BaseUploadTest):
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
         response = self.client.post(
-            reverse("request_ddi:upload_csv_collection"), {"csv_file": csv_file, "delimiter": ";"}
+            reverse("request_ddi:import"), {"csv_file": csv_file, "delimiter": ";"}
         )
         self.assertEqual(response.status_code, 200)
         json_response = response.json()
