@@ -116,8 +116,8 @@ ensured-targets = [
     "request_ddi/static/js/export.bundle.js",
     "request_ddi/static/js/questionDetail.bundle.js",
     "request_ddi/static/js/searchResults.bundle.js",
-    "request_ddi/static/js/uploadCsv.bundle.js",
-    "request_ddi/static/js/uploadXml.bundle.js",
+    "request_ddi/static/js/importCsv.bundle.js",
+    "request_ddi/static/js/importStatus.bundle.js",
 ]
 
 [tool.hatch.build.hooks.jupyter-builder.build-kwargs]
