@@ -14,7 +14,7 @@ import { loadInitialData } from "./datatable.js";
 export function attachDynamicCheckboxEvents() {
   $(".subcollection-checkbox, .survey-checkbox")
     .off("change")
-    .on("change", function () {
+    .on("change", async function () {
       const checkbox = $(this);
       const className = checkbox
         .attr("class")
@@ -29,7 +29,7 @@ export function attachDynamicCheckboxEvents() {
 
       const filterValue = checkbox.val();
 
-      handleFilterChange(filterType, filterValue);
+      await handleFilterChange(filterType, filterValue);
 
       // 🔁 Dépendances pour les subcollections
       if (filterType === "sub_collection") {
@@ -43,11 +43,6 @@ export function attachDynamicCheckboxEvents() {
           updateSurveys(selectedSubcollections);
         }
       }
-
-      // 🔁 Recharger le tableau
-      clearCache();
-      resetCurrentLimit();
-      loadInitialData();
     });
 }
 
