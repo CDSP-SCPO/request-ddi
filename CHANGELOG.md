@@ -3,6 +3,24 @@
 <!-- <START NEW CHANGELOG ENTRY> -->
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## v1.2.0
+
+([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/d4f025f15f1d59ea0c3c0a895031f6b55cad18c5...None?from_project_id=766&straight=false))
+
+### New features added
+
+- feat: Import data asynchronously using background worker [!467](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/467) ([@william.feraux](https://gitlab.sciences-po.fr/william.feraux), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon))
+
+### Bugs fixed
+
+- fix: :bug: fix bug duplication [!470](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/470) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- fix: :bug: fix bug filters reload [!469](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/469) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- fix: :bug: fix export all [!468](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/468) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+
+### [Contributors to this release](https://mahendrapaipuri.gitlab.io/gitlab-activity/usage#contributors-list)
+
+[@william.feraux](https://gitlab.sciences-po.fr/william.feraux) | [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri) | [@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon)
+
 ## v1.1.1
 
 ([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/a99dfc7fc8b6319418cbdb92fd5d767a601de7d2...None?from_project_id=766&straight=false))
