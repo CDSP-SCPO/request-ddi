@@ -136,6 +136,12 @@ build_dir = "request_ddi/static/js"
 DJANGO_SETTINGS_MODULE = "config.test_settings"
 pythonpath = [".", "config"]
 python_files = ["request_ddi/tests/test_*.py"]
+addopts = [
+    "--verbose",
+    "--color=yes",
+    "--cov=request_ddi",
+    "--cov-branch",
+]
 
 [tool.ruff]
 exclude = ["*.ipynb", "request_ddi/_version.py"]

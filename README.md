@@ -168,31 +168,9 @@ The project includes comprehensive unit tests that can be run in multiple ways.
 A dedicated `test_settings.py` configuration uses SQLite for testing, allowing tests
 to run with or without PostgreSQL and Elasticsearch.
 
-### Running Tests Outside Docker
-
-When Elasticsearch is **NOT** running, tests requiring the service
-will be automatically skipped:
-
 ```bash
 # Install test dependencies
 pip install -e '.[test]'
-
-# Run all tests with pytest
-pytest
-```
-
-### Running Tests Inside Docker
-
-The tests that require Elasticsearch can be run by spinning up local development
-environment using Docker compose/Podman compose and running the tests inside the
-docker container.
-
-```bash
-# Start dev environment and wait for all services to be online
-docker-compose up --build
-
-# Start a shell inside request-ddi container
-docker exec -it request-ddi bash
 
 # Run all tests with pytest
 pytest
