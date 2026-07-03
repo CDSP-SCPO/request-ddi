@@ -1,5 +1,6 @@
 # -- DJANGO
 import csv
+import logging
 
 from django.conf import settings
 from django.http import StreamingHttpResponse
@@ -20,6 +21,8 @@ from request_ddi.core.models import (
 )
 from request_ddi.utils.timer import log_time
 from request_ddi.views.mixins import staff_required_html
+
+logger = logging.getLogger(__name__)
 
 ES_EXPORT_BATCH_SIZE = 500
 
@@ -94,16 +97,30 @@ class ExportQuestionsCSVView(View):
         # We're keeping in memory all the variables seen, to be able to compare the new ones in order to determine whether they are identical variables or not
         pending = {}
         max_vars_seen = 0
-        start = 0
-        total = None
+
+        # We will use search_after (https://www.elastic.co/docs/reference/elasticsearch/rest-apis/paginate-search-results#search-after)
+        # API to get paginated results.
+        # The maximum number of results in a single search is 10000. We can increase
+        # this limit by increasing index.max_result_window on index settings but that
+        # would increase memory footprint.
+        #
+        # ES recommends to use search_after which is pagination of results.
+        # Here we will sort the results based on variable.id and start the query from
+        # id=0. This is what `search_after = [0]` signifies. We will update the
+        # `search_after` for each page using the `sort` key from the last hit to get
+        # next pages.
+        total = 0
+        search_after = [0]
 
         while True:
             result = es.search(
                 index="binding_survey_variables",
                 body={
                     "query": es_query,
-                    "from": start,
+                    "from": 0,
                     "size": ES_EXPORT_BATCH_SIZE,
+                    "sort": [{"variable.id": "asc"}],
+                    "search_after": search_after,
                     "_source": [
                         "variable.id",
                         "variable.question_text",
@@ -116,8 +133,6 @@ class ExportQuestionsCSVView(View):
             )
 
             hits = result["hits"]["hits"]
-            if total is None:
-                total = result["hits"]["total"]["value"]
 
             for hit in hits:
                 source = hit["_source"]
@@ -147,11 +162,20 @@ class ExportQuestionsCSVView(View):
                 pending[key]["dataset_vars"].append(dataset_var)
                 max_vars_seen = max(max_vars_seen, len(pending[key]["dataset_vars"]))
 
-            # For the pagination
-            start += len(hits)
-            if not hits or start >= total:
+            # sort key must exist in the hits but we are checking for it just in case.
+            # In a strange situtation that we did not find `sort` key in the hits, bail!
+            if not hits or "sort" not in hits[-1]:
                 break
 
+            # For the pagination
+            search_after = hits[-1]["sort"]
+            total += len(hits)
+
+        logger.debug(
+            "Nombre total de variables trouvées : %d et nombre total de variables uniques exportées : %d",
+            total,
+            len(pending),
+        )
         dataset_var_headers = [f"dataset_var{i + 1}" for i in range(max_vars_seen)]
         yield writer.writerow(
             ["question_text", "categories", "variable_label", *dataset_var_headers]
