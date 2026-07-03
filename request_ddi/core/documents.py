@@ -255,6 +255,7 @@ class BindingSurveyDocument(Document):
         sub_collection_ids=None,
         years=None,
         selected_ids=None,
+        aggregations=False,
     ):
         search = cls.search()
         search_locations = validate_search_locations(search_locations or [])
@@ -291,6 +292,8 @@ class BindingSurveyDocument(Document):
                 ],
                 minimum_should_match=1,
             )
+        if aggregations:
+            search = cls.add_filter_aggregations(search, query=query)
 
         return search
 
@@ -412,3 +415,50 @@ class BindingSurveyDocument(Document):
                 ]
 
         return queries
+
+    @classmethod
+    def add_filter_aggregations(cls, search, query=""):
+        search.aggs.bucket("surveys", "terms", field="survey.id", size=10000)
+        search.aggs.bucket(
+            "subcollections",
+            "terms",
+            field="survey.subcollection.id",
+            size=10000,
+        )
+        search.aggs.bucket(
+            "collections",
+            "terms",
+            field="survey.subcollection.collection_id",
+            size=10000,
+        )
+        search.aggs.bucket(
+            "years",
+            "date_histogram",
+            field="survey.start_date",
+            calendar_interval="year",
+            format="yyyy",
+            min_doc_count=1,
+        )
+        if query:
+            metadata_types = {
+                "questions": ["questions"],
+                "categories": ["categories"],
+                "variable_name": ["variable_name"],
+                "internal_label": ["internal_label"],
+            }
+
+            for agg_name, search_locations in metadata_types.items():
+                queries = cls._build_search_location_queries(query, search_locations)
+
+                if queries:
+                    search.aggs.bucket(
+                        agg_name,
+                        "filter",
+                        {
+                            "bool": {
+                                "should": queries,
+                                "minimum_should_match": 1,
+                            }
+                        },
+                    )
+        return search

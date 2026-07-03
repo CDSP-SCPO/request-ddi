@@ -77,17 +77,35 @@ class SearchResultsDataViewTest(BaseSearchViewTest):
     def setUp(self):
         self.url = reverse("request_ddi_api:search_results_data")
 
-    @patch.object(SearchResultsDataView, "get_queryset")
+    @patch("request_ddi.views.search_views.BindingSurveyDocument.add_filter_aggregations")
     @patch.object(SearchResultsDataView, "build_filtered_search")
     @patch.object(SearchResultsDataView, "format_search_results")
-    def test_post_with_valid_data(self, mock_format, mock_build, mock_queryset):
+    @patch("request_ddi.views.search_views.format_aggregations")
+    def test_post_with_valid_data(
+        self,
+        mock_format_aggregations,
+        mock_format_results,
+        mock_build_search,
+        mock_add_aggregations,
+    ):
         mock_response = MagicMock()
         mock_response.hits.total.value = 1
-        mock_queryset.return_value = mock_response
 
-        mock_build.return_value.count.return_value = 1
+        mock_search = MagicMock()
+        mock_search.extra.return_value = mock_search
+        mock_search.__getitem__.return_value.execute.return_value = mock_response
 
-        mock_format.return_value = [
+        mock_build_search.return_value = mock_search
+        mock_add_aggregations.return_value = mock_search
+        mock_format_aggregations.return_value = {
+            "surveys": [],
+            "subcollections": [],
+            "collections": [],
+            "years": [],
+            "search_location": [],
+        }
+
+        mock_format_results.return_value = [
             {
                 "id": "1",
                 "variable_name": "Q1",
@@ -102,40 +120,81 @@ class SearchResultsDataViewTest(BaseSearchViewTest):
         ]
 
         response = self.client.post(
-            self.url, {"q": "âge", "search_location[]": ["questions"], "draw": "1"}
+            self.url,
+            {"q": "âge", "search_location": ["questions"], "draw": "1"},
         )
 
         self.assertEqual(response.status_code, 200)
+
         json_data = response.json()
         self.assertIn("data", json_data)
+        self.assertIn("aggregations", json_data)
         self.assertEqual(len(json_data["data"]), 1)
         self.assertEqual(json_data["data"][0]["variable_name"], "Q1")
+        self.assertEqual(json_data["recordsFiltered"], 1)
+        self.assertEqual(json_data["recordsTotal"], 1)
 
-    @patch.object(SearchResultsDataView, "get_queryset")
+        mock_add_aggregations.assert_not_called()
+        mock_format_aggregations.assert_called_once_with(mock_response)
+        mock_search.extra.assert_called_once_with(track_total_hits=True)
+
+    @patch("request_ddi.views.search_views.BindingSurveyDocument.add_filter_aggregations")
     @patch.object(SearchResultsDataView, "build_filtered_search")
     @patch.object(SearchResultsDataView, "format_search_results")
-    def test_post_with_no_results(self, mock_format, mock_build, mock_queryset):
+    @patch("request_ddi.views.search_views.format_aggregations")
+    def test_post_with_no_results(
+        self,
+        mock_format_aggregations,
+        mock_format_results,
+        mock_build_search,
+        mock_add_aggregations,
+    ):
         mock_response = MagicMock()
         mock_response.hits.total.value = 0
-        mock_queryset.return_value = mock_response
 
-        mock_build.return_value.count.return_value = 0
-        mock_format.return_value = []
+        mock_search = MagicMock()
+        mock_search.extra.return_value = mock_search
+        mock_search.__getitem__.return_value.execute.return_value = mock_response
+
+        mock_build_search.return_value = mock_search
+        mock_add_aggregations.return_value = mock_search
+        mock_format_results.return_value = []
+        mock_format_aggregations.return_value = {
+            "surveys": [],
+            "subcollections": [],
+            "collections": [],
+            "years": [],
+            "search_location": [],
+        }
 
         response = self.client.post(
-            self.url, {"q": "invalid_doi", "search_location[]": ["questions"], "draw": "1"}
+            self.url,
+            {"q": "invalid_doi", "search_location": ["questions"], "draw": "1"},
         )
 
         self.assertEqual(response.status_code, 200)
+
         json_data = response.json()
         self.assertIn("data", json_data)
+        self.assertIn("aggregations", json_data)
         self.assertEqual(len(json_data["data"]), 0)
+        self.assertEqual(json_data["recordsFiltered"], 0)
+        self.assertEqual(json_data["recordsTotal"], 0)
+        self.assertEqual(json_data["aggregations"].get("search_location", []), [])
 
-    @patch.object(SearchResultsDataView, "get_queryset", side_effect=Exception("Erreur"))
-    def test_post_error_handling(self, mock_queryset):
-        response = self.client.post(self.url, {"q": "âge", "search_location[]": ["questions"]})
+        mock_add_aggregations.assert_not_called()
+        mock_format_aggregations.assert_called_once_with(mock_response)
+        mock_search.extra.assert_called_once_with(track_total_hits=True)
+
+    @patch.object(SearchResultsDataView, "build_filtered_search", side_effect=Exception("Erreur"))
+    def test_post_error_handling(self, mock_build_search):
+        response = self.client.post(
+            self.url,
+            {"q": "âge", "search_location": ["questions"]},
+        )
 
         self.assertEqual(response.status_code, 500)
+
         json_data = response.json()
         self.assertIn("error", json_data)
         self.assertEqual(json_data["error"], "Erreur")

@@ -8,10 +8,36 @@ import {
   setCachedResults,
   appendCachedResults,
 } from "./utils.js";
-import { getYearsFilter } from "./filters.js";
+import { getYearsFilter, filterState } from "./filters.js";
+import { loadDecades } from "./decades.js";
 
+export let baseYearCounts = new Map();
 
 let totalRecords = 0;
+let lastSearchQuery = null;
+
+let facetAggregationCache = {};
+
+function resetFacetAggregationCache() {
+  facetAggregationCache = {
+    search_location: null,
+    collection: null,
+    sub_collection: null,
+    survey: null,
+    years: null,
+  };
+}
+
+resetFacetAggregationCache();
+
+function getFacetAggregations(filterType, currentAggregations) {
+  if (filterState[filterType].size === 0) {
+    facetAggregationCache[filterType] = currentAggregations;
+    return currentAggregations;
+  }
+
+  return facetAggregationCache[filterType] || currentAggregations;
+}
 
 export function initializeDataTable() {
   var translations = JSON.parse(sessionStorage.getItem("request_ddi_search_translations"));
@@ -48,8 +74,21 @@ export function initializeDataTable() {
       "dataSrc": function (json) {
   
         totalRecords = json.recordsTotal;
+        const currentSearchQuery = $("input[name='q']").val().trim();
+
+        if (currentSearchQuery !== lastSearchQuery) {
+          resetFacetAggregationCache();
+          lastSearchQuery = currentSearchQuery;
+        }
         
-        appendCachedResults(json.data);
+        updateAvailableFilters(json.aggregations);
+        
+        if (getCachedResults().length === 0) {
+          setCachedResults(json.data);
+        } else {
+          appendCachedResults(json.data);
+        }
+        
         const allCachedResults = getCachedResults();
         
         $("#results-count").text(totalRecords + translations.resultats);
@@ -155,6 +194,14 @@ export function loadInitialData() {
     },
     headers: {"X-CSRFToken": $("input[name=csrfmiddlewaretoken]").val()},
     success: function(json) {
+      const currentSearchQuery = $("input[name='q']").val().trim();
+
+      if (currentSearchQuery !== lastSearchQuery) {
+        resetFacetAggregationCache();
+        lastSearchQuery = currentSearchQuery;
+      }
+      
+      updateAvailableFilters(json.aggregations);
       setCachedResults(json.data);
       table.clear();
       table.rows.add(json.data).draw();
@@ -167,4 +214,95 @@ export function loadInitialData() {
       }
     }
   });
+}
+
+function updateAvailableFilters(aggregations) {
+  if (!aggregations) {
+    $(".search-location-checkbox, .collection-checkbox, .subcollection-checkbox, .survey-checkbox")
+      .closest(".form-check-custom")
+      .show();
+
+    $(".available-count").remove();
+    return;
+  }
+
+  const searchLocationAggregations = getFacetAggregations("search_location", aggregations);
+  const collectionAggregations = getFacetAggregations("collection", aggregations);
+  const subcollectionAggregations = getFacetAggregations("sub_collection", aggregations);
+  const surveyAggregations = getFacetAggregations("survey", aggregations);
+  const yearAggregations = getFacetAggregations("years", aggregations);
+
+  const searchLocations = new Map(
+    (searchLocationAggregations.search_location || []).map(item => [String(item.id), item.count])
+  );
+
+  const collections = new Map(
+    (collectionAggregations.collections || []).map(item => [String(item.id), item.count])
+  );
+
+  const subcollections = new Map(
+    (subcollectionAggregations.subcollections || []).map(item => [String(item.id), item.count])
+  );
+
+  const surveys = new Map(
+    (surveyAggregations.surveys || []).map(item => [String(item.id), item.count])
+  );
+
+  baseYearCounts = new Map(
+    (yearAggregations.years || []).map(item => [String(item.year), item.count])
+  );
+
+  const hasSearchQuery = $("input[name='q']").val().trim().length > 0;
+
+  if (hasSearchQuery) {
+    updateFilterVisibility(".search-location-checkbox", searchLocations, true, true);
+  } else {
+    $(".search-location-checkbox")
+      .closest(".form-check-custom")
+      .show()
+      .find(".available-count")
+      .remove();
+  }
+
+  updateFilterVisibility(".collection-checkbox", collections, true, true);
+  updateFilterVisibility(".subcollection-checkbox", subcollections, true, true);
+  updateFilterVisibility(".survey-checkbox", surveys, true, true);
+  updateFilterVisibility(".year-checkbox", baseYearCounts, true, false);
+
+  if ($(".decade-item").length > 0) {
+    loadDecades();
+  }
+}
+
+function updateFilterVisibility(selector, availableMap, hideUnavailable = true, sortByCount = true) {
+  const items = [];
+
+  $(selector).each(function () {
+    const checkbox = $(this);
+    const wrapper = checkbox.closest(".form-check-custom");
+    const label = wrapper.find("label");
+    const count = availableMap.get(String(this.value));
+
+    if (hideUnavailable) {
+      wrapper.toggle(count !== undefined);
+    } else {
+      wrapper.show();
+    }
+    wrapper.find(".available-count").remove();
+
+    if (count !== undefined) {
+      label.append(`<span class="available-count">${count}</span>`);
+    }
+    items.push({
+      wrapper,
+      count: count ?? -1,
+    });
+  });
+  if (sortByCount) {
+    items
+      .sort((a, b) => b.count - a.count)
+      .forEach(item => {
+        item.wrapper.parent().append(item.wrapper);
+      });
+  }
 }

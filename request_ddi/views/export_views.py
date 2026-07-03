@@ -77,15 +77,19 @@ class ExportQuestionsCSVView(View):
         writer = csv.writer(Echo())
 
         es = Elasticsearch(**settings.ELASTICSEARCH_DSL["default"])
-        es_query = BindingSurveyDocument.search_with_filters(
-            query=query,
-            search_locations=search_locations,
-            survey_ids=[int(i) for i in survey_ids if i.isdigit()],
-            collection_ids=[int(i) for i in collection_ids if i.isdigit()],
-            sub_collection_ids=[int(i) for i in sub_collection_ids if i.isdigit()],
-            years=years,
-            selected_ids=selected_ids,
-        ).to_dict()["query"]
+        es_query = (
+            BindingSurveyDocument.search_with_filters(
+                query=query,
+                search_locations=search_locations,
+                survey_ids=[int(i) for i in survey_ids if i.isdigit()],
+                collection_ids=[int(i) for i in collection_ids if i.isdigit()],
+                sub_collection_ids=[int(i) for i in sub_collection_ids if i.isdigit()],
+                years=years,
+                selected_ids=selected_ids,
+            )
+            .to_dict()
+            .get("query", {"match_all": {}})
+        )
 
         # We're keeping in memory all the variables seen, to be able to compare the new ones in order to determine whether they are identical variables or not
         pending = {}

@@ -15,12 +15,10 @@ $(document).ready(async function () {
   initializeDataTable();
   attachStaticEventListeners();
   attachDynamicCheckboxEvents();
-  await loadDecades();
   await applyFiltersFromURL();
   updateFiltersDisplay();
   updateFilterCounts();
   updateURLWithFilters();
-  loadInitialData();
 
   const targetNode = document.getElementById("selected-filters-container");
   if (targetNode) {

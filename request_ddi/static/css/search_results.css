@@ -305,6 +305,8 @@
     cursor: pointer;
     white-space: wrap;
     font-size: 14px;
+    display: inline-flex;
+    align-items: center;
 }
 
 
@@ -538,4 +540,20 @@ table.dataTable {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.available-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+    margin-left: 8px;
+    border-radius: 999px;
+    background-color: rgba(83, 98, 84, 0.12);
+    color: #536254;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    box-sizing: border-box;
 }

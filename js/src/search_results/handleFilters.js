@@ -1,5 +1,5 @@
 import { selectedIds } from "./utils.js";
-import { filterState, updateFiltersDisplay, updateFilterCounts } from "./filters.js";
+import { filterState, updateFiltersDisplay, updateFilterCounts, clearChildFilters } from "./filters.js";
 import { updateSubcollections, updateSurveys } from "./filtersAPI.js";
 import { loadDecades } from "./decades.js";
 import { updateURLWithFilters } from "./events.js";
@@ -16,6 +16,8 @@ export async function handleFilterChange(filterType, filterValue) {
   } else {
     filterState[filterType].add(filterValue);
   }
+
+  clearChildFilters(filterType);
 
   if (filterType === "collection") {
     const collectionIds = Array.from(filterState.collection);

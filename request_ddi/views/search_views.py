@@ -74,6 +74,7 @@ class SearchResultsDataView(ListView):
             collection_ids=collections_filter,
             sub_collection_ids=subcollection_filter,
             years=years,
+            aggregations=True,
         )
 
         return (
@@ -88,14 +89,6 @@ class SearchResultsDataView(ListView):
             .highlight("variable_name", fragment_size=10000)
             .highlight("variable.internal_label", fragment_size=10000)
         )
-
-    def get_queryset(self):
-        search = self.build_filtered_search()
-        start = int(self.request.POST.get("start", 0))
-        limit = int(self.request.POST.get("limit", self.paginate_by))
-
-        response = search[start : start + limit].execute()
-        return response
 
     def format_search_results(self, response, search_locations):  # noqa: C901
         data = []
@@ -208,21 +201,29 @@ class SearchResultsDataView(ListView):
 
     def post(self, request, *args, **kwargs):
         try:
-            response = self.get_queryset()
-            total_records = self.build_filtered_search().count()
+            search = self.build_filtered_search()
+            start = int(self.request.POST.get("start", 0))
+            limit = int(self.request.POST.get("limit", self.paginate_by))
+
+            search = search.extra(track_total_hits=True)
+            logger.debug("ES query: %s", search.to_dict())
+            response = search[start : start + limit].execute()
             filtered_records = response.hits.total.value
+            total_records = filtered_records
             search_locations = validate_search_locations(
                 request.POST.getlist(
                     "search_location",
                 )
             )
             data = self.format_search_results(response, search_locations)
+            aggregations = format_aggregations(response)
             return JsonResponse(
                 {
                     "recordsTotal": total_records,
                     "recordsFiltered": filtered_records,
                     "draw": int(request.POST.get("draw", 1)),
                     "data": data,
+                    "aggregations": aggregations,
                 }
             )
 
@@ -272,3 +273,36 @@ def search_results(request):
         "search_query": search_query,
     }
     return render(request, "search_results.html", context)
+
+
+def format_aggregations(response):
+    aggregations = {
+        "surveys": [
+            {"id": bucket.key, "count": bucket.doc_count}
+            for bucket in response.aggregations.surveys.buckets
+        ],
+        "subcollections": [
+            {"id": bucket.key, "count": bucket.doc_count}
+            for bucket in response.aggregations.subcollections.buckets
+        ],
+        "collections": [
+            {"id": bucket.key, "count": bucket.doc_count}
+            for bucket in response.aggregations.collections.buckets
+        ],
+        "years": [
+            {"year": int(bucket.key_as_string), "count": bucket.doc_count}
+            for bucket in response.aggregations.years.buckets
+        ],
+        "search_location": [],
+    }
+
+    for key in ["questions", "categories", "variable_name", "internal_label"]:
+        if hasattr(response.aggregations, key):
+            aggregations["search_location"].append(
+                {
+                    "id": key,
+                    "count": getattr(response.aggregations, key).doc_count,
+                }
+            )
+
+    return aggregations

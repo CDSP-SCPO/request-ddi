@@ -77,7 +77,15 @@ export function updateFiltersDisplay() {
 
       card.find(".remove-filter").on("click", function () {
         filterState[key].delete(value);
-        $(`.${key}-checkbox[value="${value}"]`).prop("checked", false);
+        const filterClassMap = {
+          search_location: "search-location-checkbox",
+          collection: "collection-checkbox",
+          sub_collection: "subcollection-checkbox",
+          survey: "survey-checkbox",
+          years: "year-checkbox",
+        };
+        
+        $(`.${filterClassMap[key]}[value="${value}"]`).prop("checked", false);
 
         if (key === "years") updateDecadeCheckboxes();
 
@@ -110,5 +118,37 @@ function getFilterLabel(filterType, value) {
   const checkbox = $(`.${checkboxClass}[value="${value}"]`);
   if (checkbox.length === 0) return value;
 
-  return checkbox.closest(".form-check-custom").find("label").text().trim();
+  const label = checkbox.closest(".form-check-custom").find("label").first().clone();
+
+  label.find(".available-count").remove();
+
+  return label.text().trim();
+}
+
+export function clearChildFilters(parentFilterType) {
+  const hierarchy = {
+    collection: ["sub_collection", "survey", "years"],
+    sub_collection: ["survey", "years"],
+    survey: ["years"],
+    years: [],
+  };
+
+  const childFilters = hierarchy[parentFilterType] || [];
+
+  const filterClassMap = {
+    sub_collection: "subcollection-checkbox",
+    survey: "survey-checkbox",
+    years: "year-checkbox",
+  };
+
+  childFilters.forEach(filterType => {
+    filterState[filterType].clear();
+
+    const checkboxClass = filterClassMap[filterType];
+    if (checkboxClass) {
+      $(`.${checkboxClass}`).prop("checked", false);
+    }
+  });
+
+  updateDecadeCheckboxes();
 }

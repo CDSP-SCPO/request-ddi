@@ -4,7 +4,8 @@ import {
   filterState,
   updateFiltersDisplay,
   updateFilterCounts,
-  updateDecadeCheckboxes
+  updateDecadeCheckboxes,
+  clearChildFilters
 } from "./filters.js";
 import { handleFilterChange } from "./handleFilters.js";
 import { updateSubcollections, updateSurveys } from "./filtersAPI.js";
@@ -30,19 +31,6 @@ export function attachDynamicCheckboxEvents() {
       const filterValue = checkbox.val();
 
       await handleFilterChange(filterType, filterValue);
-
-      // 🔁 Dépendances pour les subcollections
-      if (filterType === "sub_collection") {
-        const selectedSubcollections = Array.from(filterState.sub_collection);
-        if (selectedSubcollections.length === 0) {
-          const allSubcollections = $(".subcollection-checkbox").map(function () {
-            return this.value;
-          }).get();
-          updateSurveys(allSubcollections);
-        } else {
-          updateSurveys(selectedSubcollections);
-        }
-      }
     });
 }
 
@@ -50,7 +38,7 @@ export function attachStaticEventListeners() {
   // Collections & search locations
   $(".collection-checkbox, .search-location-checkbox")
     .off("change")
-    .on("change", function () {
+    .on("change", async function () {
       const checkbox = $(this);
       const className = checkbox
         .attr("class")
@@ -66,15 +54,6 @@ export function attachStaticEventListeners() {
       const filterValue = checkbox.val();
 
       handleFilterChange(filterType, filterValue);
-
-      // 🔁 Dépendances pour les collections
-      if (filterType === "collection") {
-        const selectedCollections = Array.from(filterState.collection);
-        updateSubcollections(selectedCollections);
-      }
-      clearCache();
-      resetCurrentLimit();
-      loadInitialData();
     });
 
   // Reset filtres
