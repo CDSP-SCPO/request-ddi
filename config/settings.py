@@ -111,6 +111,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "request_ddi.context_processors.app_version",
                 "request_ddi.context_processors.api_version",
             ],
         },
