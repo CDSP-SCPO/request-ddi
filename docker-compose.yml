@@ -91,7 +91,7 @@ services:
   # ELASTICSEARCH
   # -----------------------------------------------------
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
     container_name: elasticsearch
     # Variables propres à Elasticsearch uniquement
     environment:

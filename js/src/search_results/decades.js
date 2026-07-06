@@ -36,7 +36,7 @@ export function loadDecades() {
             .map(y => parseInt(y, 10))
             .filter(y => baseYearCounts.size === 0 || baseYearCounts.has(String(y)));
         });
-        console.log("sortedDecades",sortedDecades)
+        // console.log("sortedDecades",sortedDecades)
 
         // 🔥 Supprimer les années invalides du filterState
         const validYears = new Set();

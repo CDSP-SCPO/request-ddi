@@ -1,6 +1,7 @@
 import { defineConfig } from "eslint/config";
 import js from "@eslint/js";
 import stylistic from '@stylistic/eslint-plugin'
+import unusedImports from "eslint-plugin-unused-imports";
 import globals from "globals";
 
 export default defineConfig([
@@ -8,12 +9,16 @@ export default defineConfig([
 		files: ["**/*.js"],
 		plugins: {
 			js,
+			"unused-imports": unusedImports,
 			"@stylistic": stylistic
 		},
 		extends: ["js/recommended"],
 		rules: {
-			"no-unused-vars": "warn",
-			"no-undef": "warn",
+			"no-unused-vars": "error",
+			"no-undef": "error",
+			"unused-imports/no-unused-imports": "error",
+			"no-use-before-define": "warn",
+			"no-unreachable": "error",
 			"@stylistic/indent": ["error", 2],
 			"@stylistic/quotes": ["error", "double"] 
 		},

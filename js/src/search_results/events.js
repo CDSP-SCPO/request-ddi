@@ -4,11 +4,9 @@ import {
   filterState,
   updateFiltersDisplay,
   updateFilterCounts,
-  updateDecadeCheckboxes,
-  clearChildFilters
+  updateDecadeCheckboxes
 } from "./filters.js";
 import { handleFilterChange } from "./handleFilters.js";
-import { updateSubcollections, updateSurveys } from "./filtersAPI.js";
 import { loadDecades } from "./decades.js";
 import { loadInitialData } from "./datatable.js";
 

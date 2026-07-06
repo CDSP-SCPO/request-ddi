@@ -2,9 +2,7 @@ import { updateTableContainerHeight, resetCurrentLimit, clearCache } from "./uti
 import { updateFiltersDisplay, updateFilterCounts } from "./filters.js";
 import { initializeDataTable } from "./datatable.js";
 import { attachStaticEventListeners, attachDynamicCheckboxEvents, updateURLWithFilters } from "./events.js";
-import { loadDecades } from "./decades.js";
 import { applyFiltersFromURL } from "./applyFiltersFromURL.js";
-import { loadInitialData } from "./datatable.js";
 
 
 $(document).ready(async function () {
