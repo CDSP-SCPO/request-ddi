@@ -10,10 +10,10 @@ $(document).ready(async function () {
   resetCurrentLimit();
   clearCache();
   updateTableContainerHeight();
+  await applyFiltersFromURL();
   initializeDataTable();
   attachStaticEventListeners();
   attachDynamicCheckboxEvents();
-  await applyFiltersFromURL();
   updateFiltersDisplay();
   updateFilterCounts();
   updateURLWithFilters();
