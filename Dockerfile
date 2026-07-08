@@ -24,7 +24,7 @@ COPY --chown=appuser:appuser . .
 RUN if [ "${development}" = "False" ]; then \
         pip install --no-cache-dir .; rm -rf /app/; apk del git nodejs npm; \
     else \
-        pip install --no-cache-dir -e '.[dev]'; apk del git; \
+        pip install --no-cache-dir -e '.[dev]'; \
     fi
 
 # Copie config de l'app

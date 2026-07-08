@@ -213,12 +213,13 @@ class Command(BaseCommand):
     @run_only_on_main_process
     def watch_js_files(self):
         try:
-            self.stdout.write(self.style.NOTICE("Installing node dependencies..."))
+            # To ensure _version.py exists in dev environment and also to install
+            # node deps
+            self.stdout.write(self.style.NOTICE("Running build hooks..."))
             subprocess.check_call(
-                ["npm", "install"],  # noqa: S607
+                ["hatch", "build", "--hooks-only", "-t", "sdist"],  # noqa: S607
                 stdout=sys.stdout,
                 stderr=sys.stderr,
-                cwd="js",
             )
             self.stdout.write(self.style.NOTICE("Watching changes in js folder..."))
             subprocess.Popen(
@@ -228,7 +229,7 @@ class Command(BaseCommand):
                 cwd="js",
             )
         except Exception as e:
-            msg = "Failed to watch js changes using vite"
+            msg = "Failed to run build hooks or watch js changes using vite"
             raise CommandError(msg) from e
 
     @run_only_on_main_process
