@@ -1,8 +1,10 @@
 # -- STDLIB
 import logging
 import time
+from datetime import datetime
 
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Value
 from django.db.models.functions import Collate
 from django.tasks import task
@@ -17,8 +19,11 @@ from .models import (
     BindingSurveyRepresentedVariable,
     BindingVariableCategoryStat,
     Category,
+    Collection,
     ConceptualVariable,
+    Distributor,
     RepresentedVariable,
+    Subcollection,
     Survey,
 )
 
@@ -27,18 +32,48 @@ logger = logging.getLogger("performance")
 
 @task(takes_context=True)
 def import_data(context, survey_data):
+    validate_unique_variable_names(survey_data["variables"])
     num_questions = len(survey_data["variables"])
     doi = survey_data["doi"]
     start_time = time.time()
     try:
-        # Get survey model from DB
-        survey = Survey.objects.get(external_ref=doi)
-        num_new_variables, num_new_bindings = import_survey_variables(
-            survey, survey_data["variables"]
-        )
-    except Survey.DoesNotExist as err:
-        msg = f"DOI '{doi}' non trouvé dans la base de données."
-        raise ValueError(msg) from err
+        with transaction.atomic():
+            distributor_name = survey_data["distributor"]
+            distributor, _ = Distributor.objects.get_or_create(name=distributor_name)
+
+            collection_name = survey_data["collection"]
+            collection, _ = Collection.objects.get_or_create(
+                name=collection_name, distributor=distributor
+            )
+
+            subcollection_name = survey_data["sous-collection"]
+            subcollection, _ = Subcollection.objects.get_or_create(
+                name=subcollection_name, collection=collection
+            )
+
+            survey, _ = Survey.objects.get_or_create(
+                external_ref=doi,
+                defaults={
+                    "name": survey_data["title"],
+                    "subcollection": subcollection,
+                    "language": survey_data["xml_lang"],
+                    "author": survey_data["author"],
+                    "producer": survey_data["producer"],
+                    "start_date": datetime.strptime(survey_data["start_date"], "%Y-%m-%d").date(),  # noqa: DTZ007
+                    "geographic_coverage": survey_data["geographic_coverage"],
+                    "geographic_unit": survey_data["geographic_unit"],
+                    "unit_of_analysis": survey_data["unit_of_analysis"],
+                    "contact": survey_data["contact"],
+                    "date_last_version": datetime.strptime(  # noqa: DTZ007
+                        survey_data["date_last_version"], "%Y-%m-%d"
+                    ).date(),
+                },
+            )
+
+            # Import variables once Survey object has been created
+            num_new_variables, num_new_bindings = import_survey_variables(
+                survey, survey_data["variables"]
+            )
     except ValueError as ve:
         msg = f"DOI '{doi}': Erreur de valeur : {ve}"
         raise ValueError(msg) from ve
@@ -63,11 +98,33 @@ def import_data(context, survey_data):
     }
 
 
+def validate_unique_variable_names(questions):
+    """BindingSurveyRepresentedVariable has a unique constraint on (survey,
+    variable_name): two questions in the same survey can never share the same
+    variable_name. A poorly documented DDI-C file (typically a grid-type question)
+    can produce this case. We detect it here, before any write, instead of letting
+    the database raise an IntegrityError mid-save and leaving the survey half
+    imported.
+    """
+    seen = {}
+    for question in questions:
+        name = question["name"]
+        if name in seen:
+            msg = (
+                f"Le variable_name '{name}' apparaît plusieurs fois dans cette enquête "
+                f"(questions en conflit : {seen[name]!r} / {question['text']!r}). "
+                "Vérifiez la documentation DDI-C de cette enquête."
+            )
+            raise ValueError(msg)
+        seen[name] = question["text"]
+
+
 def import_survey_variables(survey, questions):
     batch_size = 200
     num_new_variables = 0
     num_new_bindings = 0
-    bindings_to_index = []
+    represented_variables_to_save = []
+    bindings_to_save = []
     for question in questions:
         variable_name = question["name"]
         variable_label = question["label"]
@@ -76,11 +133,17 @@ def import_survey_variables(survey, questions):
         universe = question["universe"]
         notes = question["notes"]
 
-        # Always create categories as it is the most primitive model
+        # Always create categories as it is the most primitive model. Within the same
+        # survey we can have duplicated categories and hence, we should save the models
+        # to catch those duplicates
         categories, stats = get_or_create_categories(categories)
 
-        # Get or create RepresentedVariable which is second most primitive model
-        represented_variable, represented_variable_created = get_or_create_represented_variable(
+        # Get or make RepresentedVariable which is second most primitive model. Do not
+        # "create" the variable ie do not save it. Save only at the end.
+        # This avoids creating duplicates within the same survey which does not make
+        # sense. However, it can happen in practice if DDI-C XML is not well documented
+        # for grid type questions.
+        represented_variable, represented_variable_created = get_or_make_represented_variable(
             question_text, variable_name, variable_label, categories
         )
 
@@ -88,12 +151,19 @@ def import_survey_variables(survey, questions):
         if not represented_variable:
             continue
 
-        # If a new represented variable created, increase the counter
+        # If a new represented variable created, increase the counter and add model to
+        # array so that we can save models later.
         if represented_variable_created:
+            # We need to save both categories and variable as we need to first save
+            # variable before we can set categories to the variable. Constraint due to
+            # ManyToMany relation.
+            represented_variables_to_save.append(
+                {"categories": categories, "variable": represented_variable}
+            )
             num_new_variables += 1
 
-        # Now get or create BindingSurveyVariable which depends on RepresentedVariable
-        binding_survey_variable, binding_created = get_or_create_binding_survey_variable(
+        # Now get or make BindingSurveyVariable model which depends on RepresentedVariable
+        binding_survey_variable, binding_created = get_or_make_binding_survey_variable(
             survey, variable_name, universe, notes, represented_variable
         )
 
@@ -101,13 +171,31 @@ def import_survey_variables(survey, questions):
         if binding_created:
             num_new_bindings += 1
 
-        # Finally once we have BindingSurveyVariable variable, get or create BindingVariableCategoryStat for each
-        # category
-        get_or_create_binding_variable_category_stat(categories, stats, binding_survey_variable)
+        # Finally save binding_survey_variable and its corresponding categories and stats
+        # in a list to create later
+        bindings_to_save.append(
+            {"binding": binding_survey_variable, "categories": categories, "stats": stats}
+        )
 
-        # Index to elastic search for a given batch size so we avoid making
-        # round trips for each variable
-        bindings_to_index.append(binding_survey_variable)
+    # First save the represented variable and then set categories
+    for rv in represented_variables_to_save:
+        rv["variable"].save()
+        rv["variable"].categories.set(rv["categories"])
+
+    # Index to elastic search for a given batch size so we avoid making
+    # round trips for each variable
+    bindings_to_index = []
+    for b in bindings_to_save:
+        # First save binding
+        b["binding"].save()
+        bindings_to_index.append(b["binding"])
+        # Now get or create BindingVariableCategoryStat
+        for category, stat in zip(b["categories"], b["stats"]):
+            binding_stat, _ = BindingVariableCategoryStat.objects.get_or_create(
+                binding=b["binding"], category=category
+            )
+            binding_stat.stat = stat
+            binding_stat.save()
 
     # Index on ES at the end of each survey
     BindingSurveyDocument().update(bindings_to_index, batch_size)
@@ -138,7 +226,7 @@ def get_or_create_categories(categories):
     return category_objs, stats
 
 
-def get_or_create_represented_variable(question_text, variable_name, variable_label, categories):
+def get_or_make_represented_variable(question_text, variable_name, variable_label, categories):
     # Get normalized question text and variable label
     name_question_normalized = normalize_string_for_database(question_text)
     variable_label_normalized = normalize_string_for_database(variable_label)
@@ -149,19 +237,6 @@ def get_or_create_represented_variable(question_text, variable_name, variable_la
     # Assemble query variables
     # ALWAYS use the custom case accent insensitive collation that we defined
     # in the DB for variable_label, question_text and category labels.
-
-    # We don't use the internal label nor the variable name to determine whether two variables
-    # are similar or identical. We have to stick with the question text and the categories only.
-    # if variable_label_normalized:
-    #     print("test variable_label_normalized")
-    #     query.update(
-    #         {
-    #             "internal_label": Collate(
-    #                 Value(variable_label_normalized),
-    #                 settings.DB_COLLATION,
-    #             )
-    #         }
-    #     )
 
     # If there is no question text and categories, ignore that variable
     if not name_question_normalized and not category_ids:
@@ -175,12 +250,28 @@ def get_or_create_represented_variable(question_text, variable_name, variable_la
     # If there is no question text, check if there are binding variables that have
     # same variable name
     if name_question_normalized:
-        similar_represented_variables = RepresentedVariable.objects.filter(
+        similar_represented_variables_qtext = RepresentedVariable.objects.filter(
             question_text=Collate(
                 Value(name_question_normalized),
                 settings.DB_COLLATION,
             )
         )
+        # In case if variable label is not empty, further filter on the found represented
+        # variables. If we found at least one result, we use it as found represented variable
+        # and if not we use the found represented variables on the question text alone.
+        if variable_label_normalized:
+            similar_represented_variables_qtext_qlabel = similar_represented_variables_qtext.filter(
+                internal_label=Collate(
+                    Value(variable_label_normalized),
+                    settings.DB_COLLATION,
+                )
+            )
+            if len(similar_represented_variables_qtext_qlabel) > 0:
+                similar_represented_variables = similar_represented_variables_qtext_qlabel
+            else:
+                similar_represented_variables = similar_represented_variables_qtext
+        else:
+            similar_represented_variables = similar_represented_variables_qtext
     elif variable_name:
         similar_represented_variables = [
             RepresentedVariable.objects.get(id=i)
@@ -212,19 +303,16 @@ def get_or_create_represented_variable(question_text, variable_name, variable_la
         )
 
     # Create new represented variable
-    represented_variable = RepresentedVariable.objects.create(
+    represented_variable = RepresentedVariable(
         conceptual_var=conceptual_var,
         question_text=name_question_normalized,
         internal_label=variable_label_normalized,
         is_unique=not bool(name_question_normalized),
     )
-
-    # Update the categories of the existant or created represented variable
-    represented_variable.categories.set(categories)
     return represented_variable, True
 
 
-def get_or_create_binding_survey_variable(
+def get_or_make_binding_survey_variable(
     survey, variable_name, universe, notes, represented_variable
 ):
     binding_created = False
@@ -240,9 +328,8 @@ def get_or_create_binding_survey_variable(
         binding.variable = represented_variable
         binding.universe = universe
         binding.notes = notes
-        binding.save()
     else:
-        binding = BindingSurveyRepresentedVariable.objects.create(
+        binding = BindingSurveyRepresentedVariable(
             survey=survey,
             variable=represented_variable,
             variable_name=variable_name,
@@ -251,12 +338,3 @@ def get_or_create_binding_survey_variable(
         )
         binding_created = True
     return binding, binding_created
-
-
-def get_or_create_binding_variable_category_stat(categories, stats, binding):
-    for category, stat in zip(categories, stats):
-        binding_stat, _ = BindingVariableCategoryStat.objects.get_or_create(
-            binding=binding, category=category
-        )
-        binding_stat.stat = stat
-        binding_stat.save()

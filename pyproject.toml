@@ -141,6 +141,7 @@ addopts = [
     "--color=yes",
     "--cov=request_ddi",
     "--cov-branch",
+    "--cov-report=html:cov_html"
 ]
 
 [tool.ruff]

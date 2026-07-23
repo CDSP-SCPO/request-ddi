@@ -9,3 +9,10 @@ LOGGING["loggers"]["performance"] = {  # noqa: F405
     "level": "CRITICAL",
     "propagate": False,
 }
+
+TASKS = {
+    "default": {
+        "BACKEND": "request_ddi.tests.utils.ImmediateDBBackend",
+        "QUEUES": ["default"],
+    }
+}

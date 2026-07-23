@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.tasks.base import TaskResultStatus
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -16,6 +17,7 @@ from request_ddi.core.models import (
 )
 
 from .mixins import MockElasticsearchMixin
+from .utils import wait_task
 
 
 class BaseUploadTest(TestCase):
@@ -70,6 +72,7 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(wait_task(), TaskResultStatus.SUCCESSFUL)
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
 
     def test_form_valid_csv_without_xml(self):
@@ -246,11 +249,227 @@ class CSVUploadViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(wait_task(), TaskResultStatus.SUCCESSFUL)
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
         self.assertTrue(Survey.objects.filter(external_ref="doi:5678/test").exists())
 
+    @patch("request_ddi.views.upload_views.download_xml_file")
+    def test_csv_with_same_question_text_in_same_xml(self, mock_download):
+        """Test when multiple variables in same survey have same question text but different labels"""
+        self.login()
 
-class CheckDuplicatesTest(BaseUploadTest):
+        csv_content = (
+            "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
+            "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
+            "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
+        )
+        csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
+
+        xml_content = """
+        <root>
+            <IDNo agency="DataCite">doi:1234/test</IDNo>
+            <var name="Q1_1">
+                <labl>Variant 1</labl>
+                <qstn><qstnLit>Grid Question</qstnLit></qstn>
+                <catgry>
+                    <catValu>1</catValu>
+                    <labl>Option 1</labl>
+                    <catStat type="freq">10</catStat>
+                </catgry>
+            </var>
+            <var name="Q1_2">
+                <labl>Variant 2</labl>
+                <qstn><qstnLit>Grid Question</qstnLit></qstn>
+                <catgry>
+                    <catValu>1</catValu>
+                    <labl>Option 1</labl>
+                    <catStat type="freq">10</catStat>
+                </catgry>
+            </var>
+        </root>
+        """
+
+        mock_download.return_value = xml_content
+
+        response = self.client.post(
+            reverse("request_ddi:import"),
+            {"csv_file": csv_file, "delimiter": ","},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(wait_task(), TaskResultStatus.SUCCESSFUL)
+        self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
+        self.assertEqual(len(RepresentedVariable.objects.all()), 2)
+
+    @patch("request_ddi.views.upload_views.download_xml_file")
+    def test_csv_with_question_text_label_from_multiple_surveys(self, mock_download):
+        """Test when multiple surveys use same question text and label documentation"""
+        self.login()
+
+        csv_content = (
+            "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
+            "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
+            "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
+            "Distrib,Collection,Subcollection,doi:5678/test,Survey 2,fr,Author,Producer,2021,"
+            "France,,Individual,Contact,2021-01-01,https://example.com/xml/5678\n"
+        )
+        csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
+
+        xml_content_1 = """
+        <root>
+            <IDNo agency="DataCite">doi:1234/test</IDNo>
+            <var name="Q12000">
+                <labl>Variant 1</labl>
+                <qstn><qstnLit>Grid Question</qstnLit></qstn>
+                <catgry>
+                    <catValu>1</catValu>
+                    <labl>Option 1</labl>
+                    <catStat type="freq">10</catStat>
+                </catgry>
+            </var>
+        </root>
+        """
+
+        xml_content_2 = """
+        <root>
+            <IDNo agency="DataCite">doi:5678/test</IDNo>
+            <var name="Q12001">
+                <labl>Variant 1</labl>
+                <qstn><qstnLit>Grid Question</qstnLit></qstn>
+                <catgry>
+                    <catValu>1</catValu>
+                    <labl>Option 1</labl>
+                    <catStat type="freq">20</catStat>
+                </catgry>
+            </var>
+        </root>
+        """
+
+        mock_download.side_effect = lambda url: xml_content_1 if "1234" in url else xml_content_2
+
+        response = self.client.post(
+            reverse("request_ddi:import"),
+            {"csv_file": csv_file, "delimiter": ","},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(wait_task(), TaskResultStatus.SUCCESSFUL)
+        self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
+        self.assertTrue(Survey.objects.filter(external_ref="doi:5678/test").exists())
+        self.assertEqual(len(RepresentedVariable.objects.all()), 1)
+
+    @patch("request_ddi.views.upload_views.download_xml_file")
+    def test_csv_with_force_import(self, mock_download):
+        """Test when CSV is force imported"""
+        self.login()
+
+        csv_content = (
+            "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
+            "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
+            "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
+        )
+        csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
+
+        xml_content = """
+        <root>
+            <IDNo agency="DataCite">doi:1234/test</IDNo>
+            <var name="Q1">
+                <labl>Question 1</labl>
+                <qstn><qstnLit>Text 1</qstnLit></qstn>
+                <catgry>
+                    <catValu>1</catValu>
+                    <labl>Option 1</labl>
+                    <catStat type="freq">10</catStat>
+                </catgry>
+            </var>
+        </root>
+        """
+
+        mock_download.return_value = xml_content
+
+        # # Useful for debugging tests. This context manager prints all the SQL queries
+        # # executed against the DB.
+        # #
+        # from django.db import connection
+        # from django.test.utils import CaptureQueriesContext
+        # with CaptureQueriesContext(connection) as ctx:
+        #      commands to run...
+        #      print(ctx.captured_queries)
+        #
+        response = self.client.post(
+            reverse("request_ddi:import"),
+            {"csv_file": csv_file, "delimiter": ","},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(wait_task(), TaskResultStatus.SUCCESSFUL)
+        self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
+
+        # Make another request with force_import
+        csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
+        response = self.client.post(
+            reverse("request_ddi:import"),
+            {"csv_file": csv_file, "delimiter": ",", "force_import": "on"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(wait_task(), TaskResultStatus.SUCCESSFUL)
+        self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
+
+    @patch("request_ddi.views.upload_views.download_xml_file")
+    def test_malformed_xml_db_rollback(self, mock_download):
+        """Test when variables in XML raise an exception which should rollback DB transcation"""
+        self.login()
+
+        csv_content = (
+            "distributor,collection,sous-collection,doi,title,xml_lang,author,producer,start_date,"
+            "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
+            "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
+            "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
+        )
+        csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
+
+        # Two variables with same name
+        xml_content = """
+        <root>
+            <IDNo agency="DataCite">doi:1234/test</IDNo>
+            <var name="Q1">
+                <labl>Question 1</labl>
+                <qstn><qstnLit>Text 1</qstnLit></qstn>
+                <catgry>
+                    <catValu>1</catValu>
+                    <labl>Option 1</labl>
+                    <catStat type="freq">10</catStat>
+                </catgry>
+            </var>
+            <var name="Q1">
+                <labl>Question 2</labl>
+                <qstn><qstnLit>Text 2</qstnLit></qstn>
+                <catgry>
+                    <catValu>1</catValu>
+                    <labl>Option 1</labl>
+                    <catStat type="freq">10</catStat>
+                </catgry>
+            </var>
+        </root>
+        """
+
+        mock_download.return_value = xml_content
+
+        response = self.client.post(
+            reverse("request_ddi:import"),
+            {"csv_file": csv_file, "delimiter": ","},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(wait_task(), TaskResultStatus.FAILED)
+        self.assertFalse(Survey.objects.filter(external_ref="doi:1234/test").exists())
+
+
+class CheckDuplicatesTest(MockElasticsearchMixin, BaseUploadTest):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
@@ -315,4 +534,5 @@ class CheckDuplicatesTest(BaseUploadTest):
         self.assertEqual(response.status_code, 200)
         json_response = response.json()
         self.assertEqual(json_response["status"], "success")
+        self.assertEqual(wait_task(), TaskResultStatus.SUCCESSFUL)
         self.assertEqual(Survey.objects.filter(external_ref="doi:9999/test").count(), 1)

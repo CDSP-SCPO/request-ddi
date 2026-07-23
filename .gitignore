@@ -50,6 +50,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+cov_html/
 
 # Translations
 *.pot
@@ -236,3 +237,6 @@ js/.eslintcache
 # Ignore nb
 *.ipynb
 *.json
+
+Ignore XML files
+*.xml

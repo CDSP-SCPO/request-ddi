@@ -4,14 +4,12 @@ import io
 import logging
 import re
 from datetime import datetime
-from functools import partial
 
 import requests
 
 # -- THIRDPARTY
 # -- DJANGO
 from django import forms
-from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import reverse_lazy
@@ -23,9 +21,6 @@ from request_ddi.core.data_importer import import_data
 from request_ddi.core.exceptions import DataImportError, PartialDataImportError
 from request_ddi.core.forms import CSVUploadFormCollection
 from request_ddi.core.models import (
-    Collection,
-    Distributor,
-    Subcollection,
     Survey,
 )
 from request_ddi.core.parser import parse_codebook_xml_file
@@ -103,7 +98,7 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
             return JsonResponse(
                 {
                     "status": "success",
-                    "message": f"Le fichier CSV a été traité avec succès. {num_surveys} enquête(s) et {num_bindings} binding(s) seront importée(s).",
+                    "message": f"Le fichier CSV a été traité avec succès. {num_surveys} enquête(s) et {num_bindings} binding(s) seront importée(s) ou mise(s) à jour.",
                     "data": [
                         {
                             "num_surveys": num_surveys,
@@ -173,61 +168,60 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
         num_surveys = 0
         total_bindings = 0
 
-        for line_number, row in enumerate(survey_datas, start=1):
+        for line_number, survey_data in enumerate(survey_datas, start=1):
             try:
-                survey_doi = row["doi"]
+                survey_doi = survey_data["doi"]
                 if not survey_doi.startswith("doi:"):
                     msg = f"Le DOI à la ligne {line_number} n'est pas dans le bon format"
                     raise ValueError(msg)
                 if survey_doi in skip_dois:
                     skipped_surveys.append(survey_doi)
                     continue
-                survey_name = row["title"]
-                survey_language = row["xml_lang"]
-                survey_author = row["author"]
-                survey_producer = row["producer"]
-                survey_start_date = row["start_date"]
-                survey_geographic_coverage = row["geographic_coverage"]
-                survey_geographic_unit = row["geographic_unit"]
-                survey_unit_of_analysis = row["unit_of_analysis"]
-                survey_contact = row["contact"]
-                survey_date_last_version = row["date_last_version"]
 
                 # Conversion de survey_start_date en objet date (année uniquement)
-                if survey_start_date:
+                # DONOT create date object here as import_data function cannot accept any
+                # arguments that are not serialisable. We just do the validation and stringify
+                # the created object and then create object during DB object creation.
+                if survey_data["start_date"]:
                     try:
                         # Tente de convertir la date au format "YYYY"
-                        survey_start_date = datetime.strptime(  # noqa: DTZ007
-                            survey_start_date, "%Y"
-                        ).date()
+                        survey_data["start_date"] = str(
+                            datetime.strptime(  # noqa: DTZ007
+                                survey_data["start_date"], "%Y"
+                            ).date()
+                        )
                     except ValueError:
                         try:
                             # Si ça échoue, tente de convertir la date au format "YYYY-MM-DD"
-                            survey_start_date = datetime.strptime(  # noqa: DTZ007
-                                survey_start_date, "%Y-%m-%d"
-                            ).date()
+                            survey_data["start_date"] = str(
+                                datetime.strptime(  # noqa: DTZ007
+                                    survey_data["start_date"], "%Y-%m-%d"
+                                ).date()
+                            )
                         except ValueError:
-                            msg = f"L'année de début à la ligne {line_number} n'est pas valide : {survey_start_date}"
+                            msg = f"L'année de début à la ligne {line_number} n'est pas valide : {survey_data['start_date']}"
                             raise ValueError(msg) from None
 
                 else:
-                    survey_start_date = None
+                    survey_data["start_date"] = None
 
                 # Vérification et formatage de survey_date_last_version
-                if survey_date_last_version:
+                if survey_data["date_last_version"]:
                     len_format_yyyy_mm = 7
-                    if len(survey_date_last_version) == len_format_yyyy_mm:
-                        survey_date_last_version += "-01"
+                    if len(survey_data["date_last_version"]) == len_format_yyyy_mm:
+                        survey_data["date_last_version"] += "-01"
                     try:
-                        survey_date_last_version = datetime.strptime(  # noqa: DTZ007
-                            survey_date_last_version, "%Y-%m-%d"
-                        ).date()
+                        survey_data["date_last_version"] = str(
+                            datetime.strptime(  # noqa: DTZ007
+                                survey_data["date_last_version"], "%Y-%m-%d"
+                            ).date()
+                        )
                     except ValueError:
-                        msg = f"La date de la dernière version à la ligne {line_number} n'est pas valide : {survey_date_last_version}"
+                        msg = f"La date de la dernière version à la ligne {line_number} n'est pas valide : {survey_data['date_last_version']}"
                         raise ValueError(msg) from None
 
                 else:
-                    survey_date_last_version = None
+                    survey_data["date_last_version"] = None
 
                 doi_formatted = survey_doi.replace("doi:", "", 1)
                 xml_content = xml_contents.get(doi_formatted)
@@ -237,53 +231,25 @@ class CSVUploadViewCollection(StaffRequiredMixin, View):
 
                 uploaded_file = io.BytesIO(xml_content.encode("utf-8"))
 
-                survey_data = parse_codebook_xml_file(uploaded_file)
-                if survey_data["variables"]:
-                    if survey_data["doi"] != survey_doi:
-                        msg = f"Le XML téléchargé ne correspond pas à cette enquête (DOIs trouvés dans le XML : {survey_data['doi']})"
+                ddic = parse_codebook_xml_file(uploaded_file)
+                if ddic["variables"]:
+                    if ddic["doi"] != survey_doi:
+                        msg = f"Le XML téléchargé ne correspond pas à cette enquête (DOIs trouvés dans le XML : {ddic['doi']})"
                         raise ValueError(msg)
                 else:
                     msg = "Le XML est vide ou invalide"
                     raise ValueError(msg)
 
-                with transaction.atomic():
-                    distributor_name = row["distributor"]
-                    distributor, created = Distributor.objects.get_or_create(name=distributor_name)
+                # Add survey variables to data
+                survey_data["variables"] = ddic["variables"]
 
-                    collection_name = row["collection"]
-                    collection, created = Collection.objects.get_or_create(
-                        name=collection_name, distributor=distributor
-                    )
+                # Submit tasks to background worker
+                import_data.enqueue(survey_data)
 
-                    subcollection_name = row["sous-collection"]
-                    subcollection, created = Subcollection.objects.get_or_create(
-                        name=subcollection_name, collection=collection
-                    )
-
-                    _, created = Survey.objects.get_or_create(
-                        external_ref=survey_doi,
-                        defaults={
-                            "name": survey_name,
-                            "subcollection": subcollection,
-                            "language": survey_language,
-                            "author": survey_author,
-                            "producer": survey_producer,
-                            "start_date": survey_start_date,
-                            "geographic_coverage": survey_geographic_coverage,
-                            "geographic_unit": survey_geographic_unit,
-                            "unit_of_analysis": survey_unit_of_analysis,
-                            "contact": survey_contact,
-                            "date_last_version": survey_date_last_version,
-                        },
-                    )
-                    if created:
-                        num_surveys += 1
-                        # Increment total bindings only when survey is created
-                        total_bindings += len(survey_data["variables"])
-
-                    # Submit tasks to background worker
-                    transaction.on_commit(partial(import_data.enqueue, survey_data))
-                    successful_surveys.append(survey_doi)
+                # Increment counters to send them back in the response
+                successful_surveys.append(survey_doi)
+                num_surveys += 1
+                total_bindings += len(survey_data["variables"])
 
             except Exception as e:
                 errors.append(
