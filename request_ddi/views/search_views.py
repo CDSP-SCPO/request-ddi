@@ -205,7 +205,11 @@ class SearchResultsDataView(ListView):
             start = int(self.request.POST.get("start", 0))
             limit = int(self.request.POST.get("limit", self.paginate_by))
 
-            search = search.extra(track_total_hits=True)
+            # Since we are sorting results on _score and survey.start_date, ES does not
+            # track scores anymore (according to their docs). So, we need to explicitly
+            # ask to track scores when sorting of results is required.
+            # Ref: https://www.elastic.co/docs/reference/elasticsearch/rest-apis/sort-search-results#_track_scores
+            search = search.extra(track_total_hits=True, track_scores=True)
             logger.debug("ES query: %s", search.to_dict())
             response = search[start : start + limit].execute()
             filtered_records = response.hits.total.value

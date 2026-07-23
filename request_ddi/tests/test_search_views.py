@@ -136,7 +136,7 @@ class SearchResultsDataViewTest(BaseSearchViewTest):
 
         mock_add_aggregations.assert_not_called()
         mock_format_aggregations.assert_called_once_with(mock_response)
-        mock_search.extra.assert_called_once_with(track_total_hits=True)
+        mock_search.extra.assert_called_once_with(track_total_hits=True, track_scores=True)
 
     @patch("request_ddi.views.search_views.BindingSurveyDocument.add_filter_aggregations")
     @patch.object(SearchResultsDataView, "build_filtered_search")
@@ -184,7 +184,7 @@ class SearchResultsDataViewTest(BaseSearchViewTest):
 
         mock_add_aggregations.assert_not_called()
         mock_format_aggregations.assert_called_once_with(mock_response)
-        mock_search.extra.assert_called_once_with(track_total_hits=True)
+        mock_search.extra.assert_called_once_with(track_total_hits=True, track_scores=True)
 
     @patch.object(SearchResultsDataView, "build_filtered_search", side_effect=Exception("Erreur"))
     def test_post_error_handling(self, mock_build_search):

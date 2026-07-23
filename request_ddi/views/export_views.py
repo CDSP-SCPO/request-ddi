@@ -1,6 +1,7 @@
 # -- DJANGO
 import csv
 import logging
+from time import time
 
 from django.conf import settings
 from django.http import StreamingHttpResponse
@@ -105,12 +106,15 @@ class ExportQuestionsCSVView(View):
         # would increase memory footprint.
         #
         # ES recommends to use search_after which is pagination of results.
-        # Here we will sort the results based on variable.id and start the query from
-        # id=0. This is what `search_after = [0]` signifies. We will update the
+        # Here we will sort the results based on survey.start_date and variable.id
+        # and start the query from
+        # id=<current timestamp in milliseconds>. This is what `search_after = [int(time() * 1000), 0]`
+        # signifies. We will update the
         # `search_after` for each page using the `sort` key from the last hit to get
         # next pages.
+        # See: https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/477#note_24357
         total = 0
-        search_after = [0]
+        search_after = [int(time() * 1000), 0]
 
         while True:
             result = es.search(
@@ -119,7 +123,7 @@ class ExportQuestionsCSVView(View):
                     "query": es_query,
                     "from": 0,
                     "size": ES_EXPORT_BATCH_SIZE,
-                    "sort": [{"variable.id": "asc"}],
+                    "sort": [{"survey.start_date": {"order": "desc"}}, {"variable.id": "asc"}],
                     "search_after": search_after,
                     "_source": [
                         "variable.id",

@@ -260,6 +260,15 @@ class BindingSurveyDocument(Document):
         search = cls.search()
         search_locations = validate_search_locations(search_locations or [])
 
+        # Always return results in descending order of the survey. Newer survey results
+        # appear at the top of the search!
+        # Important to use _score as the first sorting variable as we need to ALWAYS
+        # present results by the relevance of the search term. If the score is same
+        # for all results (in case of empty search term), we use survey.start_date as
+        # tiebreaker to sort results based on survey date.
+        # See: https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/477#note_24351
+        search = search.sort("_score", {"survey.start_date": {"order": "desc"}})
+
         if query:
             queries = cls._build_search_location_queries(query, search_locations)
             if queries:

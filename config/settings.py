@@ -242,11 +242,6 @@ if not DEBUG:
     LOGGING["loggers"]["django_tasks_db"]["level"] = "ERROR"
 
 # ---------------------------------------------------------
-# HEALTH CHECKS
-# ---------------------------------------------------------
-HEALTH_CHECKS = ["request_ddi.health_checks.ElasticsearchHealthCheck"]
-
-# ---------------------------------------------------------
 # DEFAULT PK
 # ---------------------------------------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

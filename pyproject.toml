@@ -55,7 +55,7 @@ dependencies = [
   "gunicorn==26.0.0",
   "whitenoise==6.4.0",
   "django-extensions>=3.3",
-  "django-health-check==3.21.0",
+  "django-health-check[psutil]>4.0.0",
   "python-dotenv",
   "requests",
 ]

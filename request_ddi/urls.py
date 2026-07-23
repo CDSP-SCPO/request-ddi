@@ -2,6 +2,7 @@
 from django.conf import settings
 from django.contrib.auth.views import LogoutView
 from django.urls import path
+from health_check.views import HealthCheckView
 
 from request_ddi.views.import_status import ImportRetryView, ImportStatusView
 
@@ -39,4 +40,19 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("import/status/", ImportStatusView.as_view(), name="import_status"),
     path("import/status/retry/", ImportRetryView.as_view(), name="import_retry"),
+    path(
+        "health/",
+        HealthCheckView.as_view(
+            checks=[
+                "health_check.Cache",
+                "health_check.Database",
+                "health_check.Storage",
+                # 3rd party checks
+                "health_check.contrib.psutil.Disk",
+                "health_check.contrib.psutil.Memory",
+                # Custom checks
+                "request_ddi.health_checks.ElasticsearchHealthCheck",
+            ]
+        ),
+    ),
 ]
