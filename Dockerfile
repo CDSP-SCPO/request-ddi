@@ -19,9 +19,17 @@ WORKDIR /app
 # Copie le reste du code de l'application
 COPY --chown=appuser:appuser . .
 
-
 # Installe l'application
+# Due to the .dockerignore not all files are copied into the container during the build
+# process. Hence, `git status` will report missing files which leads to VCS reporting
+# versions as v1.2.0.dev0.<commit hash> even when we are on tagged versions. To avoid this
+# situation, we need to restore all files before calling pip install for production
+# images
+# We need to add `git config --global --add safe.directory /app` command as well as
+# the user building the image is `root` whereas repo files are owned by `appuser`. To bypass
+# the permission checks, we need this config
 RUN if [ "${development}" = "False" ]; then \
+        git config --global --add safe.directory /app; git restore .; \
         pip install --no-cache-dir .; rm -rf /app/; apk del git nodejs npm; \
     else \
         pip install --no-cache-dir -e '.[dev]'; \
