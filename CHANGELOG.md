@@ -3,6 +3,31 @@
 <!-- <START NEW CHANGELOG ENTRY> -->
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## v1.3.0
+
+([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/0066455e81ece79da23c8f737e4e7ac8edefd19f...None?from_project_id=766&straight=false))
+
+### New features added
+
+- feat: Add version to frontend [!474](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/474) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+- feat: :sparkles: Show only relevant filters, and add a variable count on the filters [!471](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/471) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+
+### Bugs fixed
+
+- build: Ensure _version.py exists in dev environment [!476](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/476) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- fix: Use `search_after` for pagination in export views [!473](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/473) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+
+### Maintenance and upkeep improvements
+
+- refactor: Save RVs and BVs once at the end of each survey [!478](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/478) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- refactor: Always sort results in desc order based on survey date in ES queries [!477](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/477) ([@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon), [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri), [@william.feraux](https://gitlab.sciences-po.fr/william.feraux))
+- build(deps): Upgrade ES in docker compose env [!475](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/475) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+- test: Add test coverage opts in pytest plugin [!472](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/merge_requests/472) ([@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri))
+
+### [Contributors to this release](https://mahendrapaipuri.gitlab.io/gitlab-activity/usage#contributors-list)
+
+[@malaury.lemaitresalmon](https://gitlab.sciences-po.fr/malaury.lemaitresalmon) | [@mahendra.paipuri](https://gitlab.sciences-po.fr/mahendra.paipuri) | [@william.feraux](https://gitlab.sciences-po.fr/william.feraux)
+
 ## v1.2.0
 
 ([Full Changelog](https://gitlab.sciences-po.fr/cdspit/request/request-ddi/-/compare/d4f025f15f1d59ea0c3c0a895031f6b55cad18c5...None?from_project_id=766&straight=false))
