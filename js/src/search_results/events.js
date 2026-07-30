@@ -1,168 +1,84 @@
 import Swal from "sweetalert2";
-import { selectedIds, updateCheckboxes, updateTableContainerHeight, incrementLimit, clearCache, resetCurrentLimit } from "./utils.js";
-import {
-  filterState,
-  updateFiltersDisplay,
-  updateFilterCounts,
-  updateDecadeCheckboxes
-} from "./filters.js";
-import { handleFilterChange } from "./handleFilters.js";
-import { loadDecades } from "./decades.js";
-import { loadInitialData } from "./datatable.js";
+import {loadMoreResults} from "./results.js";
+import {resetAllFilters, toggleFilter, restoreFiltersFromUrl} from "./filterController.js";
+import {buildSearchUrlParams, getSearchQuery, syncBrowserUrl} from "./searchParams.js";
+import {selectedIds} from "./state.js";
+import {updateTableContainerHeight} from "./utils.js";
+import {attachYearsEvents} from "./yearsView.js";
 
-export function attachDynamicCheckboxEvents() {
-  $(".subcollection-checkbox, .survey-checkbox")
-    .off("change")
-    .on("change", async function () {
-      const checkbox = $(this);
-      const className = checkbox
-        .attr("class")
-        .split(" ")
-        .find(c => c.endsWith("-checkbox"));
-
-      let filterType = className.replace("-checkbox", "");
-
-      // 🔧 Normalisation pour correspondre aux clés de filterState
-      if (filterType === "subcollection") filterType = "sub_collection";
-      if (filterType === "survey") filterType = "survey";
-
-      const filterValue = checkbox.val();
-
-      await handleFilterChange(filterType, filterValue);
-    });
-}
-
-export function attachStaticEventListeners() {
-  // Collections & search locations
-  $(".collection-checkbox, .search-location-checkbox")
-    .off("change")
-    .on("change", async function () {
-      const checkbox = $(this);
-      const className = checkbox
-        .attr("class")
-        .split(" ")
-        .find(c => c.endsWith("-checkbox"));
-
-      let filterType = className.replace("-checkbox", "");
-
-      // 🔧 Normalisation pour correspondre aux clés de filterState
-      if (filterType === "search-location") filterType = "search_location";
-      if (filterType === "collection") filterType = "collection";
-
-      const filterValue = checkbox.val();
-
-      handleFilterChange(filterType, filterValue);
+// Attach all the user events of the results page towards appropriate actions (checkboxes, export, reset...)
+export function attachEventListeners() {
+  $(document)
+    .off("change.requestDdiFilter", ".filter-checkbox")
+    .on("change.requestDdiFilter", ".filter-checkbox", function () {
+      toggleFilter(this.dataset.filterType, this.value);
     });
 
-  // Reset filtres
-  $("#reset-filters").off("click").on("click", async function () {
-    Object.keys(filterState).forEach(key => filterState[key].clear());
-    selectedIds.clear();
+  attachYearsEvents();
 
-    // Reset UI
-    $(".form-check-input").prop("checked", false);
-    updateDecadeCheckboxes();
-    updateFiltersDisplay();
-    updateFilterCounts();
+  $("#reset-filters").off("click").on("click", resetAllFilters);
+  $("#load-more").off("click").on("click", loadMoreResults);
+  $("#export-all").off("click").on("click", exportAll);
+  $("#export-selected").off("click").on("click", exportSelected);
 
-    clearCache();
-    resetCurrentLimit();
-    await loadDecades();
-    loadInitialData();
-    updateURLWithFilters();
+  $("#survey-table tbody")
+    .off("change.requestDdiSelection", "input[type='checkbox']")
+    .on("change.requestDdiSelection", "input[type='checkbox']", updateSelection);
+
+  $("form.search-bar").off("submit.requestDdiSearch").on("submit.requestDdiSearch", event => {
+    event.preventDefault();
+    syncBrowserUrl();
+    window.location.reload();
   });
 
-  // Load more
-  $("#load-more").off("click").on("click", function () {
-    incrementLimit();
-    $("#survey-table").DataTable().ajax.reload(function() {
-      updateCheckboxes();
-    }, false);  // false = n'efface pas les lignes existantes
-  });
-
-  // Export all
-  $("#export-all").off("click").on("click", function () {
-    const params = {
-      q: $("input[name='q']").val(),
-      survey: Array.from(filterState.survey),
-      collections: Array.from(filterState.collection),
-      sub_collections: Array.from(filterState.sub_collection),
-      search_location: Array.from(filterState.search_location),
-      years: Array.from(filterState.years),
-    };
-    const searchParams = new URLSearchParams(params).toString();
-    window.location.href = `/export/questions/?${searchParams}`;
-  });
-
-  // Export selected
-  $("#export-selected").off("click").on("click", function () {
-    if (selectedIds.size === 0) {
-      Swal.fire({
-        html: `
-            <div style="text-align: center;">
-                <img src="/static/svg/icons/checkbox_checked_swal.svg" style="width: 32px;">
-            </div>
-            <div>Veuillez sélectionner au moins une question à exporter.</div>
-        `,
-        confirmButtonText: "Fermer",
-        confirmButtonColor: "#536254",
-      });
-      return;
-    }
-    const query = Array.from(selectedIds).map(id => `ids=${id}`).join("&");
-    window.location.href = `/export/questions/?${query}`;
-  });
-
-  // Sélection DataTable
-  $("#survey-table tbody").on("change", "input[type=\"checkbox\"]", function () {
-    this.checked ? selectedIds.add(this.value) : selectedIds.delete(this.value);
-
-    const all = $("#survey-table tbody input[type=\"checkbox\"]");
-    const checked = $("#survey-table tbody input[type=\"checkbox\"]:checked");
-
-    $("#select-all")
-      .prop("checked", all.length === checked.length)
-      .prop("indeterminate", checked.length > 0 && all.length !== checked.length);
-  });
-
-  $(window).resize(updateTableContainerHeight);
+  $(window).off("resize.requestDdi").on("resize.requestDdi", updateTableContainerHeight);
 }
 
-export function updateURLWithFilters() {
-  const url = new URL(window.location.href);
-  const params = new URLSearchParams();
+function exportAll() {
+  const params = buildSearchUrlParams();
+  const exportParams = new URLSearchParams();
 
-  // Mot-clé de recherche
-  const searchQuery = $("input[name=\"q\"]").val();
-  if (searchQuery) {
-    params.set("q", searchQuery);
+  if (getSearchQuery()) exportParams.set("q", getSearchQuery());
+  params.getAll("survey").forEach(value => exportParams.append("survey", value));
+  params.getAll("collection").forEach(value => exportParams.append("collections", value));
+  params.getAll("sub_collection").forEach(value => exportParams.append("sub_collections", value));
+  params.getAll("search_location").forEach(value => exportParams.append("search_location", value));
+  params.getAll("years").forEach(value => exportParams.append("years", value));
+
+  window.location.href = `/export/questions/?${exportParams.toString()}`;
+}
+
+function exportSelected() {
+  if (selectedIds.size === 0) {
+    Swal.fire({
+      html: `
+        <div style="text-align: center;">
+          <img src="/static/svg/icons/checkbox_checked_swal.svg" style="width: 32px;">
+        </div>
+        <div>Veuillez sélectionner au moins une question à exporter.</div>
+      `,
+      confirmButtonText: "Fermer",
+      confirmButtonColor: "#536254",
+    });
+    return;
   }
 
-  // Search locations
-  filterState.search_location.forEach(value => {
-    params.append("search_location", value);
-  });
-
-  // Collections
-  filterState.collection.forEach(value => {
-    params.append("collection", value);
-  });
-
-  // Sous-collections
-  filterState.sub_collection.forEach(value => {
-    params.append("sub_collection", value);
-  });
-
-  // Surveys
-  filterState.survey.forEach(value => {
-    params.append("survey", value);
-  });
-
-  // Années
-  filterState.years.forEach(year => {
-    params.append("years", year);
-  });
-
-  url.search = params.toString();
-  window.history.pushState({}, "", url);
+  const params = new URLSearchParams();
+  selectedIds.forEach(id => params.append("ids", id));
+  window.location.href = `/export/questions/?${params.toString()}`;
 }
+
+function updateSelection() {
+  if (this.checked) selectedIds.add(this.value);
+  else selectedIds.delete(this.value);
+
+  const all = $("#survey-table tbody input[type='checkbox']");
+  const checked = $("#survey-table tbody input[type='checkbox']:checked");
+  $("#select-all")
+    .prop("checked", all.length > 0 && all.length === checked.length)
+    .prop("indeterminate", checked.length > 0 && all.length !== checked.length);
+}
+
+window.addEventListener("popstate", async () => {
+  await restoreFiltersFromUrl(true, false);
+});

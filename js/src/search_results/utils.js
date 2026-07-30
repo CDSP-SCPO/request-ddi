@@ -1,87 +1,30 @@
-export let selectedIds = new Set();
-export let table;
-export let cachedResults = [];
+import {selectedIds} from "./state.js";
 
-
-export const state = {
-  currentLimit: 10
-};
-
-
-// Setters
-export function setTable(newTable) {
-  table = newTable;
-}
-
-export function incrementLimit() {
-  state.currentLimit += 10;
-}
-
-export function getCurrentLimit() {
-  return state.currentLimit;
-}
-
-export function resetCurrentLimit() {
-  state.currentLimit = 10;
-}
-
-export function getCachedResults() {
-  return cachedResults;
-}
-
-export function setCachedResults(results) {
-  cachedResults = results;
-}
-
-export function appendCachedResults(newResults) {
-  cachedResults.push(...newResults);
-}
-
-export function clearCache() {
-  cachedResults = [];
-}
-
-// Getters de filtres
-export function getFilterValues(className) {
-  return $(`.${className}:checked`).map(function () {
-    return this.value;
-  }).get();
-}
-
-export function getSearchLocation() {
-  return getFilterValues("search-location-checkbox");
-}
-
-// Fonctions UI
+// Displays or hides question catefories and turns the caret associated
 export function toggleCategories(button, categoryId) {
   const categoriesDiv = document.getElementById(categoryId);
-  if (!categoriesDiv) return;
-
   const caretIcon = button.querySelector(".icon-caret");
-  if (!caretIcon) return;
+  if (!categoriesDiv || !caretIcon) return;
 
   const isHidden = categoriesDiv.style.display === "none" || !categoriesDiv.style.display;
-
   categoriesDiv.style.display = isHidden ? "block" : "none";
   caretIcon.classList.toggle("rotated", isHidden);
 }
 
 export function updateTableContainerHeight() {
-  const selectedFiltersContainer = $("#selected-filters-container");
-  if (selectedFiltersContainer.is(":visible") && selectedFiltersContainer.children().length > 0) {
-    const height = selectedFiltersContainer.outerHeight(true);
-    document.documentElement.style.setProperty("--selected-filters-container-height", height + "px");
-  } else {
-    document.documentElement.style.setProperty("--selected-filters-container-height", "0px");
-  }
+  const container = $("#selected-filters-container");
+  const height = container.is(":visible") && container.children().length
+    ? container.outerHeight(true)
+    : 0;
+  document.documentElement.style.setProperty(
+    "--selected-filters-container-height",
+    `${height}px`
+  );
 }
 
-export function updateCheckboxes() {
-  $("#survey-table tbody input[type=\"checkbox\"]").each(function() {
+// Visually restores selected questions after a datatable reload
+export function updateResultCheckboxes() {
+  $("#survey-table tbody input[type='checkbox']").each(function () {
     this.checked = selectedIds.has(this.value);
   });
-}
-
-export function updateFilters() {
-  $("#survey-table").DataTable().ajax.reload();
 }
