@@ -26,3 +26,9 @@ jobs:
   build:
     needs: [test-lint, test-unit]
     uses: ./.github/workflows/step_build.yml
+    permissions:
+      id-token: write
+    secrets:  
+      login: ${{ secrets.DOCKERHUB_LOGIN }}
+      password: ${{ secrets.DOCKERHUB_PAT }}
+      repo: ${{ secrets.DOCKERHUB_REPO_NAME }}
