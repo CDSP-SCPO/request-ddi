@@ -45,7 +45,7 @@ jobs:
           fi
 
       - name: Push main branch and tagged image to DockerHub
-        # if: github.ref == 'refs/heads/main' || (github.event_name == 'push' && contains(github.ref, 'refs/tags/'))
+        if: github.ref == 'refs/heads/main' || (github.event_name == 'push' && contains(github.ref, 'refs/tags/'))
         env:
           DOCKERHUB_LOGIN: ${{ secrets.login }}
           DOCKERHUB_PAT: ${{ secrets.password }}
@@ -53,11 +53,11 @@ jobs:
         run: |
           echo $DOCKERHUB_PAT | docker login -u $DOCKERHUB_LOGIN --password-stdin
           docker build -t $DOCKERHUB_REPO_NAME:${{ steps.vars.outputs.branch_name }} .
-          # docker push $DOCKERHUB_REPO_NAME:${{ steps.vars.outputs.branch_name }}
           docker image ls
+          docker push $DOCKERHUB_REPO_NAME:${{ steps.vars.outputs.branch_name }}
 
       - name: Push latest tagged image to DockerHub
-        # if: (github.event_name == 'push' && contains(github.ref, 'refs/tags/'))
+        if: (github.event_name == 'push' && contains(github.ref, 'refs/tags/'))
         env:
           DOCKERHUB_LOGIN: ${{ secrets.login }}
           DOCKERHUB_PAT: ${{ secrets.password }}
@@ -65,5 +65,5 @@ jobs:
         run: |
           echo $DOCKERHUB_PAT | docker login -u $DOCKERHUB_LOGIN --password-stdin
           docker build -t $DOCKERHUB_REPO_NAME:latest .
-          # docker push $DOCKERHUB_REPO_NAME:latest
           docker image ls
+          docker push $DOCKERHUB_REPO_NAME:latest
