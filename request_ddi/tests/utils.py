@@ -1,9 +1,9 @@
 import time
 
+from django.tasks.backends.immediate import ImmediateBackend
 from django.tasks.base import TaskResult, TaskResultStatus
 from django.utils import timezone
 from django.utils.json import normalize_json
-from django_tasks.backends.immediate import ImmediateBackend
 from django_tasks_db.backend import DatabaseBackend
 from django_tasks_db.models import DBTaskResult
 

@@ -1,0 +1,6 @@
+doi,lang,title,author,producer,distributor,start_date,geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,collection,sous-collection
+doi:10.21410/7E4/FHGZ3H,fr,Baromètre Écologie Environnement - vague 2 (ELIPSS 2025),pb dans l'import (base de request pas à jour car extraction seulement du premier auteur avec webtool),,"Sciences Po, Centre de données socio-politiques (CDSP), CNRS",2025-10-01,France,France métropolitaine hors Corse,Individu,info.cdsp@sciencespo.fr,2026-05-29,ELIPSS,Autres enquêtes ELIPSS
+name,label,type,univers,notes,questio_name,question_text,codes,missing_value_codes,,,,,
+var1,Label for var1,Text,Description for var1,,,,,,,,,,
+var2,Label for var2,Numeric,Description for var2,centimeters,,Question for var2?,,"9999, Missing, (Total Number of Responses for Missing) | 6666, Don't Know, (Total Number of Responses for Don't Know) | 8888, Refused, (Total Number of Responses for Refused)",,,,,
+var3,Label for var3,Code,Description for var3,,,,"1, Choice One, (Total Number of Responses for Choice One) | 2, Choice Two, (Total Number of Responses for Choice Two) | 3, Choice Three (Total Number of Responses for Choice Three) ",,,,,,

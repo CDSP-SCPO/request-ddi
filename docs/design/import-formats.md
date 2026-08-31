@@ -43,19 +43,55 @@ way for the end users to make sense of those errors easily.
 
 ## Detailed Design
 
-### Columns/Keys in Data Files
+This section summaries the structures of files for different formats.
 
-#### Required columns
+### Variable level metadata in DDI-C (XML) and survey metadata with CSV
 
-Irrespective of the file format (tabular data like CSV, parquet or object data like JSON),
-there must be certain columns/keys that must exist in each row/object for the importing
-data. These columns/keys are part of Survey model in the DB and hence, they are
-indispensable. Currently, these columns are as follows:
+This import format uses CSV file to provide a list of surveys and related metadata and
+variable level metadata is provided by DDI-C XML files. The CSV file will contain the
+list of surveys and DDI-C XML file for each survey will be fetched automatically from
+the URL provided in the CSV file.
+
+#### Required columns in the CSV file
+
+The following columns are required to be present in the CSV file:
 
 - doi
-- xml_lang
 - collection
-- sous-collection
+- sub-collection
+- url
+
+`url` is the URL at which the XML file can be downloaded where as `collection` and
+`sub-collection` are the abstract hierarchial structures for organizing the surveys. The
+`collection` and `sub-collection` are organization dependent and they are solely
+responsible for providing logical entries.
+
+Example of CSV file:
+
+```csv
+doi:10.21410/7E4/DDDHXW,fr,Données de recherche,Agoramétrie,https://data.sciencespo.fr/api/access/datafile/116
+
+```
+
+#### Required attributes in the fetched DDI-C XML file
+
+The DDI-C XML file fetched from the URL provided in the CSV file must have the usual
+attributes `docDscr`, `stdyDscr` and `dataDscr`.
+
+### Variable level metadata and survey metadata with CSV
+
+This import format uses CSV for both survey metadata and variable level metadata. This
+is relevant for the surveys that have no DDI-C documentation available. In this format,
+each CSV file contains metadata of one survey.
+
+The first line of the CSV must contain the headers of survey metadata and then second line
+contains the values of these headers. The first two lines must contain following
+columns:
+
+- doi
+- lang
+- collection
+- sub-collection
 - title
 - author
 - producer
@@ -67,166 +103,40 @@ indispensable. Currently, these columns are as follows:
 - contact
 - date_last_version
 
-The above stated column/key names are subject to change. Once the DB models are refined to
-work along with [DDI Life Cycle (DDI-L)](https://ddialliance.org/ddi-lifecycle), the
-names must be changed to be more in-line with DDI-L nomenclature. Similarly, the column
-name `xml_lang` must be simply changed to `lang` as the input data files to ReQuest app
-is not necessarily anymore XML files.
+Third line must contain the headers of the variable level metadata and fourth line
+onwards, variables must be documented. Here are the columns that must be included
+for variable level metadata. Optional columns are indicated.
 
-#### Optional columns
-
-Along with the above mentioned columns/keys the input data files may contain either:
-
-- url column which gives a **direct URL** to fetch the DDI-C XML file from the underlying
-data cataloging software.
-
-or
-
-The following columns that present the variable level metadata in tabular format.
-
-- variable_name
-- variable_label
+- name
+- label
+- type (optional)
+- notes (optional)
+- univers (optional)
+- question_name (optional)
 - question_text
-- univers
-- notes
-- category_labels
-- category_codes
-- category_stats
-- catgeory_missing
+- codes
+- missing_value_codes (optional)
 
-The columns `univers` and `notes` are directly provided by DDI-C XML files. The columns
-`category_labels`, `category_codes`, `category_stats` and `category_missing` can have multiple values for a
-given variable and hence, they must be concatenated into a single string delimited by
-`|`. In the case of JSON representation, these must be a list of strings and ints.
-**The order of concatenation must be preserved for all three columns.**
-
-Here are some of the examples of different types of possible input files:
-
-#### CSV format
-
-- CSV file which provides URL to fetch DDI-C XML file
-
-```csv
-doi:10.21410/7E4/DDDHXW,fr,Données de recherche,Agoramétrie,Baromètre nucléaire (2005),Pagès Jean-Pierre,Pagès Jean-Pierre; Commissariat à l'Énergie Atomique, Laboratoire de statistiques et d'études économiques et sociales (LSESS), Centre de données socio-politiques (CDSP),2005-01-01,France,France métropolitaine hors Corse,Individu,info.cdsp@sciencespo.fr,2018-09-01,https://data.sciencespo.fr/api/access/datafile/116
+An example file for the CSV format can be found [here](csv_format_template.csv). Columns
+`codes` and `missing_value_codes` must have following format:
 
 ```
-
-- CSV file which provides variable level metadata embedded into it **without providing URL**
-
-```csv
-doi:10.21410/7E4/DDDHXW,fr,Données de recherche,Agoramétrie,Baromètre nucléaire (2005),Pagès Jean-Pierre,Pagès Jean-Pierre; Commissariat à l'Énergie Atomique, Laboratoire de statistiques et d'études économiques et sociales (LSESS), Centre de données socio-politiques (CDSP),2005-01-01,France,France métropolitaine hors Corse,Individu,info.cdsp@sciencespo.fr,2018-09-01,c250,Conflits : Pour la force de dissuasion nucléaire,La force nucléaire de dissuasion est indispensable à la France,,,Pas du tout d'accord|Pas tellement d'accord|Peut-être d'accord|Bien d'accord|Entièrement d'accord|Non réponse,1|2|3|4|5|9,148|181|202|366|180|30,N|N|N|N|Y
+<CodeNumber>,<CodeLabel>,<NumberOfResponses>
 ```
 
-- CSV file with URL and variable level metadata
+where `NumberOfResponses` is optional. Each code must be delimited by `|` as follows:
 
-```csv
-doi:10.21410/7E4/DDDHXW,fr,Données de recherche,Agoramétrie,Baromètre nucléaire (2005),Pagès Jean-Pierre,Pagès Jean-Pierre; Commissariat à l'Énergie Atomique, Laboratoire de statistiques et d'études économiques et sociales (LSESS), Centre de données socio-politiques (CDSP),2005-01-01,France,France métropolitaine hors Corse,Individu,info.cdsp@sciencespo.fr,2018-09-01,https://data.sciencespo.fr/api/access/datafile/116,c250,Conflits : Pour la force de dissuasion nucléaire,La force nucléaire de dissuasion est indispensable à la France,,,Pas du tout d'accord|Pas tellement d'accord|Peut-être d'accord|Bien d'accord|Entièrement d'accord|Non réponse,1|2|3|4|5|9,148|181|202|366|180|30,N|N|N|N|Y
+```
+<Code1>,<CodeLabel1>,<CodeResponses1>|<Code2>,<CodeLabel2>,<CodeResponses2>|...
 ```
 
-#### JSON format
-
-- JSON file with URL
-
-```json
-[
-    {
-        "doi": "doi:10.21410/7E4/DDDHXW",
-        "xml_lang": "fr",
-        "collection": "Données de recherche,",
-        "sous-collection": "Agoramétrie",
-        "title": "Agoramétrie",
-        "author": "Pagès Jean-Pierre",
-        "producer": "Pagès Jean-Pierre; Commissariat à l'Énergie Atomique, Laboratoire de statistiques et d'études économiques et sociales (LSESS)",
-        "distributor": "Centre de données socio-politiques (CDSP)",
-        "start_date": "2005-01-01",
-        "geographic_coverage": "France",
-        "geographic_unit": "France métropolitaine hors Corse",
-        "unit_of_analysis": "Individu",
-        "contact": "info.cdsp@sciencespo.fr",
-        "date_last_version": "2018-09-01",
-        "url": "https://data.sciencespo.fr/api/access/datafile/116"
-    }
-]
-```
-
-- JSON file with variable level metadata embedded into it.
-
-```json
-[
-    {
-        "doi": "doi:10.21410/7E4/DDDHXW",
-        "xml_lang": "fr",
-        "collection": "Données de recherche,",
-        "sous-collection": "Agoramétrie",
-        "title": "Agoramétrie",
-        "author": "Pagès Jean-Pierre",
-        "producer": "Pagès Jean-Pierre; Commissariat à l'Énergie Atomique, Laboratoire de statistiques et d'études économiques et sociales (LSESS)",
-        "distributor": "Centre de données socio-politiques (CDSP)",
-        "start_date": "2005-01-01",
-        "geographic_coverage": "France",
-        "geographic_unit": "France métropolitaine hors Corse",
-        "unit_of_analysis": "Individu",
-        "contact": "info.cdsp@sciencespo.fr",
-        "date_last_version": "2018-09-01",
-        "variables": [
-            {
-                "name": "c250",
-                "label": "Conflits : Pour la force de dissuasion nucléaire",
-                "question_text": "La force nucléaire de dissuasion est indispensable à la France",
-                "univers": "",
-                "notes": "",
-                "categories": [
-                    {
-                        "label": "Pas du tout d'accord",
-                        "code": 1,
-                        "stat": 148,
-                        "missing": false
-                    },
-                    {
-                        "label": "Pas tellement d'accord",
-                        "code": 2,
-                        "stat": 181,
-                        "missing": false
-                    },
-                    {
-                        "label": "Peut-être d'accord",
-                        "code": 3,
-                        "stat": 202,
-                        "missing": false
-                    },
-                    {
-                        "label": "Bien d'accord",
-                        "code": 4,
-                        "stat": 366,
-                        "missing": false
-                    },
-                    {
-                        "label": "Entièrement d'accord",
-                        "code": 5,
-                        "stat": 180,
-                        "missing": false
-                    },
-                    {
-                        "label": "Non réponse",
-                        "code": 9,
-                        "stat": 30,
-                        "missing": true
-                    }
-                ]
-            }
-        ]
-    }
-]
-```
-
-The above examples are just for demonstrative purposes and not necessarily mean that should
-be implemented in the app. In fact any tabular data format can be easily integrated into
-the app with carefully designed interface.
+The above two formats must be implemented in the app. In fact any tabular data format
+can be easily integrated into the app with carefully designed interface.
 
 ### Frontend
 
 The principal job of the frontend is to show HTML form to upload the file. If and when
-uploading data in multiple formats will be supported, a form input field for
+uploading data in multiple formats will be supported, a **separate input page** for
 each different format must be added and do the basic sanity checks like the extension of the file using in-built
 HTML features. The uploaded file in the browser must be sent to the backend server, wait
 for the server to return the response and show the success/error messages to the
@@ -242,213 +152,36 @@ Force import. All the surveys in the CSV file will be reimported and updated.
 This checkbox parameter must be sent as a query parameter `force_import` to the backend
 server. The purpose of this query parameter is discussed in the [Backend](#backend) section.
 
+Each import format should have its dedicated page with instructions on the page on formats of
+the input file(s). For the moment, following two endpoints must be implemented:
+
+- `/import/ddic` - For importing via DDI-C XML files and using CSV to define list of surveys
+- `/import/csv` - For importing variable level metadata using CSV
+
 Finally, **it is desirable** to support uploading multiple files in each format. This gives
-more freedom for the end users to organize thier input files to their needs.
+more freedom for the end users to organize their input files to their needs. In case of
+`/import/ddic` endpoint this translates to importing multiple CSV files that contains
+list of surveys where in case of `/import/csv` it is importing multiple CSV files where
+each file corresponds to one survey.
 
 ### Backend
 
 #### Validation
 
 The first step on the backend is to validate the user supplied input file. Each format
-should have its own form field and hence the validation for each format should be done
-in its own method as per [Django Form field validation](https://docs.djangoproject.com/en/6.0/ref/forms/validation/).
+should be validated as per [Django Form field validation](https://docs.djangoproject.com/en/6.0/ref/forms/validation/).
 The following elements must be validated in the form class:
 
-- It is important to note that when there are multiple fields, atmost only one field value
-should be non-empty, _i.e.,_ the backend should receive only one type of input file. This
-should not arrive in reality, however, it is a good practice to check this. If there are
-more than one non-mepty field, fail fast and raise a [`ValidationError`](https://docs.djangoproject.com/en/6.0/ref/forms/validation/#raising-validationerror)
-saying only one format at a time can be used to upload.
-
-- First check if the provided input files have all the [required columns/keys](#required-columns) based on the
-input format. If there is any missing column/key in the input file, stop processing and
-return a [`ValidationError`](https://docs.djangoproject.com/en/6.0/ref/forms/validation/#raising-validationerror)
+- First check the provided input file has the expected file extension. For instance, for
+both `/import/ddic` and `/import/csv` endpoints the input file must have `.csv` extension.
+If not return a [`ValidationError`](https://docs.djangoproject.com/en/6.0/ref/forms/validation/#raising-validationerror)
 with an appropriate error message.
 
-- Once all the required columns/keys are found in the input file, the presence of
-[optional columns/keys](#optional-columns) must be checked. If the optional columns
-are present, a new variable, say, `fetch_from _url` can be defined in `cleaned_data` and
-set to `False`. This can be used in data processing step to directly read variable level
-metadata from input file _per se_.
-
-- If the optional columns/keys are not present, the presence of `url` column/key must
-be verified. If the column is present, set `fetch_from _url` to `True` in `cleaned_data`
-and return. If not found, raise a [`ValidationError`](https://docs.djangoproject.com/en/6.0/ref/forms/validation/#raising-validationerror)
-saying either `url` or [optional columns/keys](#optional-columns) must be present in the
-input file(s).
-
-If the input file(s) contain both `url` and optional columns/keys, the above algorithm
-will take precedence of reading variable level metadata from optional columns. This is
-to allow end users to use modified variable level metadata that might not exist in their
-data cataloging software.
-
-A pseudo code for the Form class can be as follows:
-
-```python
-class UploadForm(forms.Form):
-    csv_file = forms.FileField(label="Sélectionnez un fichier CSV")
-    json_file = forms.FileField(label="Sélectionnez un fichier JSON")
-
-    def _clean_csv_file(self):
-        self.cleaned_data["content"] = file
-        self.cleaned_data["delimiter"] = delimiter
-        self.cleaned_data["format"] = "csv"
-        if not all_required_columns_are_present:
-            raise ValidationError("Required columns are missins")
-
-        self.cleaned_data["fetch_from_url"] = False
-        if all_optional_columns_are_present:
-            return file
-        else:
-            if not url_column_is_present:
-                raise ValidationError("Neither URL nor optional columns are present")
-            self.cleaned_data["fetch_from_url"] = True
-            return file
-
-    def clean(self):
-        # Ensure to run any validation logic in parent
-        super().clean()
-
-        # Check if atmost one form field is provided
-        if self.cleaned_data.get("csv_file") and self.cleaned_data.get("json_file"):
-            raise ValidationError("Atmost one input field must be provided")
-
-        # Run validation checks on CSV file
-        if self.cleaned_data.get("csv_file"):
-            return self._clean_csv_file()
-
-        # Run validation checks on JSON file
-        if self.cleaned_data.get("csv_file"):
-            return self._clean_json_file()
-```
-
-#### Parsing data
-
-The first step in parsing data is convert data in different formats in a standardised
-Python native format for processing. As Python dict and JSON are compatible, the JSON
-format described in [JSON section](#json-format) can be used as the standardised format.
-Thus, every different supported format must be first transformed into Python dict
-compatible with JSON described in [JSON format](#json-format) section. This can be
-done in `get_data` method of the view.
-
-```python
-class UploadView(StaffRequiredMixin, View):
-
-    def _parse_csv_file(self, content, delimiter, fetch_from_url):
-        content_dict = csv.DictReader(content, delimiter=delimiter)
-        xml_parser = XMLParser()
-
-        surveys = []
-        errors = []
-        for line_number, row in enumerate(content_dict, start=1):
-            if fetch_from_url:
-                url = row["url"]
-                doi = row["doi"]
-                xml_content = self._fetch_xml(url)
-                try:
-                    survey = xml_parser.parse(xml_content)
-                    surveys.append(survey)
-                except Exception as e:
-                    # Log exception
-                    # Add a more verbose error message
-                    errors.append({"doi": doi, "error": e})
-
-        return surveys, errors
-
-    def get_data(self, form):
-        """get_data should return list of survey dicts and error dicts"""
-        if form.cleaned_data["format"] == "csv":
-            return self._parse_csv_file(form.cleaned_data["content"], form.cleaned_data["delimiter"], form.cleaned_data["fetch_from_url"])
-        if form.cleaned_data["format"] == "json":
-            return self._parse_json_file(form.cleaned_data["content"], form.cleaned_data["fetch_from_url"])
-```
-
-When support for more formats is needed, a new private method `_parse_<format>_file` must
-be added and transform the data into a Python dict.
-
-Once the data has been transformed into a standard dict, it needs to be processed to be
-imported in the DB. The first step is to get a list of all DOIs in the input files and
-compare them with the existent DOIs in the DB. Next step is to import variable level
-metadata of new surveys into the DB. There are two very important pointers in the current
-context of importing surveys into the DB that need to be considered:
-
-- Based on the query parameter `force_import`, import behaviour must be modified.
-If `force_import` is `False` or does not exist in the query parameters, only new surveys
-that are in the input files must be imported. The response must include the list of
-surveys that are imported and the list of surveys that have been ignored because they
-already exist in the DB. If the `force_import` is truthy, all the surveys must be
-reimported irrespective of the fact if they exist in the DB or not.
-
-- The atomic transcation on the DB must be imposed on the individual survey level rather
-than the HTTP request level. The rationale is that within atomic requests, a single error
-in DB transcation will roll back all the DB operations. Hence, a single error can rollback
-all DB operations of ALL surveys when atomic transcation is applied at the HTTP request.
-On the other hand, using atomic transcation at the survey level will only rollback DB
-operations of that survey which can be reimported easily after fixing the issues. It
-is also important to push data into Elastic search only when all the variables are
-successfully imported into SQL DB in order to avoid inconsistencies between SQL and
-Elastic search.
-
-A partial code can look as follows:
-
-```python
-class UploadView(StaffRequiredMixin, View):
-
-    def form_valid(self, form):
-        try:
-            surveys, parse_errors = self.get_data(form)
-            force_import = bool(self.request.POST.query("force_import", None))
-            input_dois = [s["doi"] for s in surveys]
-            existing_dois = [s.external_ref for s in Survey.objects.filter(external_ref__in=input_dois)]
-            dois_to_import = set(input_dois) - set(existing_dois)
-            # Based on force_import setup dois_to_import
-            if force_import:
-                dois_to_import = input_dois
-
-            import_stats, import_errors = self.process_data(surveys, dois_to_import)
-
-            # If all surveys failed to import raise Exception
-            if not import_stats["dois"]:
-                raise Exception
-
-            # If some surveys failed to import
-            if parse_errors or import_errors:
-                # Return 207 with body containing failed surveys dois
-                # https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/207
-                return JsonResponse({...}, status=207)
-        except ....
-            # Exception blocks
-
-    def process_data(self, surveys, dois_to_import):
-        """process_data should return stats of import and errors dicts. Each error
-        dict must have doi and error string keys"""
-        importer = DataImporter()
-
-        errors = []
-        import_stats = {
-            "dois": [],
-            "num_surveys": 0,
-            "num_variables": 0,
-            "num_bindings": 0,
-        }
-        # Import each survey
-        for survey in surveys:
-            if not survey["doi"] not in existing_dois:
-                continue
-
-            # Create survey object
-            Survey.objects.get_or_create(...)
-
-            try:
-                num_records, num_variables, num_bindings = importer.import_data(survey)
-                import_stats["dois"].append(survey["doi"])
-                import_stats["num_surveys"] += 1
-                import_stats["num_variables"] += num_variables
-                import_stats["num_bindings"] += num_bindings
-            except Exception as e:
-                errors.append({"doi": survey["doi"], "error": e})
-        return import_stats, errors
-```
+- Then check if input files have all the [required columns](#required-columns-in-the-csv-file) for
+`/import/ddic` endpoint or [required columns](#variable-level-metadata-and-survey-metadata-with-csv) for
+`/import/csv` endpoint. If there is any missing columns in the input file, stop processing and
+return a [`ValidationError`](https://docs.djangoproject.com/en/6.0/ref/forms/validation/#raising-validationerror)
+with an appropriate error message.
 
 #### HTTP response data structure
 
@@ -557,7 +290,7 @@ exception must have all the data necessary to be included in the JSON response w
 
 - If none of the surveys have passed, the method must raise another custom exception that
 embeds a message and all the errors that have occurred. Eventually the caller will catch
-this exception and return a 400 response code with approproate JSON object made out of
+this exception and return a 400 response code with appropriate JSON object made out of
 exception.
 
 - Finally the caller should have a bare exception to catch all other sort of exceptions
@@ -567,3 +300,36 @@ in the errors and this response object must be returned with 500 code.
 Eventually the frontend client code must consume this response and show the message or
 errors based on the status code. If there is a non empty warnings, it must be shown
 to the end user as well.
+
+#### Parsing data
+
+The first step is to get a list of all DOIs in the input files and
+compare them with the existent DOIs in the DB. Next step is to import variable level
+metadata of new surveys into the DB. There are two very important pointers in the current
+context of importing surveys into the DB that need to be considered:
+
+- Based on the query parameter `force_import`, import behaviour must be modified.
+If `force_import` is `False` or does not exist in the query parameters, only new surveys
+that are in the input files must be imported. The response must include the list of
+surveys that are imported and the list of surveys that have been ignored because they
+already exist in the DB. If the `force_import` is truthy, all the surveys must be
+reimported irrespective of the fact if they exist in the DB or not.
+
+- The atomic transaction on the DB must be imposed on the individual survey level rather
+than the HTTP request level. The rationale is that within atomic requests, a single error
+in DB transaction will roll back all the DB operations. Hence, a single error can rollback
+all DB operations of ALL surveys when atomic transaction is applied at the HTTP request.
+On the other hand, using atomic transaction at the survey level will only rollback DB
+operations of that survey which can be reimported easily after fixing the issues. It
+is also important to push data into Elastic search only when all the variables are
+successfully imported into SQL DB in order to avoid inconsistencies between SQL and
+Elastic search.
+
+As all the input formats must return the same JSON response, all the common code in the
+import view handler must be included in a Mixin class and the individual import view
+handlers must be derived from this Mixin class.
+
+Besides defining template name, form class for each individual import view handler,
+a method, say `get_data`, must be defined that reads the data provided from the frontend
+and creates the Django tasks. We **must** absolutely keep this method as light as possible
+to avoid timeouts. All the heavy lifting must be done inside the Django tasks.

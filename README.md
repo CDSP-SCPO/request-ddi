@@ -102,7 +102,7 @@ To use Request DDI in your own Django project:
 ```python
 INSTALLED_APPS = [
     # ... your other apps
-    'request_ddi',
+    "request_ddi",
 ]
 ```
 
@@ -113,7 +113,7 @@ from django.urls import path, include
 
 urlpatterns = [
     # ... your other urls
-    path('request/', include('request_ddi.urls')),
+    path("request/", include("request_ddi.urls")),
 ]
 ```
 
