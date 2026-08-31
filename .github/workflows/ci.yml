@@ -31,4 +31,4 @@ jobs:
     secrets:  
       login: ${{ secrets.DOCKERHUB_LOGIN }}
       password: ${{ secrets.DOCKERHUB_PAT }}
-      registry: ${{  secrets.DOCKERHUB_REGISTRY_NAME }}
+      repo: ${{ secrets.DOCKERHUB_REPO_NAME }}
