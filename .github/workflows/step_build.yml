@@ -3,6 +3,13 @@ run-name: Build
 
 on:
   workflow_call:
+    secrets:
+      login:
+        required: true
+      password:
+        required: true
+      registry:
+        required: true
 
 jobs:
   build:
@@ -40,9 +47,9 @@ jobs:
       - name: Push main branch and tagged image to DockerHub
         # if: github.ref == 'refs/heads/main' || (github.event_name == 'push' && contains(github.ref, 'refs/tags/'))
         env:
-          DOCKERHUB_LOGIN: ${{ secrets.DOCKERHUB_LOGIN }}
-          DOCKERHUB_PAT: ${{ secrets.DOCKERHUB_PAT }}
-          DOCKERHUB_REGISTRY_NAME: ${{ secrets.DOCKERHUB_REGISTRY_NAME }}
+          DOCKERHUB_LOGIN: ${{ secrets.login }}
+          DOCKERHUB_PAT: ${{ secrets.password }}
+          DOCKERHUB_REGISTRY_NAME: ${{ secrets.registry }}
         run: |
           echo $DOCKERHUB_PAT | docker login -u $DOCKERHUB_LOGIN --password-stdin $DOCKERHUB_REGISTRY_NAME
           docker build -t request-ddi:${{ steps.vars.outputs.branch_name }} .
@@ -52,9 +59,9 @@ jobs:
       - name: Push latest tagged image to DockerHub
         # if: (github.event_name == 'push' && contains(github.ref, 'refs/tags/'))
         env:
-          DOCKERHUB_LOGIN: ${{ secrets.DOCKERHUB_LOGIN }}
-          DOCKERHUB_PAT: ${{ secrets.DOCKERHUB_PAT }}
-          DOCKERHUB_REGISTRY_NAME: ${{ secrets.DOCKERHUB_REGISTRY_NAME }}
+          DOCKERHUB_LOGIN: ${{ secrets.login }}
+          DOCKERHUB_PAT: ${{ secrets.password }}
+          DOCKERHUB_REGISTRY_NAME: ${{ secrets.registry }}
         run: |
           echo $DOCKERHUB_PAT | docker login -u $DOCKERHUB_LOGIN --password-stdin $DOCKERHUB_REGISTRY_NAME
           docker build -t request-ddi:latest .
