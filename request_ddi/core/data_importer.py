@@ -1,7 +1,6 @@
 # -- STDLIB
 import logging
 import time
-from datetime import datetime
 
 from django.conf import settings
 from django.db import transaction
@@ -9,12 +8,15 @@ from django.db.models import Value
 from django.db.models.functions import Collate
 from django.tasks import task
 
+from request_ddi.utils.datetime import (
+    parse_date,
+)
 from request_ddi.utils.normalize_string import (
     normalize_string_for_database,
 )
 
-# -- REQUEST_DDI (LOCAL)
 from .documents import BindingSurveyDocument
+from .exceptions import DataValidationError
 from .models import (
     BindingSurveyRepresentedVariable,
     BindingVariableCategoryStat,
@@ -27,46 +29,65 @@ from .models import (
     Survey,
 )
 
+# -- REQUEST_DDI (LOCAL)
+from .parser import fetch_and_parse_xml
+
 logger = logging.getLogger("performance")
 
 
+IMPORT_FORMAT_DDIC = "ddic"
+
+
 @task(takes_context=True)
-def import_data(context, survey_data):
-    validate_unique_variable_names(survey_data["variables"])
+def import_data(context, survey, import_format):
+    # If import_format is ddic, fetch XML and parse it
+    if import_format == IMPORT_FORMAT_DDIC:
+        survey_data = fetch_and_parse_xml(survey)
+
+    # Conversion de survey_start_date en objet date (année uniquement)
+    for d in ("start_date", "date_last_version"):
+        if survey_data[d]:
+            survey_data[d] = parse_date(survey_data[d], survey_data["doi"])
+        else:
+            survey_data[d] = None
+
     num_questions = len(survey_data["variables"])
     doi = survey_data["doi"]
     start_time = time.time()
     try:
+        # Validate survey_data
+        validate_unique_variable_names(survey_data["variables"])
+
+        # We use update_or_create here as during the force update, we should update all
+        # the objects
         with transaction.atomic():
             distributor_name = survey_data["distributor"]
-            distributor, _ = Distributor.objects.get_or_create(name=distributor_name)
+            distributor, _ = Distributor.objects.update_or_create(name=distributor_name)
 
             collection_name = survey_data["collection"]
-            collection, _ = Collection.objects.get_or_create(
+            collection, _ = Collection.objects.update_or_create(
                 name=collection_name, distributor=distributor
             )
 
-            subcollection_name = survey_data["sous-collection"]
-            subcollection, _ = Subcollection.objects.get_or_create(
+            subcollection_name = survey_data["sub_collection"]
+            subcollection, _ = Subcollection.objects.update_or_create(
                 name=subcollection_name, collection=collection
             )
 
-            survey, _ = Survey.objects.get_or_create(
+            survey, _ = Survey.objects.update_or_create(
                 external_ref=doi,
                 defaults={
                     "name": survey_data["title"],
                     "subcollection": subcollection,
-                    "language": survey_data["xml_lang"],
-                    "author": survey_data["author"],
+                    "language": survey_data["lang"],
+                    "author": survey_data["authors"],
                     "producer": survey_data["producer"],
-                    "start_date": datetime.strptime(survey_data["start_date"], "%Y-%m-%d").date(),  # noqa: DTZ007
+                    "start_date": survey_data["start_date"],
                     "geographic_coverage": survey_data["geographic_coverage"],
                     "geographic_unit": survey_data["geographic_unit"],
                     "unit_of_analysis": survey_data["unit_of_analysis"],
                     "contact": survey_data["contact"],
-                    "date_last_version": datetime.strptime(  # noqa: DTZ007
-                        survey_data["date_last_version"], "%Y-%m-%d"
-                    ).date(),
+                    "date_last_version": survey_data["date_last_version"],
                 },
             )
 
@@ -74,9 +95,6 @@ def import_data(context, survey_data):
             num_new_variables, num_new_bindings = import_survey_variables(
                 survey, survey_data["variables"]
             )
-    except ValueError as ve:
-        msg = f"DOI '{doi}': Erreur de valeur : {ve}"
-        raise ValueError(msg) from ve
     except Exception as e:
         msg = f"DOI '{doi}': Erreur inattendue : {e!s}"
         raise ValueError(msg) from e
@@ -115,7 +133,7 @@ def validate_unique_variable_names(questions):
                 f"(questions en conflit : {seen[name]!r} / {question['text']!r}). "
                 "Vérifiez la documentation DDI-C de cette enquête."
             )
-            raise ValueError(msg)
+            raise DataValidationError(msg)
         seen[name] = question["text"]
 
 

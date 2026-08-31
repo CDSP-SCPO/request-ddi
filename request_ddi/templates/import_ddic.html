@@ -4,7 +4,7 @@
     <div class="container-custom mt-4">
         <div class="text-center mb-3">
             <h1 class="mb-2">Import de fichier</h1>
-            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Importer un fichier csv</a>
+            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Importer un ou plusieurs fichiers csv</a>
         </div>
 
         <!-- Section XML -->
@@ -15,19 +15,8 @@
                         <h3>Colonnes attendues pour le CSV</h3>
                         <ul>
                             <li>doi</li>
-                            <li>xml_lang</li>
-                            <li>title</li>
-                            <li>author</li>
-                            <li>producer</li>
-                            <li>distributor</li>
-                            <li>start_date</li>
-                            <li>geographic_coverage</li>
-                            <li>geographic_unit</li>
-                            <li>unit_of_analysis</li>
-                            <li>contact</li>
-                            <li>date_last_version</li>
                             <li>collection</li>
-                            <li>sous-collection</li>
+                            <li>sub_collection</li>
                             <li>url</li>
                         </ul>
                     </div>
@@ -35,6 +24,34 @@
                     <div class="col-md-6">
                         <h3>Balises attendues pour le XML</h3>
                         <ul>
+                            <li>IDNo</li> 
+                            <li>titl</li>
+                            <li>rspStmt 
+                                <ul> 
+                                    <li>AuthEnty</li> 
+                                </ul> 
+                            </li>
+                            <li>prodStmt 
+                                <ul> 
+                                    <li>producer</li> 
+                                </ul> 
+                            </li>
+                            <li>distStmt 
+                                <ul> 
+                                    <li>distrbtr</li> 
+                                    <li>contact</li> 
+                                    <li>distDate</li> 
+                                </ul> 
+                            </li>
+                            <li>verStmt</li>
+                            <li>sumDscr 
+                                <ul> 
+                                    <li>timePrd</li> 
+                                    <li>nation</li> 
+                                    <li>geogCover</li>
+                                    <li>anlyUnit</li> 
+                                </ul> 
+                            </li>
                             <li>var 
                                 <ul> 
                                     <li>catValu</li> 
@@ -44,9 +61,7 @@
                                     <li>universe</li> 
                                     <li>notes</li> 
                                 </ul> 
-                            </li> 
-                            <li>IDNo</li> 
-                            <li>titl</li>
+                            </li>
                         </ul>
                     </div>
                     <p class="text-center px-3">Assurez-vous que ces balises sont présentes dans votre fichier CSV ainsi que dans vos fichiers XML associés, pour garantir une structure valide.</p>
@@ -74,11 +89,11 @@
                 </div>
                 <div class="modal-body">
                     <form method="POST" enctype="multipart/form-data" id="csvUploadFormCollection"
-                          action="{% url 'request_ddi:import' %}">
+                          action="{% url 'request_ddi:import_ddic' %}">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="csv_file">Sélectionnez un fichier CSV :</label>
-                            <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv">
+                            <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv" multiple>
                         </div>
                         <div class="mb-3 form-check">
                             <input type="checkbox" name="force_import" id="force_import" class="form-check-input">

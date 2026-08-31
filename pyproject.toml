@@ -144,6 +144,29 @@ addopts = [
     "--cov-report=html:cov_html"
 ]
 
+[tool.coverage.run]
+omit = [
+    "request_ddi/tests/*",
+]
+parallel = true
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_lines = [
+    "if self.debug:",
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise NotImplementedError",
+    "except ImportError",
+]
+ignore_errors = true
+omit = [
+    "request_ddi/tests/*",
+    "request_ddi/manage.py",
+]
+
+
 [tool.ruff]
 exclude = ["*.ipynb", "request_ddi/_version.py"]
 target-version = "py39"

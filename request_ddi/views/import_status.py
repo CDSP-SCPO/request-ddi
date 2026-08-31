@@ -175,6 +175,6 @@ class ImportRetryView(StaffRequiredMixin, View):
                             status=409,
                         )
 
-        import_data.enqueue(survey_data)
+        import_data.enqueue(*original.args_kwargs["args"])
 
         return JsonResponse({"status": "enqueued", "doi": doi})

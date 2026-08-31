@@ -41,6 +41,9 @@ class ImmediateDBBackend(ImmediateBackend, DatabaseBackend):
         )
 
         self._execute_task(task_result)
+        tracebacks = []
+        for err in task_result.errors:
+            tracebacks.append(err.traceback)
 
         DBTaskResult.objects.create(
             id=self._get_id(),
@@ -52,6 +55,7 @@ class ImmediateDBBackend(ImmediateBackend, DatabaseBackend):
             backend_name=self.alias,
             status=task_result.status,
             finished_at=timezone.now(),
+            traceback="\n".join(tracebacks),
         )
         return task_result
 
@@ -66,4 +70,6 @@ def wait_task():
         time.sleep(1)
         if time.time() - start >= STATUS_TIMEOUT:
             return DBTaskResult.objects.latest("finished_at").status
-    return DBTaskResult.objects.latest("finished_at").status
+    return DBTaskResult.objects.latest("finished_at").status, DBTaskResult.objects.latest(
+        "finished_at"
+    ).traceback

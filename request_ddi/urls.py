@@ -9,13 +9,13 @@ from request_ddi.views.import_status import ImportRetryView, ImportStatusView
 from .views.auth_views import CustomLoginView
 from .views.detail_views import QuestionDetailView
 from .views.export_views import export_page
+
+# -- REQUEST_DDI (LOCAL)
+from .views.import_views import DDICImportViewCollection
 from .views.search_views import (
     RepresentedVariableSearchView,
     search_results,
 )
-
-# -- REQUEST_DDI (LOCAL)
-from .views.upload_views import CSVUploadViewCollection
 
 API_VERSION = getattr(settings, "API_VERSION", "v1")
 
@@ -24,9 +24,9 @@ app_name = "request_ddi"
 urlpatterns = [
     # === Upload de fichiers ===
     path(
-        "import/",
-        CSVUploadViewCollection.as_view(),
-        name="import",
+        "import/ddic",
+        DDICImportViewCollection.as_view(),
+        name="import_ddic",
     ),
     # === Recherche de variables représentées ===
     path("", RepresentedVariableSearchView.as_view(), name="representedvariable_search"),

@@ -1,6 +1,7 @@
 # -- STDLIB
 import re
 import unicodedata
+from string import punctuation
 
 
 def normalize_string_for_database(value):
@@ -48,6 +49,10 @@ def normalize_string_for_comparison(value):
     # Suppression des accents (en gardant uniquement les caractères ASCII)
     text = "".join(char for char in text if unicodedata.category(char) != "Mn")
 
-    text = text.lower()
+    # Convert to lower case and remove punctuation
+    text = text.lower().translate(str.maketrans("", "", punctuation))
+
+    # Remove uneven white spaces
+    text = " ".join(text.split())
 
     return text

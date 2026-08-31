@@ -39,7 +39,8 @@ class Survey(models.Model):
     date_last_version = models.DateField(null=True, blank=True)
     language = models.CharField(max_length=510, default="")
 
-    author = models.CharField(max_length=510, null=True, blank=True)
+    # Authors can be a long text dependening on number of authors
+    author = models.TextField(null=True, blank=True)
     producer = models.CharField(max_length=510, null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)
     geographic_coverage = models.CharField(max_length=510, null=True, blank=True)

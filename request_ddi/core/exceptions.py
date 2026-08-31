@@ -1,5 +1,53 @@
+class InvalidDateError(Exception):
+    """Exception raised for invalid dates in import views."""
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
+class InvalidDOIError(Exception):
+    """Exception raised for invalid DOI in import views."""
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
+class MissingAttributeError(Exception):
+    """Exception raised for missing attributes in XML in import views."""
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
+class DataValidationError(Exception):
+    """Exception raised for data validation in import views."""
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
+class InvalidDDICError(Exception):
+    """Exception raised for invalid DDIC XML in import views."""
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
+class DDICFileURLNotFoundError(Exception):
+    """Exception raised for survey when DDIC URL not found in import views."""
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
 class DataImportError(Exception):
-    """Exception raised for errors in upload view."""
+    """Exception raised for errors in import views."""
 
     def __init__(self, message, errors=None, warnings=None):
         super().__init__(message)
@@ -9,7 +57,7 @@ class DataImportError(Exception):
 
 
 class PartialDataImportError(Exception):
-    """Exception raised for partial success in upload view."""
+    """Exception raised for partial success in import views."""
 
     def __init__(self, message, data=None, errors=None):
         super().__init__(message)
