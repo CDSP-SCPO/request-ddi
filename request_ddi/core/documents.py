@@ -445,18 +445,19 @@ class BindingSurveyDocument(Document):
         years=None,
         exclude=None,
     ):
+        exclude = set(exclude or [])
         filters = []
 
-        if survey_ids and exclude != "survey":
+        if survey_ids and "survey" not in exclude:
             filters.append({"terms": {"survey.id": survey_ids}})
 
-        if sub_collection_ids and exclude != "sub_collection":
+        if sub_collection_ids and "sub_collection" not in exclude:
             filters.append({"terms": {"survey.subcollection.id": sub_collection_ids}})
 
-        if collection_ids and exclude != "collection":
+        if collection_ids and "collection" not in exclude:
             filters.append({"terms": {"survey.subcollection.collection_id": collection_ids}})
 
-        if years and exclude != "years":
+        if years and "years" not in exclude:
             filters.append(
                 {
                     "bool": {
@@ -519,28 +520,13 @@ class BindingSurveyDocument(Document):
         facet_root = search.aggs.bucket("facets", "global")
 
         facet_definitions = {
-            "surveys": {
-                "exclude": "survey",
-                "aggregation": (
-                    "terms",
-                    {
-                        "field": "survey.id",
-                        "size": 10000,
-                    },
-                ),
-            },
-            "subcollections": {
-                "exclude": "sub_collection",
-                "aggregation": (
-                    "terms",
-                    {
-                        "field": "survey.subcollection.id",
-                        "size": 10000,
-                    },
-                ),
-            },
             "collections": {
-                "exclude": "collection",
+                "exclude": {
+                    "collection",
+                    "sub_collection",
+                    "survey",
+                    "years",
+                },
                 "aggregation": (
                     "terms",
                     {
@@ -549,8 +535,37 @@ class BindingSurveyDocument(Document):
                     },
                 ),
             },
+            "subcollections": {
+                "exclude": {
+                    "sub_collection",
+                    "survey",
+                    "years",
+                },
+                "aggregation": (
+                    "terms",
+                    {
+                        "field": "survey.subcollection.id",
+                        "size": 10000,
+                    },
+                ),
+            },
+            "surveys": {
+                "exclude": {
+                    "survey",
+                    "years",
+                },
+                "aggregation": (
+                    "terms",
+                    {
+                        "field": "survey.id",
+                        "size": 10000,
+                    },
+                ),
+            },
             "years": {
-                "exclude": "years",
+                "exclude": {
+                    "years",
+                },
                 "aggregation": (
                     "date_histogram",
                     {
