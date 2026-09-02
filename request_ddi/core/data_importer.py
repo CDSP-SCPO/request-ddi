@@ -27,6 +27,7 @@ from .models import (
     RepresentedVariable,
     Subcollection,
     Survey,
+    UploadedDDICFile,
 )
 
 # -- REQUEST_DDI (LOCAL)
@@ -100,14 +101,23 @@ def import_data(context, survey, import_format):
         raise ValueError(msg) from e
     finally:
         duration = time.time() - start_time
+        # num_questions peut être 0 (enquête documentée sans balise <var>, ex: un jeu de
+        # résultats agrégés) : ce n'est pas une erreur, juste rien à diviser.
+        duration_per_question = duration / num_questions if num_questions else 0
         logger.debug(
             "⏱ Temps d'import — Survey '%s', DOI '%s', %d Variables : Total %.2f s, Temps per question %.2f s",
             survey,
             doi,
             num_questions,
             duration,
-            duration / num_questions,
+            duration_per_question,
         )
+
+    # If the survey had no URL, the XML came from the volume: delete it now that the
+    # whole import (including the DB transaction) has succeeded. A later force_import
+    # on this DOI will require a fresh upload, exactly as if none had ever been made.
+    if import_format == IMPORT_FORMAT_DDIC and not survey_data.get("url", "").strip():
+        UploadedDDICFile.objects.filter(doi=doi).delete()
 
     return {
         "num_records": num_questions,

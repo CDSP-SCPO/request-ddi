@@ -114,8 +114,8 @@ function formatPartialSuccessHtml(message, importData, skippedErrors, otherError
   `;
 }
 
-function showErrorAlert(data, overlay) {
-  $("#csvUploadModal").off("hidden.bs.modal");
+function showErrorAlert(data, overlay, modalId = "csvUploadModal") {
+  $(`#${modalId}`).off("hidden.bs.modal");
   hideOverlay(overlay);
 
   const errorDetails = data.errors?.join("<br>") ?? data.message;
@@ -157,5 +157,65 @@ function formatDuplicatesHtml(duplicates) {
   return html;
 }
 
+function initXmlUpload() {
+  const xmlForm = document.getElementById("xmlUploadForm");
+  if (!xmlForm) return;
+
+  xmlForm.addEventListener("submit", handleXmlUploadSubmit);
+}
+
+function handleXmlUploadSubmit(event) {
+  event.preventDefault();
+
+  const xmlForm = event.currentTarget;
+  const overlay = document.getElementById("overlay");
+  const xmlFiles = xmlForm.querySelector("input[name=\"xml_files\"]")?.files;
+
+  if (!xmlFiles || xmlFiles.length === 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "Aucun fichier sélectionné",
+      text: "Veuillez sélectionner au moins un fichier XML avant d'envoyer.",
+    });
+    return;
+  }
+
+  submitXmlForm(xmlForm, overlay);
+}
+
+function submitXmlForm(xmlForm, overlay) {
+  const formData = new FormData(xmlForm);
+  showOverlay(overlay);
+
+  fetch(xmlForm.action, {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => response.json())
+    .then((data) => handleXmlUploadResponse(data, overlay))
+    .catch((err) => handleUploadError(err, overlay));
+}
+
+function handleXmlUploadResponse(data, overlay) {
+  hideOverlay(overlay);
+
+  if (data.status === "success" || data.status === "partial_success") {
+    const dois = data.data?.[0]?.dois ?? [];
+    Swal.fire({
+      icon: data.status === "success" ? "success" : "warning",
+      title: data.status === "success" ? "Succès" : "Dépôt partiel",
+      html: `
+        <strong>${data.message}</strong><br><br>
+        ${dois.length > 0 ? `<strong>Fichier(s) déposé(s) :</strong> ${dois.join(", ")}<br><br>` : ""}
+        ${data.errors?.length ? `<strong>Erreurs :</strong><br>${data.errors.join("<br>")}` : ""}
+      `,
+    });
+    return;
+  }
+
+  showErrorAlert(data, overlay, "xmlUploadModal");
+}
+
 document.addEventListener("DOMContentLoaded", initCsvUploadCollection);
+document.addEventListener("DOMContentLoaded", initXmlUpload);
 

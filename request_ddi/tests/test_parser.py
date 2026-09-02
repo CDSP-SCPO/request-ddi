@@ -4,11 +4,12 @@ from unittest.mock import patch
 from django.test import TestCase
 
 from request_ddi.core.exceptions import (
-    DDICFileURLNotFoundError,
+    DDICFileNotFoundInVolumeError,
     InvalidDDICError,
     InvalidDOIError,
     MissingAttributeError,
 )
+from request_ddi.core.models import UploadedDDICFile
 from request_ddi.core.parser import (
     fetch_and_parse_xml,
     parse_codebook_xml_file,
@@ -90,11 +91,34 @@ class XMLParserTests(TestCase):
 
 
 class XMLFetcherTests(TestCase):
-    def test_fetch_xml_with_no_url(self):
-        """Test when survey DDIC URL not found"""
+    def test_fetch_xml_with_no_url_and_no_uploaded_file(self):
+        """Test when survey has no URL and no XML was uploaded to the volume for its DOI"""
         data = {"url": "", "doi": "doi:9999/test"}
-        with self.assertRaises(DDICFileURLNotFoundError):
+        with self.assertRaises(DDICFileNotFoundInVolumeError):
             fetch_and_parse_xml(data)
+
+    def test_fetch_xml_with_no_url_reads_from_volume(self):
+        """Test when survey has no URL but a matching XML was uploaded to the volume"""
+        xml_content = """
+        <codeBook version="1.2.2" ID="doi:9999/test" xml-lang="fr">
+            <IDNo agency="DataCite">doi:9999/test</IDNo>
+            <titl>Test depuis le volume</titl>
+            <timePrd date="1982" event="start"/>
+            <verStmt>
+                <version date="2018-01-26">Version 1</version>
+            </verStmt>
+            <var name="Q1"><labl>Age</labl></var>
+        </codeBook>
+        """
+        UploadedDDICFile.objects.create(
+            doi="doi:9999/test",
+            original_filename="test.xml",
+            xml_content=xml_content,
+        )
+
+        data = fetch_and_parse_xml({"url": "", "doi": "doi:9999/test"})
+
+        self.assertEqual(data["title"], "Test depuis le volume")
 
     @patch("request_ddi.core.parser.download_xml_file")
     def test_fetch_xml_with_mismatching_dois(self, mock_download):

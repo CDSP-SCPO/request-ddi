@@ -13,6 +13,10 @@ class CustomAuthenticationForm(AuthenticationForm):
     password = forms.CharField(widget=forms.PasswordInput(attrs={"class": "form-control"}))
 
 
+class DDICXMLUploadForm(forms.Form):
+    xml_files = forms.FileField(label="Sélectionnez un ou plusieurs fichiers XML")
+
+
 class DDICImportFormCollection(forms.Form):
     csv_file = forms.FileField(label="Sélectionnez un fichier CSV")
 

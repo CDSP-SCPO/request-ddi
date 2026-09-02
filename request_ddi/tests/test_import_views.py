@@ -14,6 +14,7 @@ from request_ddi.core.models import (
     RepresentedVariable,
     Subcollection,
     Survey,
+    UploadedDDICFile,
 )
 
 from .mixins import MockElasticsearchMixin
@@ -798,3 +799,249 @@ class CheckDuplicatesTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertEqual(json_response["status"], "success")
         self.assertEqual(task_status, TaskResultStatus.SUCCESSFUL)
         self.assertEqual(Survey.objects.filter(external_ref="doi:9999/test").count(), 1)
+
+
+class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
+    """Teste l'import CSV dont la colonne `url` est vide : le XML doit être retrouvé
+    dans le volume (`UploadedDDICFile`) au lieu d'être téléchargé.
+    """
+
+    xml_content = """
+        <root>
+            <IDNo agency="DataCite">doi:1234/volume</IDNo>
+            <titl>Survey From Volume</titl>
+            <timePrd date="1982" event="start"/>
+            <verStmt>
+                <version date="2018-01-26">Version 1</version>
+            </verStmt>
+            <var name="Q1">
+                <labl>Âge</labl>
+                <qstnLit>Quel est votre âge ?</qstnLit>
+            </var>
+        </root>
+        """
+
+    def csv_with_empty_url(self, doi):
+        content = (
+            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,"
+            "start_date,geographic_coverage,geographic_unit,unit_of_analysis,contact,"
+            "date_last_version,url\n"
+            f"Distrib,Collection,Subcollection,{doi},Survey Test,fr,Author,Producer,2020,"
+            "France,,Individual,Contact,2020-01-01,\n"
+        )
+        return SimpleUploadedFile("test.csv", content.encode(), content_type="text/csv")
+
+    def test_import_with_empty_url_and_uploaded_file_succeeds(self):
+        self.login()
+        UploadedDDICFile.objects.create(
+            doi="doi:1234/volume",
+            original_filename="survey.xml",
+            xml_content=self.xml_content,
+        )
+
+        response = self.client.post(
+            reverse("request_ddi:import_ddic"),
+            {"csv_file": self.csv_with_empty_url("doi:1234/volume"), "delimiter": ","},
+        )
+        task_status, _ = wait_task()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(task_status, TaskResultStatus.SUCCESSFUL)
+        self.assertTrue(Survey.objects.filter(external_ref="doi:1234/volume").exists())
+
+        # La ligne est supprimée dès que l'import réussit, plus de trace en base
+        self.assertFalse(UploadedDDICFile.objects.filter(doi="doi:1234/volume").exists())
+
+    def test_force_import_without_new_upload_after_first_import_fails(self):
+        """Une fois consommé par un premier import, un force_import sur ce DOI doit
+        échouer exactement comme si aucun fichier n'avait jamais été déposé.
+        """
+        self.login()
+        UploadedDDICFile.objects.create(
+            doi="doi:1234/volume",
+            original_filename="survey.xml",
+            xml_content=self.xml_content,
+        )
+        self.client.post(
+            reverse("request_ddi:import_ddic"),
+            {"csv_file": self.csv_with_empty_url("doi:1234/volume"), "delimiter": ","},
+        )
+        wait_task()
+
+        response = self.client.post(
+            reverse("request_ddi:import_ddic"),
+            {
+                "csv_file": self.csv_with_empty_url("doi:1234/volume"),
+                "delimiter": ",",
+                "force_import": "on",
+            },
+        )
+        task_status, traceback = wait_task()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(task_status, TaskResultStatus.FAILED)
+        self.assertIn("Aucun fichier XML n'a été déposé", traceback)
+
+    def test_import_survey_with_no_variables_succeeds(self):
+        """Un DDI-C sans balise <var> (ex: un jeu de résultats agrégés sans variable
+        documentée) doit s'importer sans planter — même comportement que si ce fichier
+        avait été récupéré par URL depuis data.sciencespo.
+        """
+        self.login()
+        xml_content = """
+            <root>
+                <IDNo agency="DataCite">doi:1234/no-variables</IDNo>
+                <titl>Résultats agrégés sans variable</titl>
+            </root>
+            """
+        UploadedDDICFile.objects.create(
+            doi="doi:1234/no-variables",
+            original_filename="no-variables.xml",
+            xml_content=xml_content,
+        )
+
+        response = self.client.post(
+            reverse("request_ddi:import_ddic"),
+            {"csv_file": self.csv_with_empty_url("doi:1234/no-variables"), "delimiter": ","},
+        )
+        task_status, _ = wait_task()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(task_status, TaskResultStatus.SUCCESSFUL)
+        self.assertTrue(Survey.objects.filter(external_ref="doi:1234/no-variables").exists())
+
+    def test_import_with_empty_url_and_no_uploaded_file_fails(self):
+        self.login()
+
+        response = self.client.post(
+            reverse("request_ddi:import_ddic"),
+            {"csv_file": self.csv_with_empty_url("doi:9999/missing"), "delimiter": ","},
+        )
+        task_status, traceback = wait_task()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(task_status, TaskResultStatus.FAILED)
+        self.assertIn("Aucun fichier XML n'a été déposé", traceback)
+        self.assertFalse(Survey.objects.filter(external_ref="doi:9999/missing").exists())
+
+
+class DDICXMLUploadViewTest(BaseUploadTest):
+    """Teste l'endpoint /import/xml de dépôt direct de fichiers XML dans le volume."""
+
+    valid_xml = """
+        <root>
+            <IDNo agency="DataCite">doi:5555/upload</IDNo>
+            <titl>Uploaded Survey</titl>
+        </root>
+        """
+
+    def test_upload_valid_xml_creates_uploaded_file(self):
+        self.login()
+        xml_file = SimpleUploadedFile(
+            "survey.xml", self.valid_xml.encode(), content_type="text/xml"
+        )
+
+        response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
+
+        self.assertEqual(response.status_code, 200)
+        json_response = response.json()
+        self.assertEqual(json_response["status"], "success")
+        self.assertEqual(json_response["data"][0]["dois"], ["doi:5555/upload"])
+
+        uploaded = UploadedDDICFile.objects.get(doi="doi:5555/upload")
+        self.assertEqual(uploaded.original_filename, "survey.xml")
+
+    def test_upload_non_utf8_xml_is_decoded_correctly(self):
+        """Un DDI-C encodé en ISO-8859-1 (courant sur d'anciens exports), déclarant
+        son encodage dans le prologue XML, doit être décodé correctement plutôt que
+        supposé UTF-8 à tort.
+        """
+        self.login()
+        xml_content = """<?xml version="1.0" encoding="ISO-8859-1"?>
+        <root>
+            <IDNo agency="DataCite">doi:6666/latin1</IDNo>
+            <titl>Enquête générationnelle âgée</titl>
+        </root>
+        """
+        xml_file = SimpleUploadedFile(
+            "survey.xml", xml_content.encode("iso-8859-1"), content_type="text/xml"
+        )
+
+        response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+
+        uploaded = UploadedDDICFile.objects.get(doi="doi:6666/latin1")
+        self.assertIn("Enquête générationnelle âgée", uploaded.xml_content)
+
+    def test_upload_without_staff_permission_is_rejected(self):
+        User.objects.create_user(username="not-staff", password="pwd")  # noqa: S106
+        self.client.logout()
+        self.client.login(username="not-staff", password="pwd")  # noqa: S106
+
+        xml_file = SimpleUploadedFile(
+            "survey.xml", self.valid_xml.encode(), content_type="text/xml"
+        )
+        response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
+
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_upload_malformed_xml_is_rejected(self):
+        self.login()
+        malformed_xml = "<root><titl>No DOI here</titl></root>"
+        xml_file = SimpleUploadedFile("bad.xml", malformed_xml.encode(), content_type="text/xml")
+
+        response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["status"], "error")
+        self.assertFalse(UploadedDDICFile.objects.exists())
+
+    def test_upload_non_xml_file_is_rejected(self):
+        self.login()
+        text_file = SimpleUploadedFile("notes.txt", b"hello", content_type="text/plain")
+
+        response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": text_file})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(any("format XML" in e for e in response.json()["errors"]))
+
+    def test_upload_mixed_valid_and_invalid_files_is_partial_success(self):
+        self.login()
+        good_file = SimpleUploadedFile("good.xml", self.valid_xml.encode(), content_type="text/xml")
+        bad_file = SimpleUploadedFile("bad.txt", b"hello", content_type="text/plain")
+
+        response = self.client.post(
+            reverse("request_ddi:import_xml"),
+            {"xml_files": [good_file, bad_file]},
+        )
+
+        self.assertEqual(response.status_code, 207)
+        self.assertEqual(response.json()["status"], "partial_success")
+        self.assertEqual(UploadedDDICFile.objects.count(), 1)
+
+    def test_upload_overwrites_existing_doi(self):
+        self.login()
+        existing = UploadedDDICFile.objects.create(
+            doi="doi:5555/upload",
+            original_filename="old.xml",
+            xml_content=self.valid_xml,
+        )
+
+        xml_file = SimpleUploadedFile("new.xml", self.valid_xml.encode(), content_type="text/xml")
+        response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
+
+        self.assertEqual(response.status_code, 200)
+        existing.refresh_from_db()
+        self.assertEqual(existing.original_filename, "new.xml")
+
+    def test_upload_no_file_returns_error(self):
+        self.login()
+
+        response = self.client.post(reverse("request_ddi:import_xml"), {})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["status"], "error")
