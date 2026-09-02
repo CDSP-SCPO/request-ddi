@@ -102,7 +102,7 @@ async function renderYears(decade) {
         <div class="form-check-custom year-item">
           <input
             type="checkbox"
-            class="form-check-input year-checkbox checkbox-custom"
+            class="form-check-input year-checkbox checkbox-custom filter-checkbox"
             data-filter-type="years"
             value="${year}"
             id="year-${year}"

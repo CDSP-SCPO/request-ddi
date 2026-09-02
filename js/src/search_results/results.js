@@ -1,9 +1,4 @@
-import {
-  facetState,
-  filterState,
-  resetFacetCache,
-  resultState,
-} from "./state.js";
+import {resultState} from "./state.js";
 import {buildSearchPayload, buildSearchUrlParams, getSearchQuery} from "./searchParams.js";
 import {renderFacetAvailability} from "./filterView.js";
 import {refreshYearsView} from "./yearsView.js";
@@ -71,13 +66,10 @@ export function loadMoreResults() {
 // Handles received hits and aggregations, updates cache and returns rows to the datatable
 function processSearchResponse(json, translations) {
   const currentQuery = getSearchQuery();
-  if (currentQuery !== facetState.lastSearchQuery) {
-    resetFacetCache();
-    facetState.lastSearchQuery = currentQuery;
-  }
 
-  const resolvedAggregations = resolveFacetAggregations(json.aggregations || {});
-  renderFacetAvailability(resolvedAggregations, {hasSearchQuery: currentQuery.length > 0});
+  renderFacetAvailability(json.aggregations || {}, {
+    hasSearchQuery: currentQuery.length > 0,
+  });
 
   if (resultState.cachedResults.length === 0) {
     resultState.cachedResults = [...json.data];
@@ -86,30 +78,23 @@ function processSearchResponse(json, translations) {
   }
 
   resultState.totalRecords = json.recordsTotal;
-  $("#results-count").text(`${resultState.totalRecords}${translations.resultats}`);
-  $("#load-more").toggle(resultState.cachedResults.length < resultState.totalRecords);
+
+  $("#results-count").text(
+    `${resultState.totalRecords}${translations.resultats}`
+  );
+
+  $("#load-more").toggle(
+    resultState.cachedResults.length < resultState.totalRecords
+  );
 
   refreshYearsView().catch(error => {
-    console.error("Erreur lors du rafraîchissement des années :", error);
+    console.error(
+      "Erreur lors du rafraîchissement des années :",
+      error
+    );
   });
 
   return resultState.cachedResults;
-}
-
-// Selects the aggregation data to use for each filter category, between the latest ES aggs and their cached version (depending on whether we want to keep the aggregations from sides unchecked filters or not)
-function resolveFacetAggregations(currentAggregations) {
-  const resolved = {};
-
-  Object.keys(filterState).forEach(type => {
-    if (filterState[type].size === 0) {
-      facetState.cache[type] = currentAggregations;
-      resolved[type] = currentAggregations;
-    } else {
-      resolved[type] = facetState.cache[type] || currentAggregations;
-    }
-  });
-
-  return resolved;
 }
 
 // Transforms a search result into a complete HTML card

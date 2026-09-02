@@ -280,32 +280,42 @@ def search_results(request):
 
 
 def format_aggregations(response):
+    facets = response.aggregations.facets
+
     aggregations = {
         "surveys": [
             {"id": bucket.key, "count": bucket.doc_count}
-            for bucket in response.aggregations.surveys.buckets
+            for bucket in facets.surveys_scope.surveys.buckets
         ],
         "subcollections": [
             {"id": bucket.key, "count": bucket.doc_count}
-            for bucket in response.aggregations.subcollections.buckets
+            for bucket in facets.subcollections_scope.subcollections.buckets
         ],
         "collections": [
             {"id": bucket.key, "count": bucket.doc_count}
-            for bucket in response.aggregations.collections.buckets
+            for bucket in facets.collections_scope.collections.buckets
         ],
         "years": [
-            {"year": int(bucket.key_as_string), "count": bucket.doc_count}
-            for bucket in response.aggregations.years.buckets
+            {
+                "year": int(bucket.key_as_string),
+                "count": bucket.doc_count,
+            }
+            for bucket in facets.years_scope.years.buckets
         ],
         "search_location": [],
     }
 
-    for key in ["questions", "categories", "variable_name", "internal_label"]:
-        if hasattr(response.aggregations, key):
+    for key in [
+        "questions",
+        "categories",
+        "variable_name",
+        "internal_label",
+    ]:
+        if hasattr(facets, key):
             aggregations["search_location"].append(
                 {
                     "id": key,
-                    "count": getattr(response.aggregations, key).doc_count,
+                    "count": getattr(facets, key).doc_count,
                 }
             )
 

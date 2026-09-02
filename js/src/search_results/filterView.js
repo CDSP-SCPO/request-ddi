@@ -131,16 +131,36 @@ export function renderFacetAvailability(aggregations, {hasSearchQuery}) {
     return;
   }
 
-  const searchLocations = aggregationMap(aggregations.search_location, "search_location");
-  const collections = aggregationMap(aggregations.collection, "collections");
-  const subcollections = aggregationMap(aggregations.sub_collection, "subcollections");
-  const surveys = aggregationMap(aggregations.survey, "surveys");
-  const years = aggregationMap(aggregations.years, "years", "year");
+  const searchLocations = aggregationMap(
+    aggregations,
+    "search_location",
+  );
+  const collections = aggregationMap(
+    aggregations,
+    "collections",
+  );
+  const subcollections = aggregationMap(
+    aggregations,
+    "subcollections",
+  );
+  const surveys = aggregationMap(
+    aggregations,
+    "surveys",
+  );
+  const years = aggregationMap(
+    aggregations,
+    "years",
+    "year",
+  );
 
   facetState.baseYearCounts = years;
 
   if (hasSearchQuery) {
-    updateOptionAvailability(".search-location-checkbox", searchLocations, true);
+    updateOptionAvailability(
+      ".search-location-checkbox",
+      searchLocations,
+      true,
+    );
   } else {
     $(".search-location-checkbox")
       .closest(".form-check-custom")

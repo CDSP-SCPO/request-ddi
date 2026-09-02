@@ -302,7 +302,15 @@ class BindingSurveyDocument(Document):
                 minimum_should_match=1,
             )
         if aggregations:
-            search = cls.add_filter_aggregations(search, query=query)
+            search = cls.add_filter_aggregations(
+                search,
+                query=query,
+                search_locations=search_locations,
+                survey_ids=survey_ids,
+                collection_ids=collection_ids,
+                sub_collection_ids=sub_collection_ids,
+                years=years,
+            )
 
         return search
 
@@ -426,48 +434,178 @@ class BindingSurveyDocument(Document):
         return queries
 
     @classmethod
-    def add_filter_aggregations(cls, search, query=""):
-        search.aggs.bucket("surveys", "terms", field="survey.id", size=10000)
-        search.aggs.bucket(
-            "subcollections",
-            "terms",
-            field="survey.subcollection.id",
-            size=10000,
-        )
-        search.aggs.bucket(
-            "collections",
-            "terms",
-            field="survey.subcollection.collection_id",
-            size=10000,
-        )
-        search.aggs.bucket(
-            "years",
-            "date_histogram",
-            field="survey.start_date",
-            calendar_interval="year",
-            format="yyyy",
-            min_doc_count=1,
-        )
-        if query:
-            metadata_types = {
-                "questions": ["questions"],
-                "categories": ["categories"],
-                "variable_name": ["variable_name"],
-                "internal_label": ["internal_label"],
-            }
+    def _build_facet_filter(
+        cls,
+        *,
+        query="",
+        search_locations=None,
+        survey_ids=None,
+        collection_ids=None,
+        sub_collection_ids=None,
+        years=None,
+        exclude=None,
+    ):
+        filters = []
 
-            for agg_name, search_locations in metadata_types.items():
-                queries = cls._build_search_location_queries(query, search_locations)
+        if survey_ids and exclude != "survey":
+            filters.append({"terms": {"survey.id": survey_ids}})
 
-                if queries:
-                    search.aggs.bucket(
-                        agg_name,
-                        "filter",
-                        {
-                            "bool": {
-                                "should": queries,
-                                "minimum_should_match": 1,
+        if sub_collection_ids and exclude != "sub_collection":
+            filters.append({"terms": {"survey.subcollection.id": sub_collection_ids}})
+
+        if collection_ids and exclude != "collection":
+            filters.append({"terms": {"survey.subcollection.collection_id": collection_ids}})
+
+        if years and exclude != "years":
+            filters.append(
+                {
+                    "bool": {
+                        "should": [
+                            {
+                                "range": {
+                                    "survey.start_date": {
+                                        "gte": f"{year}-01-01",
+                                        "lt": f"{year + 1}-01-01",
+                                    }
+                                }
                             }
-                        },
-                    )
+                            for year in years
+                        ],
+                        "minimum_should_match": 1,
+                    }
+                }
+            )
+
+        must = []
+
+        if query:
+            queries = cls._build_search_location_queries(
+                query,
+                validate_search_locations(search_locations or []),
+            )
+
+            if queries:
+                must.append(
+                    {
+                        "bool": {
+                            "should": queries,
+                            "minimum_should_match": 1,
+                        }
+                    }
+                )
+
+        bool_query = {}
+
+        if must:
+            bool_query["must"] = must
+
+        if filters:
+            bool_query["filter"] = filters
+
+        return {"bool": bool_query} if bool_query else {"match_all": {}}
+
+    @classmethod
+    def add_filter_aggregations(
+        cls,
+        search,
+        *,
+        query="",
+        search_locations=None,
+        survey_ids=None,
+        collection_ids=None,
+        sub_collection_ids=None,
+        years=None,
+    ):
+        facet_root = search.aggs.bucket("facets", "global")
+
+        facet_definitions = {
+            "surveys": {
+                "exclude": "survey",
+                "aggregation": (
+                    "terms",
+                    {
+                        "field": "survey.id",
+                        "size": 10000,
+                    },
+                ),
+            },
+            "subcollections": {
+                "exclude": "sub_collection",
+                "aggregation": (
+                    "terms",
+                    {
+                        "field": "survey.subcollection.id",
+                        "size": 10000,
+                    },
+                ),
+            },
+            "collections": {
+                "exclude": "collection",
+                "aggregation": (
+                    "terms",
+                    {
+                        "field": "survey.subcollection.collection_id",
+                        "size": 10000,
+                    },
+                ),
+            },
+            "years": {
+                "exclude": "years",
+                "aggregation": (
+                    "date_histogram",
+                    {
+                        "field": "survey.start_date",
+                        "calendar_interval": "year",
+                        "format": "yyyy",
+                        "min_doc_count": 1,
+                    },
+                ),
+            },
+        }
+
+        for facet_name, definition in facet_definitions.items():
+            facet_filter = cls._build_facet_filter(
+                query=query,
+                search_locations=search_locations,
+                survey_ids=survey_ids,
+                collection_ids=collection_ids,
+                sub_collection_ids=sub_collection_ids,
+                years=years,
+                exclude=definition["exclude"],
+            )
+
+            scoped_facet = facet_root.bucket(
+                f"{facet_name}_scope",
+                "filter",
+                facet_filter,
+            )
+
+            aggregation_type, aggregation_params = definition["aggregation"]
+
+            scoped_facet.bucket(
+                facet_name,
+                aggregation_type,
+                **aggregation_params,
+            )
+
+        if query:
+            for location in [
+                "questions",
+                "categories",
+                "variable_name",
+                "internal_label",
+            ]:
+                facet_root.bucket(
+                    location,
+                    "filter",
+                    cls._build_facet_filter(
+                        query=query,
+                        search_locations=[location],
+                        survey_ids=survey_ids,
+                        collection_ids=collection_ids,
+                        sub_collection_ids=sub_collection_ids,
+                        years=years,
+                    ),
+                )
+
         return search

@@ -17,8 +17,6 @@ export const resultState = {
 };
 
 export const facetState = {
-  lastSearchQuery: null,
-  cache: Object.fromEntries(FILTER_TYPES.map(type => [type, null])),
   baseYearCounts: new Map(),
 };
 
@@ -52,12 +50,4 @@ export function resetResults() {
   resultState.currentLimit = 10;
   resultState.cachedResults = [];
   selectedIds.clear();
-}
-
-// Empties aggs in cache, et years counts
-export function resetFacetCache() {
-  FILTER_TYPES.forEach(type => {
-    facetState.cache[type] = null;
-  });
-  facetState.baseYearCounts = new Map();
 }
