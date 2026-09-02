@@ -2,69 +2,47 @@
 {% load static %}
 {% block content %}
     <div class="container-custom mt-4">
-        <div class="text-center mb-3">
+        <div class="text-center mb-4">
             <h1 class="mb-2">Import de fichier</h1>
-            <a href="#" class="btn btn-warning" data-toggle="modal" data-target="#csvUploadModal">Importer un ou plusieurs fichiers csv</a>
+            <p class="text-muted mb-0 mx-auto text-justify import-intro-text">
+                Chaque enquête à importer est décrite par une ligne dans un fichier CSV. Le XML qui documente
+                son contenu est soit téléchargé automatiquement depuis une URL indiquée dans le CSV, soit
+                déposé directement ci-dessous — dans ce cas, <strong>déposez-le avant d'importer le CSV</strong>,
+                sinon l'import échouera faute de fichier trouvé pour ce DOI.
+            </p>
         </div>
 
-        <!-- Section XML -->
-        <div class="col-md-8 mx-auto">
-            <div class="help-box">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h3>Colonnes attendues pour le CSV</h3>
-                        <ul>
-                            <li>doi</li>
-                            <li>collection</li>
-                            <li>sub_collection</li>
-                            <li>url</li>
+        <div class="row justify-content-center">
+            <div class="col-md-5 mb-4 d-flex">
+                <div class="card shadow-sm import-option-card flex-fill">
+                    <div class="card-body d-flex flex-column">
+                        <span class="import-step-badge mb-2">Étape 1</span>
+                        <h5 class="card-title">Fichier CSV</h5>
+                        <p class="card-text text-muted small">Une ligne par enquête, avec son DOI, sa collection et une URL de téléchargement du DDI-C.</p>
+                        <ul class="list-unstyled small mb-4">
+                            <li class="mb-1"><span class="badge badge-danger">Requis</span> doi</li>
+                            <li class="mb-1"><span class="badge badge-danger">Requis</span> collection</li>
+                            <li class="mb-1"><span class="badge badge-danger">Requis</span> sub_collection</li>
+                            <li><span class="badge badge-info">Requis, peut être vide</span> url</li>
                         </ul>
+                        <button type="button" class="btn btn-warning mt-auto" data-toggle="modal" data-target="#csvUploadModal">Importer un fichier CSV</button>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <h3>Balises attendues pour le XML</h3>
-                        <ul>
-                            <li>IDNo</li> 
-                            <li>titl</li>
-                            <li>rspStmt 
-                                <ul> 
-                                    <li>AuthEnty</li> 
-                                </ul> 
-                            </li>
-                            <li>prodStmt 
-                                <ul> 
-                                    <li>producer</li> 
-                                </ul> 
-                            </li>
-                            <li>distStmt 
-                                <ul> 
-                                    <li>distrbtr</li> 
-                                    <li>contact</li> 
-                                    <li>distDate</li> 
-                                </ul> 
-                            </li>
-                            <li>verStmt</li>
-                            <li>sumDscr 
-                                <ul> 
-                                    <li>timePrd</li> 
-                                    <li>nation</li> 
-                                    <li>geogCover</li>
-                                    <li>anlyUnit</li> 
-                                </ul> 
-                            </li>
-                            <li>var 
-                                <ul> 
-                                    <li>catValu</li> 
-                                    <li>labl</li> 
-                                    <li>catgry</li> 
-                                    <li>qstnLit</li> 
-                                    <li>universe</li> 
-                                    <li>notes</li> 
-                                </ul> 
-                            </li>
-                        </ul>
+                </div>
+            </div>
+
+            <div class="col-md-5 mb-4 d-flex">
+                <div class="card shadow-sm import-option-card flex-fill">
+                    <div class="card-body d-flex flex-column">
+                        <span class="import-step-badge mb-2">Optionnel</span>
+                        <h5 class="card-title">Dépôt XML direct</h5>
+                        <p class="card-text text-muted small">Pas d'URL de téléchargement pour une enquête ? Déposez son XML ici, il sera retrouvé automatiquement par DOI.</p>
+                        <ol class="small mb-4 pl-3">
+                            <li class="mb-1">Déposez le(s) fichier(s) XML ici</li>
+                            <li class="mb-1">Laissez <code>url</code> vide pour ce DOI dans le CSV</li>
+                            <li>Importez le CSV normalement</li>
+                        </ol>
+                        <button type="button" class="btn btn-warning mt-auto" data-toggle="modal" data-target="#xmlUploadModal">Déposer des fichiers XML</button>
                     </div>
-                    <p class="text-center px-3">Assurez-vous que ces balises sont présentes dans votre fichier CSV ainsi que dans vos fichiers XML associés, pour garantir une structure valide.</p>
                 </div>
             </div>
         </div>
@@ -107,6 +85,31 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="xmlUploadModal" tabindex="-1" aria-labelledby="xmlUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="xmlUploadModalLabel">Déposer des fichiers XML</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Ces fichiers seront ensuite retrouvés automatiquement par DOI lors d'un import CSV dont la colonne <code>url</code> est vide.</p>
+                    <form method="POST" enctype="multipart/form-data" id="xmlUploadForm"
+                          action="{% url 'request_ddi:import_xml' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="xml_files">Sélectionnez un ou plusieurs fichiers XML :</label>
+                            <input type="file" name="xml_files" id="xml_files" class="form-control" accept=".xml" multiple>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Déposer les fichiers XML</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -121,13 +124,32 @@
             border: none;
         }
 
-        /* Styles similaires à ceux utilisés dans `upload_csv.html` */
-        .help-box {
-            background-color: #e9ecef;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            color: #333;
+        .import-intro-text {
+            max-width: 640px;
+        }
+
+        .import-option-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            transition: box-shadow 0.15s ease, transform 0.15s ease;
+        }
+
+        .import-option-card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+            transform: translateY(-2px);
+        }
+
+        .import-step-badge {
+            display: inline-block;
+            align-self: flex-start;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #b8860b;
+            background-color: #fff3cd;
+            padding: 3px 10px;
+            border-radius: 12px;
         }
 
         /* Superposition et spinner */

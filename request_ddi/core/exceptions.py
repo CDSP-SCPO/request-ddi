@@ -38,8 +38,10 @@ class InvalidDDICError(Exception):
         super().__init__(self.message)
 
 
-class DDICFileURLNotFoundError(Exception):
-    """Exception raised for survey when DDIC URL not found in import views."""
+class DDICFileNotFoundInVolumeError(Exception):
+    """Exception raised when a CSV row has no URL and no matching XML has been
+    uploaded to the volume for that DOI.
+    """
 
     def __init__(self, message):
         self.message = message
