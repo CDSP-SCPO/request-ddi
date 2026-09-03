@@ -1009,6 +1009,17 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.assertEqual(response.status_code, 400)
         self.assertTrue(any("format XML" in e for e in response.json()["errors"]))
 
+    def test_upload_accepts_uppercase_xml_extension(self):
+        self.login()
+        xml_file = SimpleUploadedFile(
+            "Survey.XML", self.valid_xml.encode(), content_type="text/xml"
+        )
+
+        response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+
     def test_upload_mixed_valid_and_invalid_files_is_partial_success(self):
         self.login()
         good_file = SimpleUploadedFile("good.xml", self.valid_xml.encode(), content_type="text/xml")

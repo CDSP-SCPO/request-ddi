@@ -68,7 +68,7 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
         uploaded_dois = []
         errors = []
         for file in files:
-            if not file.name.endswith(".xml"):
+            if not file.name.lower().endswith(".xml"):
                 errors.append(f"{file.name} : le fichier doit être au format XML.")
                 continue
 
