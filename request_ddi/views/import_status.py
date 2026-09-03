@@ -73,9 +73,17 @@ class ImportStatusView(StaffRequiredMixin, View):
 
             # Traceback tronqué pour l'affichage
             traceback_excerpt = None
+            error_message = None
             if r.traceback:
                 lines = r.traceback.strip().splitlines()
                 traceback_excerpt = "\n".join(lines[-8:])
+
+                # La dernière ligne d'un traceback Python est "<chemin.Exception>: <message>" :
+                # on en extrait le message pour l'afficher au lieu du seul nom de la classe.
+                last_line = lines[-1] if lines else ""
+                prefix = f"{r.exception_class_path}: "
+                if r.exception_class_path and last_line.startswith(prefix):
+                    error_message = last_line[len(prefix) :]
 
             # Bouton relancer : uniquement si FAILED et qu'aucune tâche
             # plus récente n'existe pour ce même DOI
@@ -101,6 +109,7 @@ class ImportStatusView(StaffRequiredMixin, View):
                     "exception_class": r.exception_class_path.rsplit(".", 1)[-1]
                     if r.exception_class_path
                     else None,
+                    "error_message": error_message,
                     "traceback": traceback_excerpt,
                     "can_retry": can_retry,
                     # On passe le survey_data pour pouvoir le re-enqueue sans retaper le DOI

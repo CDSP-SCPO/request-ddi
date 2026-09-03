@@ -117,8 +117,8 @@
     if (t.num_new_bindings !== null && t.num_new_bindings !== undefined) {
       meta.push(`<span class="task-card__meta-item">Nouveaux bindings&nbsp;<strong>${t.num_new_bindings}</strong></span>`);
     }
-    if (t.exception_class) {
-      meta.push(`<span class="task-card__meta-item" style="color:#dc2626;">${t.exception_class}</span>`);
+    if (t.error_message || t.exception_class) {
+      meta.push(`<span class="task-card__meta-item" style="color:#dc2626;">${t.error_message || t.exception_class}</span>`);
     }
   
     const progressBar = t.status === "RUNNING"

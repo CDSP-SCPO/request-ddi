@@ -89,6 +89,19 @@ class XMLParserTests(TestCase):
         with self.assertRaises(MissingAttributeError):
             parse_codebook_xml_file(file)
 
+    def test_parse_invalid_xml_no_variables(self):
+        xml_content = """
+        <codeBook version="1.2.2" ID="doi:10.1234/test" xml-lang="en">
+            <IDNo agency="DataCite">doi:10.1234/test</IDNo>
+            <titl>Résultats agrégés sans variable</titl>
+        </codeBook>
+        """.encode()
+        file = BytesIO(xml_content)
+        file.name = "no-variables.xml"
+
+        with self.assertRaises(MissingAttributeError):
+            parse_codebook_xml_file(file)
+
 
 class XMLFetcherTests(TestCase):
     def test_fetch_xml_with_no_url_and_no_uploaded_file(self):

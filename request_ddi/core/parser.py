@@ -197,6 +197,10 @@ def parse_codebook_xml_file(content):  # noqa: PLR0915,C901
                 }
             )
 
+        if not data["variables"]:
+            msg = f"Aucune variable (balise var) trouvée dans le fichier XML de l'enquête {doi}"
+            raise MissingAttributeError(msg)
+
         return data
     except Exception as e:
         logger.error("Erreur lors de la lecture du DDI-C de l'enquête %s: %s", doi, str(e))

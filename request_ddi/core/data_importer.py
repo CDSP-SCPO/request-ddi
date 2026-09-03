@@ -101,9 +101,7 @@ def import_data(context, survey, import_format):
         raise ValueError(msg) from e
     finally:
         duration = time.time() - start_time
-        # num_questions peut être 0 (enquête documentée sans balise <var>, ex: un jeu de
-        # résultats agrégés) : ce n'est pas une erreur, juste rien à diviser.
-        duration_per_question = duration / num_questions if num_questions else 0
+        duration_per_question = duration / num_questions
         logger.debug(
             "⏱ Temps d'import — Survey '%s', DOI '%s', %d Variables : Total %.2f s, Temps per question %.2f s",
             survey,

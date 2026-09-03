@@ -883,10 +883,10 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertEqual(task_status, TaskResultStatus.FAILED)
         self.assertIn("Aucun fichier XML n'a été déposé", traceback)
 
-    def test_import_survey_with_no_variables_succeeds(self):
+    def test_import_survey_with_no_variables_fails(self):
         """Un DDI-C sans balise <var> (ex: un jeu de résultats agrégés sans variable
-        documentée) doit s'importer sans planter — même comportement que si ce fichier
-        avait été récupéré par URL depuis data.sciencespo.
+        documentée) doit être rejeté dès la validation du XML — même comportement
+        que si ce fichier avait été récupéré par URL depuis data.sciencespo.
         """
         self.login()
         xml_content = """
@@ -905,11 +905,12 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
             reverse("request_ddi:import_ddic"),
             {"csv_file": self.csv_with_empty_url("doi:1234/no-variables"), "delimiter": ","},
         )
-        task_status, _ = wait_task()
+        task_status, traceback = wait_task()
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(task_status, TaskResultStatus.SUCCESSFUL)
-        self.assertTrue(Survey.objects.filter(external_ref="doi:1234/no-variables").exists())
+        self.assertEqual(task_status, TaskResultStatus.FAILED)
+        self.assertIn("Aucune variable", traceback)
+        self.assertFalse(Survey.objects.filter(external_ref="doi:1234/no-variables").exists())
 
     def test_import_with_empty_url_and_no_uploaded_file_fails(self):
         self.login()
@@ -934,6 +935,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         <root>
             <IDNo agency="DataCite">doi:5555/upload</IDNo>
             <titl>Uploaded Survey</titl>
+            <var name="Q1"><labl>Question 1</labl></var>
         </root>
         """
 
@@ -963,6 +965,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         <root>
             <IDNo agency="DataCite">doi:6666/latin1</IDNo>
             <titl>Enquête générationnelle âgée</titl>
+            <var name="Q1"><labl>Question 1</labl></var>
         </root>
         """
         xml_file = SimpleUploadedFile(
@@ -993,6 +996,24 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.login()
         malformed_xml = "<root><titl>No DOI here</titl></root>"
         xml_file = SimpleUploadedFile("bad.xml", malformed_xml.encode(), content_type="text/xml")
+
+        response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["status"], "error")
+        self.assertFalse(UploadedDDICFile.objects.exists())
+
+    def test_upload_xml_without_variables_is_rejected(self):
+        self.login()
+        no_variables_xml = """
+            <root>
+                <IDNo agency="DataCite">doi:7777/no-variables</IDNo>
+                <titl>Résultats agrégés sans variable</titl>
+            </root>
+            """
+        xml_file = SimpleUploadedFile(
+            "no-variables.xml", no_variables_xml.encode(), content_type="text/xml"
+        )
 
         response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
 
