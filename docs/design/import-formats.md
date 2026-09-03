@@ -66,11 +66,6 @@ The following columns are required to be present in the CSV file:
 `collection` and `sub-collection` are organization dependent and they are solely
 responsible for providing logical entries.
 
-If `url` is left empty for a row, the DDI-C XML file is not downloaded. Instead, it is
-looked up by DOI among the files previously uploaded via the `/import/xml` endpoint (see
-[Direct XML upload](#direct-xml-upload) below). This covers surveys for which no
-downloadable URL exists.
-
 Example of CSV file:
 
 ```csv
@@ -82,25 +77,6 @@ doi:10.21410/7E4/DDDHXW,fr,Données de recherche,Agoramétrie,https://data.scien
 
 The DDI-C XML file fetched from the URL provided in the CSV file must have the usual
 attributes `docDscr`, `stdyDscr` and `dataDscr`.
-
-#### Direct XML upload
-
-The `/import/xml` endpoint accepts one or more DDI-C XML files directly, without going
-through a URL. Each file is validated (same checks as when a file is fetched from a URL:
-a DOI must be present and start with `doi:`, and the `titl` attribute must be present)
-and stored, indexed by the DOI found inside it. Uploading a file whose DOI already exists
-overwrites the previously stored one.
-
-This does not import any survey by itself: a survey is only imported through the CSV
-format above, with `url` left empty for the corresponding row. This keeps `collection`
-and `sub-collection` assignment exclusively driven by the CSV, regardless of whether the
-XML was fetched remotely or uploaded directly.
-
-Once a survey's import succeeds using a volume file, that file's record is deleted
-entirely. A later `force_import` on that same DOI therefore requires uploading the XML
-again first — attempting it without doing so fails with the exact same error as if no
-file had ever been uploaded for that DOI, by design: both cases require the same fix
-(upload the XML), so they are not distinguished.
 
 ### Variable level metadata and survey metadata with CSV
 
