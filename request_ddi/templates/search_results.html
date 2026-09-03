@@ -91,7 +91,7 @@
                             <div id="collections-filter" class="div-all-checkboxes">
                                 {% for collection in collections %}
                                     <div class="form-check-custom">
-                                        <input class="form-check-input collection-checkbox checkbox-custom filter-checkbox" data-filter-type="collection" type="checkbox" value="{{ collection.id }}" id="collection-{{ collection.id }}" {% if collection.id|stringformat:"s" in request.session.selected_collection %}checked{% endif %}>
+                                        <input class="form-check-input collection-checkbox checkbox-custom filter-checkbox" data-filter-type="collection" type="checkbox" value="{{ collection.id }}" id="collection-{{ collection.id }}" >
                                         <label class="form-check-label" for="collection-{{ collection.id }}">
                                             {{ collection.name }}
                                         </label>
@@ -116,7 +116,7 @@
                             <div id="subcollections-filter" class="div-all-checkboxes">
                                 {% for subcollection in subcollections %}
                                     <div class="form-check-custom">
-                                        <input class="form-check-input subcollection-checkbox checkbox-custom filter-checkbox" data-filter-type="sub_collection" type="checkbox" value="{{ subcollection.id }}" id="subcollection-{{ subcollection.id }}" {% if subcollection.id|stringformat:"s" in request.session.selected_sub_collection %}checked{% endif %}>
+                                        <input class="form-check-input subcollection-checkbox checkbox-custom filter-checkbox" data-filter-type="sub_collection" type="checkbox" value="{{ subcollection.id }}" id="subcollection-{{ subcollection.id }}">
                                         <label class="form-check-label" for="subcollection-{{ subcollection.id }}">
                                             {{ subcollection.name }}
                                         </label>
@@ -141,7 +141,7 @@
                             <div id="survey-filter" class="div-all-checkboxes">
                                 {% for survey in surveys %}
                                     <div class="form-check-custom">
-                                        <input class="form-check-input survey-checkbox checkbox-custom filter-checkbox" data-filter-type="survey" type="checkbox" value="{{ survey.id }}" id="survey-{{ survey.id }}" {% if survey.id|stringformat:"s" in request.session.selected_surveys %}checked{% endif %}>
+                                        <input class="form-check-input survey-checkbox checkbox-custom filter-checkbox" data-filter-type="survey" type="checkbox" value="{{ survey.id }}" id="survey-{{ survey.id }}">
                                         <label class="form-check-label" for="survey-{{ survey.id }}">
                                             {{ survey.name }}
                                         </label>

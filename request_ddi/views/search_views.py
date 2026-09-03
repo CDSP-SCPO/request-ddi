@@ -238,43 +238,15 @@ class SearchResultsDataView(ListView):
 
 @method_decorator(log_time, name="dispatch")
 def search_results(request):
-    selected_surveys = request.GET.getlist("survey")
-    selected_sub_collection = request.GET.getlist("sub_collections")
-    selected_collection = request.GET.getlist("collections")
-    search_locations = validate_search_locations(request.GET.getlist("search_location"))
-    search_query = request.GET.get("q", "")
-
-    request.session["selected_surveys"] = selected_surveys
-    request.session["selected_sub_collection"] = selected_sub_collection
-    request.session["selected_collection"] = selected_collection
-    request.session["search_location"] = search_locations
-
     collections = Collection.objects.all().order_by("name")
     subcollections = Subcollection.objects.all().order_by("name")
     surveys = Survey.objects.all().order_by("name")
-
-    years = Survey.objects.values_list("start_date", flat=True).distinct()
-    years = [year.year for year in years if year is not None]
-    years.sort()
-
-    decades = {}
-    for year in years:
-        decade = (year // 10) * 10
-        if decade not in decades:
-            decades[decade] = []
-        decades[decade].append(year)
 
     context = {
         "collections": collections,
         "subcollections": subcollections,
         "surveys": surveys,
-        "search_location": search_locations,
-        "selected_surveys": selected_surveys,
-        "selected_sub_collection": selected_sub_collection,
-        "selected_collection": selected_collection,
         "show_search_bar": True,
-        "decades": decades,
-        "search_query": search_query,
     }
     return render(request, "search_results.html", context)
 

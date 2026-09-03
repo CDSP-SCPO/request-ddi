@@ -204,21 +204,12 @@ class SearchResultsViewTest(BaseSearchViewTest):
     def test_search_results_view(self):
         response = self.client.get(
             reverse("request_ddi:search_results"),
-            {"q": "âge", "search_location": ["questions"], "survey": ["1"]},
+            {
+                "q": "âge",
+            },
         )
+
         self.assertEqual(response.status_code, 200)
         self.assertIn("collections", response.context)
         self.assertIn("subcollections", response.context)
         self.assertIn("surveys", response.context)
-        self.assertIn("search_location", response.context)
-        self.assertEqual(response.context["search_query"], "âge")
-        self.assertEqual(response.context["search_location"], ["questions"])
-        self.assertEqual(response.context["selected_surveys"], ["1"])
-
-    def test_search_results_view_session(self):
-        self.client.get(
-            reverse("request_ddi:search_results"),
-            {"q": "âge", "search_location": ["questions"], "survey": ["1"]},
-        )
-        self.assertEqual(self.client.session["search_location"], ["questions"])
-        self.assertEqual(self.client.session["selected_surveys"], ["1"])
