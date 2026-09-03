@@ -102,6 +102,12 @@ export async function resetAllFilters() {
   commitFilterChange();
 }
 
+export function resetFiltersForNewSearch() {
+  clearFilters();
+  resetResults();
+  syncBrowserUrl();
+}
+
 // Handles the click on a whole decade
 export function toggleDecade(years, checked) {
   years.forEach(year => {

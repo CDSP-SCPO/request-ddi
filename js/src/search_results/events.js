@@ -1,7 +1,7 @@
 import Swal from "sweetalert2";
 import {loadMoreResults} from "./results.js";
-import {resetAllFilters, toggleFilter, restoreFiltersFromUrl} from "./filterController.js";
-import {buildSearchUrlParams, getSearchQuery, syncBrowserUrl} from "./searchParams.js";
+import {resetAllFilters, resetFiltersForNewSearch, toggleFilter, restoreFiltersFromUrl} from "./filterController.js";
+import {buildSearchUrlParams, getSearchQuery} from "./searchParams.js";
 import {selectedIds} from "./state.js";
 import {updateTableContainerHeight} from "./utils.js";
 import {attachYearsEvents} from "./yearsView.js";
@@ -25,11 +25,13 @@ export function attachEventListeners() {
     .off("change.requestDdiSelection", "input[type='checkbox']")
     .on("change.requestDdiSelection", "input[type='checkbox']", updateSelection);
 
-  $("form.search-bar").off("submit.requestDdiSearch").on("submit.requestDdiSearch", event => {
-    event.preventDefault();
-    syncBrowserUrl();
-    window.location.reload();
-  });
+  $("form.search-bar")
+    .off("submit.requestDdiSearch")
+    .on("submit.requestDdiSearch", event => {
+      event.preventDefault();
+      resetFiltersForNewSearch();
+      window.location.reload();
+    });
 
   $(window).off("resize.requestDdi").on("resize.requestDdi", updateTableContainerHeight);
 }
