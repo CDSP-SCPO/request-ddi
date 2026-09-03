@@ -15,28 +15,38 @@ function handleCsvUploadSubmit(event) {
   const csvFile = getCsvFile(csvForm);
 
   if (!csvFile) {
-    showNoFileSelectedAlert();
+    showNoFileSelectedAlert("Veuillez sélectionner un fichier CSV avant d'envoyer.");
     return;
   }
 
-  submitCsvForm(csvForm, overlay);
+  submitForm(csvForm, overlay, handleUploadResponse);
 }
 
 function getCsvFile(csvForm) {
   return csvForm.querySelector("input[name=\"csv_file\"]")?.files[0];
 }
 
-function submitCsvForm(csvForm, overlay) {
-  const formData = new FormData(csvForm);
+function submitForm(form, overlay, onResponse) {
+  const formData = new FormData(form);
   showOverlay(overlay);
 
-  fetch(csvForm.action, {
+  fetch(form.action, {
     method: "POST",
     body: formData,
   })
     .then((response) => response.json())
-    .then((data) => handleUploadResponse(data, overlay))
-    .catch((err) => handleUploadError(err, overlay));  
+    .then((data) => onResponse(data, overlay))
+    .catch((err) => handleUploadError(err, overlay));
+}
+
+// Échappe une chaîne avant de l'injecter dans du HTML (Swal `html:`) — nécessaire
+// puisque certains messages d'erreur embarquent des chaînes fournies par
+// l'utilisateur (ex: nom de fichier uploadé), qui ne doivent jamais être interprétées
+// comme du HTML actif.
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
 }
 
 function handleUploadResponse(data, overlay) {
@@ -60,11 +70,11 @@ function handleUploadResponse(data, overlay) {
   showErrorAlert(data, overlay);
 }
 
-function showNoFileSelectedAlert() {
+function showNoFileSelectedAlert(text) {
   Swal.fire({
     icon: "warning",
     title: "Aucun fichier sélectionné",
-    text: "Veuillez sélectionner un fichier CSV avant d'envoyer.",
+    text,
   });
 }
 
@@ -118,12 +128,14 @@ function showErrorAlert(data, overlay, modalId = "csvUploadModal") {
   $(`#${modalId}`).off("hidden.bs.modal");
   hideOverlay(overlay);
 
-  const errorDetails = data.errors?.join("<br>") ?? data.message;
+  const errorDetails = data.errors?.length
+    ? data.errors.map(escapeHtml).join("<br>")
+    : escapeHtml(data.message);
 
   Swal.fire({
     icon: "error",
     title: "Erreur",
-    html: `<strong>${data.message}</strong><br><br><strong>Erreurs :</strong><br>${errorDetails}`,
+    html: `<strong>${escapeHtml(data.message)}</strong><br><br><strong>Erreurs :</strong><br>${errorDetails}`,
   });
 }
 
@@ -172,28 +184,11 @@ function handleXmlUploadSubmit(event) {
   const xmlFiles = xmlForm.querySelector("input[name=\"xml_files\"]")?.files;
 
   if (!xmlFiles || xmlFiles.length === 0) {
-    Swal.fire({
-      icon: "warning",
-      title: "Aucun fichier sélectionné",
-      text: "Veuillez sélectionner au moins un fichier XML avant d'envoyer.",
-    });
+    showNoFileSelectedAlert("Veuillez sélectionner au moins un fichier XML avant d'envoyer.");
     return;
   }
 
-  submitXmlForm(xmlForm, overlay);
-}
-
-function submitXmlForm(xmlForm, overlay) {
-  const formData = new FormData(xmlForm);
-  showOverlay(overlay);
-
-  fetch(xmlForm.action, {
-    method: "POST",
-    body: formData,
-  })
-    .then((response) => response.json())
-    .then((data) => handleXmlUploadResponse(data, overlay))
-    .catch((err) => handleUploadError(err, overlay));
+  submitForm(xmlForm, overlay, handleXmlUploadResponse);
 }
 
 function handleXmlUploadResponse(data, overlay) {
@@ -205,9 +200,9 @@ function handleXmlUploadResponse(data, overlay) {
       icon: data.status === "success" ? "success" : "warning",
       title: data.status === "success" ? "Succès" : "Dépôt partiel",
       html: `
-        <strong>${data.message}</strong><br><br>
-        ${dois.length > 0 ? `<strong>Fichier(s) déposé(s) :</strong> ${dois.join(", ")}<br><br>` : ""}
-        ${data.errors?.length ? `<strong>Erreurs :</strong><br>${data.errors.join("<br>")}` : ""}
+        <strong>${escapeHtml(data.message)}</strong><br><br>
+        ${dois.length > 0 ? `<strong>Fichier(s) déposé(s) :</strong> ${dois.map(escapeHtml).join(", ")}<br><br>` : ""}
+        ${data.errors?.length ? `<strong>Erreurs :</strong><br>${data.errors.map(escapeHtml).join("<br>")}` : ""}
       `,
     });
     return;
