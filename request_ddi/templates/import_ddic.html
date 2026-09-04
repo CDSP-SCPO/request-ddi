@@ -23,7 +23,7 @@
                             <li class="mb-1"><span class="badge badge-danger">Requis</span> doi</li>
                             <li class="mb-1"><span class="badge badge-danger">Requis</span> collection</li>
                             <li class="mb-1"><span class="badge badge-danger">Requis</span> sub_collection</li>
-                            <li><span class="badge badge-info">Requis, peut être vide</span> url</li>
+                            <li><span class="badge badge-info">Optionnel</span> url</li>
                         </ul>
                         <button type="button" class="btn btn-warning mt-auto" data-toggle="modal" data-target="#csvUploadModal">Importer un fichier CSV</button>
                     </div>
@@ -38,7 +38,7 @@
                         <p class="card-text text-muted small">Pas d'URL de téléchargement pour une enquête ? Déposez son XML ici, il sera retrouvé automatiquement par DOI.</p>
                         <ol class="small mb-4 pl-3">
                             <li class="mb-1">Déposez le(s) fichier(s) XML ici</li>
-                            <li class="mb-1">Laissez <code>url</code> vide pour ce DOI dans le CSV</li>
+                            <li class="mb-1">Laissez <code>url</code> vide (ou omettez la colonne) pour ce DOI dans le CSV</li>
                             <li>Importez le CSV normalement</li>
                         </ol>
                         <button type="button" class="btn btn-warning mt-auto" data-toggle="modal" data-target="#xmlUploadModal">Déposer des fichiers XML</button>
@@ -96,7 +96,7 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <p>Ces fichiers seront ensuite retrouvés automatiquement par DOI lors d'un import CSV dont la colonne <code>url</code> est vide.</p>
+                    <p>Ces fichiers seront ensuite retrouvés automatiquement par DOI lors d'un import CSV dont la colonne <code>url</code> est vide ou absente.</p>
                     <form method="POST" enctype="multipart/form-data" id="xmlUploadForm"
                           action="{% url 'request_ddi:import_xml' %}">
                         {% csrf_token %}
