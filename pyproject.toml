@@ -58,6 +58,7 @@ dependencies = [
   "django-health-check[psutil]>4.0.0",
   "python-dotenv",
   "requests",
+  "charset-normalizer",
 ]
 dynamic = [
   "version",

@@ -17,6 +17,28 @@ IMPORT_TASK_PATH = import_data.module_path
 TASK_WINDOW_HOURS = 48  # Afficher les tâches des dernières 48h
 
 
+def _parse_traceback(traceback_text, exception_class_path):
+    """Retourne (extrait tronqué, message d'erreur) à partir d'un traceback brut.
+
+    La dernière ligne d'un traceback Python est "<chemin.Exception>: <message>" :
+    on en extrait le message pour l'afficher au lieu du seul nom de la classe.
+    """
+    if not traceback_text:
+        return None, None
+
+    lines = traceback_text.strip().splitlines()
+    traceback_excerpt = "\n".join(lines[-8:])
+
+    last_line = lines[-1] if lines else ""
+    prefix = f"{exception_class_path}: "
+    error_message = (
+        last_line[len(prefix) :]
+        if exception_class_path and last_line.startswith(prefix)
+        else None
+    )
+    return traceback_excerpt, error_message
+
+
 class ImportStatusView(StaffRequiredMixin, View):
     template_name = "import_status.html"
 
@@ -71,11 +93,7 @@ class ImportStatusView(StaffRequiredMixin, View):
                 num_new_variables = r.return_value.get("num_new_variables")
                 num_new_bindings = r.return_value.get("num_new_bindings")
 
-            # Traceback tronqué pour l'affichage
-            traceback_excerpt = None
-            if r.traceback:
-                lines = r.traceback.strip().splitlines()
-                traceback_excerpt = "\n".join(lines[-8:])
+            traceback_excerpt, error_message = _parse_traceback(r.traceback, r.exception_class_path)
 
             # Bouton relancer : uniquement si FAILED et qu'aucune tâche
             # plus récente n'existe pour ce même DOI
@@ -101,6 +119,7 @@ class ImportStatusView(StaffRequiredMixin, View):
                     "exception_class": r.exception_class_path.rsplit(".", 1)[-1]
                     if r.exception_class_path
                     else None,
+                    "error_message": error_message,
                     "traceback": traceback_excerpt,
                     "can_retry": can_retry,
                     # On passe le survey_data pour pouvoir le re-enqueue sans retaper le DOI

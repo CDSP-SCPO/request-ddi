@@ -14,6 +14,7 @@ from .core.models import (
     RepresentedVariable,
     Subcollection,
     Survey,
+    UploadedDDIXMLFile,
 )
 
 admin.site.register(Survey)
@@ -27,3 +28,4 @@ admin.site.register(Collection)
 admin.site.register(Subcollection)
 admin.site.register(Distributor)
 admin.site.register(BindingVariableCategoryStat)
+admin.site.register(UploadedDDIXMLFile)
