@@ -11,6 +11,7 @@ from request_ddi.core.exceptions import (
 )
 from request_ddi.core.models import UploadedDDIXMLFile
 from request_ddi.core.parser import (
+    extract_doi_from_xml,
     fetch_and_parse_xml,
     parse_codebook_xml_file,
 )
@@ -101,6 +102,52 @@ class XMLParserTests(TestCase):
 
         with self.assertRaises(MissingAttributeError):
             parse_codebook_xml_file(file)
+
+
+class DoiExtractorTests(TestCase):
+    def test_extract_doi_prefers_datacite_agency(self):
+        xml_content = """
+        <root>
+            <IDNo agency="local">not-this-one</IDNo>
+            <IDNo agency="DataCite">doi:10.1234/test</IDNo>
+            <titl>Test</titl>
+        </root>
+        """
+        self.assertEqual(extract_doi_from_xml(xml_content), "doi:10.1234/test")
+
+    def test_extract_doi_falls_back_to_any_idno(self):
+        xml_content = """
+        <root>
+            <IDNo>doi:10.1234/test</IDNo>
+            <titl>Test</titl>
+        </root>
+        """
+        self.assertEqual(extract_doi_from_xml(xml_content), "doi:10.1234/test")
+
+    def test_extract_doi_ignores_rest_of_a_large_codebook(self):
+        """La fonction ne doit pas exiger de variables ni d'autres attributs : elle
+        n'extrait que le DOI, sans valider le reste du codebook.
+        """
+        xml_content = """
+        <codeBook>
+            <IDNo agency="DataCite">doi:10.1234/huge</IDNo>
+        </codeBook>
+        """
+        self.assertEqual(extract_doi_from_xml(xml_content), "doi:10.1234/huge")
+
+    def test_extract_doi_missing_raises(self):
+        xml_content = "<root><titl>No DOI here</titl></root>"
+        with self.assertRaises(InvalidDOIError):
+            extract_doi_from_xml(xml_content)
+
+    def test_extract_doi_invalid_prefix_raises(self):
+        xml_content = "<root><IDNo>not-a-doi</IDNo></root>"
+        with self.assertRaises(InvalidDOIError):
+            extract_doi_from_xml(xml_content)
+
+    def test_extract_doi_malformed_xml_raises(self):
+        with self.assertRaises(InvalidDDICError):
+            extract_doi_from_xml("<root><unclosed></root>")
 
 
 class XMLFetcherTests(TestCase):

@@ -14,7 +14,7 @@ from request_ddi.core.data_importer import IMPORT_FORMAT_DDIC
 # -- LOCAL
 from request_ddi.core.forms import DDICImportFormCollection, DDIXMLUploadForm
 from request_ddi.core.models import UploadedDDIXMLFile
-from request_ddi.core.parser import decode_xml_content, parse_codebook_xml_file
+from request_ddi.core.parser import decode_xml_content, extract_doi_from_xml
 from request_ddi.utils.csv import read_csv_file
 from request_ddi.utils.timer import log_time
 from request_ddi.views.mixins import ImportViewMixin, StaffRequiredMixin
@@ -74,9 +74,8 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
 
             try:
                 content = decode_xml_content(file.read(), file.name)
-                ddic = parse_codebook_xml_file(content)
+                doi = extract_doi_from_xml(content)
 
-                doi = ddic["doi"]
                 existing = UploadedDDIXMLFile.objects.filter(doi=doi).first()
                 if existing:
                     logger.warning(

@@ -6,6 +6,7 @@ import re
 import charset_normalizer
 import requests
 from bs4 import BeautifulSoup
+from lxml import etree
 
 from request_ddi.utils.timing import timed
 
@@ -72,6 +73,32 @@ def decode_xml_content(raw_bytes, filename):
         msg = f"Impossible de déterminer l'encodage du fichier {filename}"
         raise InvalidDDICError(msg)
     return str(match)
+
+
+_XML_DECLARATION_RE = re.compile(r"^\s*<\?xml[^>]*\?>")
+
+
+def extract_doi_from_xml(content):
+    """Extrait uniquement le DOI d'un fichier XML DDI, via xpath (lxml), sans parser
+    l'intégralité du codebook. Utile pour un DDI-L volumineux, où un parsing complet
+    juste pour identifier le fichier serait inutilement coûteux.
+    """
+    # lxml refuse une déclaration d'encodage sur une str Python déjà décodée.
+    stripped = _XML_DECLARATION_RE.sub("", content, count=1)
+    try:
+        root = etree.fromstring(stripped.encode("utf-8"))
+    except etree.XMLSyntaxError as e:
+        msg = f"Fichier XML invalide : {e}"
+        raise InvalidDDICError(msg) from e
+
+    doi_tags = root.xpath('.//IDNo[@agency="DataCite"]') or root.xpath(".//IDNo")
+    doi = doi_tags[0].text.strip() if doi_tags and doi_tags[0].text else None
+
+    if not doi or not doi.startswith("doi:"):
+        msg = f"DOI {doi} invalide (doit commencer par 'doi:')"
+        raise InvalidDOIError(msg)
+
+    return doi
 
 
 def fetch_xml_from_local(doi):
