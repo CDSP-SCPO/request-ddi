@@ -29,7 +29,7 @@ urlpatterns = [
         name="import_ddic",
     ),
     path(
-        "import/xml",
+        "import/ddic/xml",
         DDICXMLUploadView.as_view(),
         name="import_xml",
     ),
