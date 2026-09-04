@@ -831,6 +831,39 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         )
         return SimpleUploadedFile("test.csv", content.encode(), content_type="text/csv")
 
+    def csv_without_url_column(self, doi):
+        content = (
+            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,"
+            "start_date,geographic_coverage,geographic_unit,unit_of_analysis,contact,"
+            "date_last_version\n"
+            f"Distrib,Collection,Subcollection,{doi},Survey Test,fr,Author,Producer,2020,"
+            "France,,Individual,Contact,2020-01-01\n"
+        )
+        return SimpleUploadedFile("test.csv", content.encode(), content_type="text/csv")
+
+    def test_import_with_no_url_column_and_uploaded_file_succeeds(self):
+        """La colonne `url` est optionnelle : un CSV qui l'omet complètement doit
+        pouvoir importer depuis le fichier déposé, comme si elle était présente
+        mais vide.
+        """
+        self.login()
+        UploadedDDIXMLFile.objects.create(
+            doi="doi:1234/volume",
+            original_filename="survey.xml",
+            xml_content=self.xml_content,
+        )
+
+        response = self.client.post(
+            reverse("request_ddi:import_ddic"),
+            {"csv_file": self.csv_without_url_column("doi:1234/volume"), "delimiter": ","},
+        )
+        task_status, _ = wait_task()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(task_status, TaskResultStatus.SUCCESSFUL)
+        self.assertTrue(Survey.objects.filter(external_ref="doi:1234/volume").exists())
+
     def test_import_with_empty_url_and_uploaded_file_succeeds(self):
         self.login()
         UploadedDDIXMLFile.objects.create(

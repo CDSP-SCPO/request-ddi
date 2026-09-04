@@ -24,7 +24,6 @@ class DDICImportFormCollection(forms.Form):
         "doi",
         "collection",
         "sub_collection",
-        "url",
     ]
     validate_duplicates = True
 
