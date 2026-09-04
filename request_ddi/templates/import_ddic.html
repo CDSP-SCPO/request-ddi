@@ -25,7 +25,7 @@
                             <li class="mb-1"><span class="badge badge-danger">Requis</span> sub_collection</li>
                             <li><span class="badge badge-info">Optionnel</span> url</li>
                         </ul>
-                        <button type="button" class="btn btn-warning mt-auto" data-toggle="modal" data-target="#csvUploadModal">Importer un fichier CSV</button>
+                        <button type="button" class="btn btn-import mt-auto" data-toggle="modal" data-target="#csvUploadModal">Importer un fichier CSV</button>
                     </div>
                 </div>
             </div>
@@ -41,7 +41,7 @@
                             <li class="mb-1">Laissez <code>url</code> vide (ou omettez la colonne) pour ce DOI dans le CSV</li>
                             <li>Importez le CSV normalement</li>
                         </ol>
-                        <button type="button" class="btn btn-warning mt-auto" data-toggle="modal" data-target="#xmlUploadModal">Déposer des fichiers XML</button>
+                        <button type="button" class="btn btn-import mt-auto" data-toggle="modal" data-target="#xmlUploadModal">Déposer des fichiers XML</button>
                     </div>
                 </div>
             </div>
@@ -146,10 +146,23 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.03em;
-            color: #b8860b;
-            background-color: #fff3cd;
+            color: #2E6831;
+            background-color: #E9F3EA;
             padding: 3px 10px;
             border-radius: 12px;
+        }
+
+        .btn-import {
+            background-color: #2E6831 !important;
+            border-color: #235024 !important;
+            color: #fff !important;
+        }
+
+        .btn-import:hover,
+        .btn-import:focus {
+            background-color: #235024 !important;
+            border-color: #1a3d1c !important;
+            color: #fff !important;
         }
 
         /* Superposition et spinner */
