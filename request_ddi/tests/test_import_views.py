@@ -853,6 +853,41 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         # La ligne est supprimée dès que l'import réussit, plus de trace en base
         self.assertFalse(UploadedDDIXMLFile.objects.filter(doi="doi:1234/volume").exists())
 
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
+    def test_import_with_url_deletes_stale_uploaded_file_for_same_doi(self, mock_download):
+        """Si un fichier XML a été déposé pour un DOI et qu'une URL est aussi fournie
+        dans le CSV pour ce même DOI, l'URL est prioritaire pour l'import — mais le
+        fichier déposé, devenu obsolète, doit quand même être supprimé pour ne pas
+        être repris par un import ultérieur sur ce DOI.
+        """
+        self.login()
+        UploadedDDIXMLFile.objects.create(
+            doi="doi:1234/volume",
+            original_filename="survey.xml",
+            xml_content=self.xml_content,
+        )
+        mock_download.return_value = self.xml_content
+
+        csv_content = (
+            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,"
+            "start_date,geographic_coverage,geographic_unit,unit_of_analysis,contact,"
+            "date_last_version,url\n"
+            "Distrib,Collection,Subcollection,doi:1234/volume,Survey Test,fr,Author,Producer,"
+            "2020,France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
+        )
+        csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
+
+        response = self.client.post(
+            reverse("request_ddi:import_ddic"),
+            {"csv_file": csv_file, "delimiter": ","},
+        )
+        task_status, _ = wait_task()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(task_status, TaskResultStatus.SUCCESSFUL)
+        self.assertTrue(Survey.objects.filter(external_ref="doi:1234/volume").exists())
+        self.assertFalse(UploadedDDIXMLFile.objects.filter(doi="doi:1234/volume").exists())
+
     def test_force_import_without_new_upload_after_first_import_fails(self):
         """Une fois consommé par un premier import, un force_import sur ce DOI doit
         échouer exactement comme si aucun fichier n'avait jamais été déposé.
