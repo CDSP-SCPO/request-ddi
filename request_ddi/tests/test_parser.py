@@ -4,12 +4,12 @@ from unittest.mock import patch
 from django.test import TestCase
 
 from request_ddi.core.exceptions import (
-    DDICFileNotFoundInVolumeError,
+    DDIXMLFileNotFoundError,
     InvalidDDICError,
     InvalidDOIError,
     MissingAttributeError,
 )
-from request_ddi.core.models import UploadedDDICFile
+from request_ddi.core.models import UploadedDDIXMLFile
 from request_ddi.core.parser import (
     fetch_and_parse_xml,
     parse_codebook_xml_file,
@@ -107,7 +107,7 @@ class XMLFetcherTests(TestCase):
     def test_fetch_xml_with_no_url_and_no_uploaded_file(self):
         """Test when survey has no URL and no XML was uploaded to the volume for its DOI"""
         data = {"url": "", "doi": "doi:9999/test"}
-        with self.assertRaises(DDICFileNotFoundInVolumeError):
+        with self.assertRaises(DDIXMLFileNotFoundError):
             fetch_and_parse_xml(data)
 
     def test_fetch_xml_with_no_url_reads_from_volume(self):
@@ -123,7 +123,7 @@ class XMLFetcherTests(TestCase):
             <var name="Q1"><labl>Age</labl></var>
         </codeBook>
         """
-        UploadedDDICFile.objects.create(
+        UploadedDDIXMLFile.objects.create(
             doi="doi:9999/test",
             original_filename="test.xml",
             xml_content=xml_content,
@@ -133,7 +133,7 @@ class XMLFetcherTests(TestCase):
 
         self.assertEqual(data["title"], "Test depuis le volume")
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_fetch_xml_with_mismatching_dois(self, mock_download):
         """Test when survey DDIC DOI does not match with DOI in CSV"""
         data = {"url": "https://example.com/1", "doi": "doi:9999/test"}

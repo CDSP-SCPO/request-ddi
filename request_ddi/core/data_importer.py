@@ -27,7 +27,7 @@ from .models import (
     RepresentedVariable,
     Subcollection,
     Survey,
-    UploadedDDICFile,
+    UploadedDDIXMLFile,
 )
 
 # -- REQUEST_DDI (LOCAL)
@@ -115,7 +115,7 @@ def import_data(context, survey, import_format):
     # whole import (including the DB transaction) has succeeded. A later force_import
     # on this DOI will require a fresh upload, exactly as if none had ever been made.
     if import_format == IMPORT_FORMAT_DDIC and not survey_data.get("url", "").strip():
-        UploadedDDICFile.objects.filter(doi=doi).delete()
+        UploadedDDIXMLFile.objects.filter(doi=doi).delete()
 
     return {
         "num_records": num_questions,

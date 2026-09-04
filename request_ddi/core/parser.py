@@ -10,12 +10,12 @@ from bs4 import BeautifulSoup
 from request_ddi.utils.timing import timed
 
 from .exceptions import (
-    DDICFileNotFoundInVolumeError,
+    DDIXMLFileNotFoundError,
     InvalidDDICError,
     InvalidDOIError,
     MissingAttributeError,
 )
-from .models import UploadedDDICFile
+from .models import UploadedDDIXMLFile
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,9 @@ def fetch_and_parse_xml(data):
     try:
         survey_url = data.get("url", "").strip()
         content = (
-            download_xml_file(survey_url) if survey_url else get_volume_xml_content(data["doi"])
+            fetch_xml_from_remote(survey_url)
+            if survey_url
+            else fetch_xml_from_local(data["doi"])
         )
         ddic = parse_codebook_xml_file(content)
 
@@ -72,8 +74,8 @@ def decode_xml_content(raw_bytes, filename):
     return str(match)
 
 
-def get_volume_xml_content(doi):
-    uploaded = UploadedDDICFile.objects.filter(doi=doi).first()
+def fetch_xml_from_local(doi):
+    uploaded = UploadedDDIXMLFile.objects.filter(doi=doi).first()
     if not uploaded:
         # Vaut aussi bien pour "jamais déposé" que pour "déjà importé" : la ligne est
         # supprimée dès qu'un import la consomme avec succès, donc les deux cas sont
@@ -82,7 +84,7 @@ def get_volume_xml_content(doi):
             f"Aucun fichier XML n'a été déposé pour l'enquête {doi}. Déposez-le via la page "
             "d'import XML avant de relancer l'import."
         )
-        raise DDICFileNotFoundInVolumeError(msg)
+        raise DDIXMLFileNotFoundError(msg)
     return uploaded.xml_content
 
 
@@ -207,7 +209,7 @@ def parse_codebook_xml_file(content):  # noqa: PLR0915,C901
         raise e
 
 
-def download_xml_file(survey_url):
+def fetch_xml_from_remote(survey_url):
     r = requests.get(survey_url, timeout=30)
     r.raise_for_status()
 

@@ -200,7 +200,7 @@ class BindingVariableCategoryStat(models.Model):
         return f"{self.binding.variable_name} - {self.category.code}: {self.stat}"
 
 
-class UploadedDDICFile(models.Model):
+class UploadedDDIXMLFile(models.Model):
     """Fichier DDI-C XML déposé directement par un utilisateur, sans passer par une URL.
 
     Une ligne CSV d'import dont la colonne `url` est vide est résolue en cherchant

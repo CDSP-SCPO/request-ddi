@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="UploadedDDICFile",
+            name="UploadedDDIXMLFile",
             fields=[
                 (
                     "id",

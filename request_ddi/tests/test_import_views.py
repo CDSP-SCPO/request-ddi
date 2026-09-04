@@ -14,7 +14,7 @@ from request_ddi.core.models import (
     RepresentedVariable,
     Subcollection,
     Survey,
-    UploadedDDICFile,
+    UploadedDDIXMLFile,
 )
 
 from .mixins import MockElasticsearchMixin
@@ -54,7 +54,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
     #
     """
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_form_valid_with_valid_csv_and_xml(self, mock_download):
         self.login()
         csv_content = (
@@ -178,7 +178,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertEqual(response.json()["status"], "error")
         self.assertTrue(any("n'est pas dans le bon format" in e for e in response.json()["errors"]))
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_form_invalid_with_malformed_xml(self, mock_download):
         """Teste l'import avec un XML mal formé"""
         self.login()
@@ -225,7 +225,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertEqual(response.json()["status"], "error")
         self.assertIn("Les colonnes suivantes sont manquantes", response.json()["message"])
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_csv_with_multiple_surveys_and_xmls(self, mock_download):
         """Teste l'import de plusieurs surveys avec leurs XMLs respectifs"""
         self.login()
@@ -296,7 +296,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
         self.assertTrue(Survey.objects.filter(external_ref="doi:5678/test").exists())
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_csv_with_multiple_surveys_and_xmls_with_multiple_csv_files(self, mock_download):
         """Teste l'import de plusieurs surveys avec leurs XMLs respectifs dans plusieurs fichiers CSV"""
         self.login()
@@ -376,7 +376,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
         self.assertTrue(Survey.objects.filter(external_ref="doi:5678/test").exists())
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_csv_with_same_question_text_in_same_xml(self, mock_download):
         """Test when multiple variables in same survey have same question text but different labels"""
         self.login()
@@ -434,7 +434,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
         self.assertEqual(len(RepresentedVariable.objects.all()), 2)
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_csv_with_question_text_label_from_multiple_surveys(self, mock_download):
         """Test when multiple surveys use same question text and label documentation"""
         self.login()
@@ -506,7 +506,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertTrue(Survey.objects.filter(external_ref="doi:5678/test").exists())
         self.assertEqual(len(RepresentedVariable.objects.all()), 1)
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_csv_with_force_import(self, mock_download):
         """Test when CSV is force imported"""
         self.login()
@@ -567,7 +567,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertEqual(task_status, TaskResultStatus.SUCCESSFUL)
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/test").exists())
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_malformed_xml_db_rollback(self, mock_download):
         """Test when variables in XML raise an exception which should rollback DB transcation"""
         self.login()
@@ -626,7 +626,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertFalse(Survey.objects.filter(external_ref="doi:1234/test").exists())
         self.assertIn("DataValidationError", traceback)
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_malformed_start_date_xml(self, mock_download):
         """Test when start_date in XML is not well formatted"""
         self.login()
@@ -674,7 +674,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertFalse(Survey.objects.filter(external_ref="doi:1234/test").exists())
         self.assertIn("InvalidDateError", traceback)
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_malformed_date_last_version_xml(self, mock_download):
         """Test when start_date in XML is not well formatted"""
         self.login()
@@ -740,7 +740,7 @@ class CheckDuplicatesTest(MockElasticsearchMixin, BaseUploadTest):
             variable_name="Q1", survey=cls.survey, variable=represented_var, notes="", universe=""
         )
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_check_duplicates_with_duplicate(self, mock_download):
         self.login()
 
@@ -764,7 +764,7 @@ class CheckDuplicatesTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertEqual(json_response["status"], "partial_success")
         self.assertTrue(any("doi:1234/test" in e for e in json_response["errors"]))
 
-    @patch("request_ddi.core.parser.download_xml_file")
+    @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_check_duplicates_with_no_duplicate(self, mock_download):
         self.login()
 
@@ -803,7 +803,7 @@ class CheckDuplicatesTest(MockElasticsearchMixin, BaseUploadTest):
 
 class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
     """Teste l'import CSV dont la colonne `url` est vide : le XML doit être retrouvé
-    dans le volume (`UploadedDDICFile`) au lieu d'être téléchargé.
+    dans le volume (`UploadedDDIXMLFile`) au lieu d'être téléchargé.
     """
 
     xml_content = """
@@ -833,7 +833,7 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
 
     def test_import_with_empty_url_and_uploaded_file_succeeds(self):
         self.login()
-        UploadedDDICFile.objects.create(
+        UploadedDDIXMLFile.objects.create(
             doi="doi:1234/volume",
             original_filename="survey.xml",
             xml_content=self.xml_content,
@@ -851,14 +851,14 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/volume").exists())
 
         # La ligne est supprimée dès que l'import réussit, plus de trace en base
-        self.assertFalse(UploadedDDICFile.objects.filter(doi="doi:1234/volume").exists())
+        self.assertFalse(UploadedDDIXMLFile.objects.filter(doi="doi:1234/volume").exists())
 
     def test_force_import_without_new_upload_after_first_import_fails(self):
         """Une fois consommé par un premier import, un force_import sur ce DOI doit
         échouer exactement comme si aucun fichier n'avait jamais été déposé.
         """
         self.login()
-        UploadedDDICFile.objects.create(
+        UploadedDDIXMLFile.objects.create(
             doi="doi:1234/volume",
             original_filename="survey.xml",
             xml_content=self.xml_content,
@@ -895,7 +895,7 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
                 <titl>Résultats agrégés sans variable</titl>
             </root>
             """
-        UploadedDDICFile.objects.create(
+        UploadedDDIXMLFile.objects.create(
             doi="doi:1234/no-variables",
             original_filename="no-variables.xml",
             xml_content=xml_content,
@@ -952,7 +952,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.assertEqual(json_response["status"], "success")
         self.assertEqual(json_response["data"][0]["dois"], ["doi:5555/upload"])
 
-        uploaded = UploadedDDICFile.objects.get(doi="doi:5555/upload")
+        uploaded = UploadedDDIXMLFile.objects.get(doi="doi:5555/upload")
         self.assertEqual(uploaded.original_filename, "survey.xml")
 
     def test_upload_non_utf8_xml_is_decoded_correctly(self):
@@ -977,7 +977,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
 
-        uploaded = UploadedDDICFile.objects.get(doi="doi:6666/latin1")
+        uploaded = UploadedDDIXMLFile.objects.get(doi="doi:6666/latin1")
         self.assertIn("Enquête générationnelle âgée", uploaded.xml_content)
 
     def test_upload_without_staff_permission_is_rejected(self):
@@ -1001,7 +1001,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["status"], "error")
-        self.assertFalse(UploadedDDICFile.objects.exists())
+        self.assertFalse(UploadedDDIXMLFile.objects.exists())
 
     def test_upload_xml_without_variables_is_rejected(self):
         self.login()
@@ -1019,7 +1019,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["status"], "error")
-        self.assertFalse(UploadedDDICFile.objects.exists())
+        self.assertFalse(UploadedDDIXMLFile.objects.exists())
 
     def test_upload_non_xml_file_is_rejected(self):
         self.login()
@@ -1053,11 +1053,11 @@ class DDICXMLUploadViewTest(BaseUploadTest):
 
         self.assertEqual(response.status_code, 207)
         self.assertEqual(response.json()["status"], "partial_success")
-        self.assertEqual(UploadedDDICFile.objects.count(), 1)
+        self.assertEqual(UploadedDDIXMLFile.objects.count(), 1)
 
     def test_upload_overwrites_existing_doi(self):
         self.login()
-        existing = UploadedDDICFile.objects.create(
+        existing = UploadedDDIXMLFile.objects.create(
             doi="doi:5555/upload",
             original_filename="old.xml",
             xml_content=self.valid_xml,

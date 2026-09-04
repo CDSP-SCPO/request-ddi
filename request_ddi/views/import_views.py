@@ -12,8 +12,8 @@ from django.views import View
 from request_ddi.core.data_importer import IMPORT_FORMAT_DDIC
 
 # -- LOCAL
-from request_ddi.core.forms import DDICImportFormCollection, DDICXMLUploadForm
-from request_ddi.core.models import UploadedDDICFile
+from request_ddi.core.forms import DDICImportFormCollection, DDIXMLUploadForm
+from request_ddi.core.models import UploadedDDIXMLFile
 from request_ddi.core.parser import decode_xml_content, parse_codebook_xml_file
 from request_ddi.utils.csv import read_csv_file
 from request_ddi.utils.timer import log_time
@@ -56,7 +56,7 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
     qu'en le téléchargeant.
     """
 
-    form_class = DDICXMLUploadForm
+    form_class = DDIXMLUploadForm
 
     def post(self, request, *args, **kwargs):
         files = request.FILES.getlist("xml_files")
@@ -77,7 +77,7 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
                 ddic = parse_codebook_xml_file(content)
 
                 doi = ddic["doi"]
-                existing = UploadedDDICFile.objects.filter(doi=doi).first()
+                existing = UploadedDDIXMLFile.objects.filter(doi=doi).first()
                 if existing:
                     logger.warning(
                         "Écrasement du fichier XML du DOI %s : '%s' (déposé le %s) remplacé par '%s'",
@@ -87,7 +87,7 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
                         file.name,
                     )
 
-                UploadedDDICFile.objects.update_or_create(
+                UploadedDDIXMLFile.objects.update_or_create(
                     doi=doi,
                     defaults={
                         "original_filename": file.name,
