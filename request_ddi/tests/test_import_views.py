@@ -1071,7 +1071,13 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.assertEqual(response.json()["status"], "error")
         self.assertFalse(UploadedDDIXMLFile.objects.exists())
 
-    def test_upload_xml_without_variables_is_rejected(self):
+    def test_upload_xml_without_variables_succeeds(self):
+        """L'upload n'extrait que le DOI (voir extract_doi_from_xml) et ne parse plus
+        tout le codebook : un DDI-C sans balise <var> est donc accepté ici. Il sera
+        rejeté plus tard, au moment de l'import CSV qui le consomme (voir
+        DDICImportFromVolumeTest.test_import_survey_with_no_variables_fails), où le
+        parsing complet a de toute façon lieu.
+        """
         self.login()
         no_variables_xml = """
             <root>
@@ -1085,9 +1091,9 @@ class DDICXMLUploadViewTest(BaseUploadTest):
 
         response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()["status"], "error")
-        self.assertFalse(UploadedDDIXMLFile.objects.exists())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertTrue(UploadedDDIXMLFile.objects.filter(doi="doi:7777/no-variables").exists())
 
     def test_upload_non_xml_file_is_rejected(self):
         self.login()
