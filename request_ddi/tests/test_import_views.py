@@ -997,7 +997,7 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
 
 
 class DDICXMLUploadViewTest(BaseUploadTest):
-    """Teste l'endpoint /import/xml de dépôt direct de fichiers XML dans le volume."""
+    """Teste l'endpoint /import/ddic/xml de dépôt direct de fichiers XML dans le volume."""
 
     valid_xml = """
         <root>
