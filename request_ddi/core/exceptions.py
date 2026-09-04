@@ -38,9 +38,9 @@ class InvalidDDICError(Exception):
         super().__init__(self.message)
 
 
-class DDICFileNotFoundInVolumeError(Exception):
+class DDIXMLFileNotFoundError(Exception):
     """Exception raised when a CSV row has no URL and no matching XML has been
-    uploaded to the volume for that DOI.
+    uploaded for that DOI.
     """
 
     def __init__(self, message):

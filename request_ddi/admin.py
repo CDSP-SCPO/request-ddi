@@ -14,7 +14,7 @@ from .core.models import (
     RepresentedVariable,
     Subcollection,
     Survey,
-    UploadedDDICFile,
+    UploadedDDIXMLFile,
 )
 
 admin.site.register(Survey)
@@ -28,4 +28,4 @@ admin.site.register(Collection)
 admin.site.register(Subcollection)
 admin.site.register(Distributor)
 admin.site.register(BindingVariableCategoryStat)
-admin.site.register(UploadedDDICFile)
+admin.site.register(UploadedDDIXMLFile)
