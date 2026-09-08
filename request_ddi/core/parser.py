@@ -20,15 +20,19 @@ from .models import UploadedDDIXMLFile
 
 logger = logging.getLogger(__name__)
 
+_XML_ENCODING_DECLARATION_RE = re.compile(
+    rb'<\?xml[^>]*encoding=["\']([^"\']+)["\']', re.IGNORECASE
+)
+_XML_DECLARATION_RE = re.compile(r"^\s*<\?xml[^>]*\?>")
+_XML_XPATH_QUERY = "//*[local-name() = $name]"
+
 
 @timed
 def fetch_and_parse_xml(data):
     try:
         survey_url = data.get("url", "").strip()
         content = (
-            fetch_xml_from_remote(survey_url)
-            if survey_url
-            else fetch_xml_from_local(data["doi"])
+            fetch_xml_from_remote(survey_url) if survey_url else fetch_xml_from_local(data["doi"])
         )
         ddic = parse_codebook_xml_file(content)
 
@@ -45,11 +49,6 @@ def fetch_and_parse_xml(data):
             "Erreur lors de la récupération du DDI-C de l'enquête %s: %s", data["doi"], str(e)
         )
         raise e
-
-
-_XML_ENCODING_DECLARATION_RE = re.compile(
-    rb'<\?xml[^>]*encoding=["\']([^"\']+)["\']', re.IGNORECASE
-)
 
 
 def decode_xml_content(raw_bytes, filename):
@@ -75,9 +74,6 @@ def decode_xml_content(raw_bytes, filename):
     return str(match)
 
 
-_XML_DECLARATION_RE = re.compile(r"^\s*<\?xml[^>]*\?>")
-
-
 def extract_doi_from_xml(content):
     """Extrait uniquement le DOI d'un fichier XML DDI, via xpath (lxml), sans parser
     l'intégralité du codebook. Utile pour un DDI-L volumineux, où un parsing complet
@@ -91,14 +87,17 @@ def extract_doi_from_xml(content):
         msg = f"Fichier XML invalide : {e}"
         raise InvalidDDICError(msg) from e
 
-    doi_tags = root.xpath('.//IDNo[@agency="DataCite"]') or root.xpath(".//IDNo")
-    doi = doi_tags[0].text.strip() if doi_tags and doi_tags[0].text else None
+    # By default XPath looks up in default namespace. In our case, DDI has its dedicated
+    # namespace which we need to include in the query. To avoid looking for type and
+    # version of DDI to include in XPath query, we use local-name function which parses
+    # the XML locally in its own namespace
+    # Ref: https://examples.javacodegeeks.com/java-development/core-java/xml/xpath/xpath-local-name-example/
+    for doi in root.xpath(_XML_XPATH_QUERY, name="IDNo"):
+        if doi.text.startswith("doi:"):
+            return doi.text.strip()
 
-    if not doi or not doi.startswith("doi:"):
-        msg = f"DOI {doi} invalide (doit commencer par 'doi:')"
-        raise InvalidDOIError(msg)
-
-    return doi
+    msg = "DOI introuvable"
+    raise InvalidDOIError(msg)
 
 
 def fetch_xml_from_local(doi):

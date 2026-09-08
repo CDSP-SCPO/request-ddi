@@ -20,7 +20,7 @@ from request_ddi.core.parser import (
 class XMLParserTests(TestCase):
     def test_parse_valid_xml(self):
         xml_content = """
-        <codeBook version="1.2.2" ID="doi:10.1234/test" xml-lang="en">
+        <codeBook xmlns="ddi:codebook:2_5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="ddi:codebook:2_5 https://www.ddialliance.org/Specification/DDI-Codebook/2.5/XMLSchema/codebook.xsd" version="1.2.2" ID="doi:10.1234/test" xml-lang="en">
             <IDNo agency="DataCite">doi:10.1234/test</IDNo>
             <titl>Test</titl>
             <timePrd date="1982" event="start"/>
@@ -129,7 +129,7 @@ class DoiExtractorTests(TestCase):
         n'extrait que le DOI, sans valider le reste du codebook.
         """
         xml_content = """
-        <codeBook>
+        <codeBook xmlns="ddi:codebook:2_5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="ddi:codebook:2_5 https://www.ddialliance.org/Specification/DDI-Codebook/2.5/XMLSchema/codebook.xsd">
             <IDNo agency="DataCite">doi:10.1234/huge</IDNo>
         </codeBook>
         """
@@ -160,7 +160,7 @@ class XMLFetcherTests(TestCase):
     def test_fetch_xml_with_no_url_reads_from_volume(self):
         """Test when survey has no URL but a matching XML was uploaded to the volume"""
         xml_content = """
-        <codeBook version="1.2.2" ID="doi:9999/test" xml-lang="fr">
+        <codeBook version="1.2.2" ID="doi:9999/test" xml-lang="fr" xmlns="ddi:codebook:2_5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="ddi:codebook:2_5 https://www.ddialliance.org/Specification/DDI-Codebook/2.5/XMLSchema/codebook.xsd">
             <IDNo agency="DataCite">doi:9999/test</IDNo>
             <titl>Test depuis le volume</titl>
             <timePrd date="1982" event="start"/>
