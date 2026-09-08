@@ -32,9 +32,7 @@ def _parse_traceback(traceback_text, exception_class_path):
     last_line = lines[-1] if lines else ""
     prefix = f"{exception_class_path}: "
     error_message = (
-        last_line[len(prefix) :]
-        if exception_class_path and last_line.startswith(prefix)
-        else None
+        last_line[len(prefix) :] if exception_class_path and last_line.startswith(prefix) else None
     )
     return traceback_excerpt, error_message
 
