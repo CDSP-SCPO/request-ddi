@@ -37,11 +37,12 @@
                         <h5 class="card-title">Dépôt XML direct</h5>
                         <p class="card-text text-muted small">Pas d'URL de téléchargement pour une enquête ? Déposez son XML ici, il sera retrouvé automatiquement par DOI.</p>
                         <ol class="small mb-4 pl-3">
-                            <li class="mb-1">Déposez le(s) fichier(s) XML ici</li>
+                            <li class="mb-1">Déposez le(s) fichier(s) XML et/ou ZIP ici</li>
                             <li class="mb-1">Laissez <code>url</code> vide (ou omettez la colonne) pour ce DOI dans le CSV</li>
                             <li>Importez le CSV normalement</li>
                         </ol>
-                        <button type="button" class="btn btn-import mt-auto" data-toggle="modal" data-target="#xmlUploadModal">Déposer des fichiers XML</button>
+                        <p class="card-text text-muted small">Il est recommandé d'archiver les fichiers au format .zip lorsqu'il y a plus de 10 fichiers XML à déposer.</p>
+                        <button type="button" class="btn btn-import mt-auto" data-toggle="modal" data-target="#xmlUploadModal">Déposer des fichiers XML et/ou ZIP</button>
                     </div>
                 </div>
             </div>
@@ -90,7 +91,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="xmlUploadModalLabel">Déposer des fichiers XML</h5>
+                    <h5 class="modal-title" id="xmlUploadModalLabel">Déposer des fichiers XML et/ou ZIP</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -101,10 +102,10 @@
                           action="{% url 'request_ddi:import_xml' %}">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label for="xml_files">Sélectionnez un ou plusieurs fichiers XML :</label>
-                            <input type="file" name="xml_files" id="xml_files" class="form-control" accept=".xml" multiple>
+                            <label for="xml_files">Sélectionnez un ou plusieurs fichiers XML et/ou ZIP :</label>
+                            <input type="file" name="xml_files" id="xml_files" class="form-control" accept=".xml,.zip" multiple>
                         </div>
-                        <button type="submit" class="btn btn-primary">Déposer les fichiers XML</button>
+                        <button type="submit" class="btn btn-primary">Déposer les fichiers XML et/ou ZIP</button>
                     </form>
                 </div>
             </div>
@@ -112,99 +113,13 @@
     </div>
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/import_ddic.css' %}">
+{% endblock %}
+
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type=module src="{% static 'js/importCsv.bundle.js' %}"></script>
 {% endblock %}
 
-
-{% block extra_css %}
-    <style>
-        .form-control {
-            border: none;
-        }
-
-        .import-intro-text {
-            max-width: 640px;
-        }
-
-        .import-option-card {
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            transition: box-shadow 0.15s ease, transform 0.15s ease;
-        }
-
-        .import-option-card:hover {
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
-            transform: translateY(-2px);
-        }
-
-        .import-step-badge {
-            display: inline-block;
-            align-self: flex-start;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: #2E6831;
-            background-color: #E9F3EA;
-            padding: 3px 10px;
-            border-radius: 12px;
-        }
-
-        .btn-import {
-            background-color: #2E6831 !important;
-            border-color: #235024 !important;
-            color: #fff !important;
-        }
-
-        .btn-import:hover,
-        .btn-import:focus {
-            background-color: #235024 !important;
-            border-color: #1a3d1c !important;
-            color: #fff !important;
-        }
-
-        /* Superposition et spinner */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .overlay.show {
-            display: flex;
-        }
-
-        .spinner-container {
-            text-align: center;
-        }
-
-        .spinner {
-            width: 60px;
-            height: 60px;
-            border: 8px solid rgba(0, 0, 0, 0.1);
-            border-top: 8px solid #28a745;
-            animation: spin 1s linear infinite;
-            border-radius: 50%;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
-{% endblock %}
 
