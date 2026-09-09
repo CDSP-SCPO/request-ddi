@@ -27,6 +27,7 @@ from .models import (
     RepresentedVariable,
     Subcollection,
     Survey,
+    UploadedDDIXMLFile,
 )
 
 # -- REQUEST_DDI (LOCAL)
@@ -100,14 +101,23 @@ def import_data(context, survey, import_format):
         raise ValueError(msg) from e
     finally:
         duration = time.time() - start_time
+        duration_per_question = duration / num_questions
         logger.debug(
             "⏱ Temps d'import — Survey '%s', DOI '%s', %d Variables : Total %.2f s, Temps per question %.2f s",
             survey,
             doi,
             num_questions,
             duration,
-            duration / num_questions,
+            duration_per_question,
         )
+
+    # Delete any XML previously uploaded for this DOI now that the whole import
+    # (including the DB transaction) has succeeded — regardless of whether this
+    # particular import used that uploaded file or fetched from a URL instead, so a
+    # stale upload can never be picked up by a later import. A later force_import on
+    # this DOI will require a fresh upload, exactly as if none had ever been made.
+    if import_format == IMPORT_FORMAT_DDIC:
+        UploadedDDIXMLFile.objects.filter(doi=doi).delete()
 
     return {
         "num_records": num_questions,
