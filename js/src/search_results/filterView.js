@@ -11,6 +11,82 @@ const FILTER_SELECTOR = {
 
 let onRemoveFilter = null;
 
+// Converts an aggregation from backend into a Map id -> number of results
+function aggregationMap(aggregations, key, idKey = "id") {
+  const source = aggregations?.[key] || [];
+  return new Map(source.map(item => [String(item[idKey]), item.count]));
+}
+
+// Finds the name of a filter from a filter value using its checkbox
+function getFilterLabel(type, value) {
+  const selector = FILTER_SELECTOR[type];
+  const checkbox = selector
+    ? $(`${selector}[value="${CSS.escape(String(value))}"]`)
+    : $();
+
+  if (!checkbox.length) return String(value);
+
+  const label = checkbox.closest(".form-check-custom").find("label").first().clone();
+  label.find(".available-count").remove();
+  return label.text().trim();
+}
+
+// Checks or unchecks checkboxes of a certain filter type, using filterState
+export function syncFilterCheckboxes(type) {
+  const selector = FILTER_SELECTOR[type];
+  if (!selector) return;
+
+  $(selector).each(function () {
+    const value = type === "years" ? Number(this.value) : String(this.value);
+    this.checked = filterState[type].has(value);
+  });
+}
+
+// Generates checkboxes of a group of dynamic options, then sync with filterState
+function renderOptions({container, options, type, className, idPrefix}) {
+  const html = options.map(option => `
+    <div class="form-check-custom">
+      <input
+        class="form-check-input ${className} checkbox-custom filter-checkbox"
+        data-filter-type="${type}"
+        type="checkbox"
+        value="${option.id}"
+        id="${idPrefix}-${option.id}"
+      >
+      <label class="form-check-label" for="${idPrefix}-${option.id}">
+        ${option.name}
+      </label>
+    </div>
+  `).join("");
+
+  $(container).html(html);
+  syncFilterCheckboxes(type);
+}
+
+// Displays available options, adds result counts et order them by frequency
+function updateOptionAvailability(selector, available, sortByCount) {
+  const items = [];
+
+  $(selector).each(function () {
+    const wrapper = $(this).closest(".form-check-custom");
+    const label = wrapper.find("label");
+    const count = available.get(String(this.value));
+
+    wrapper.toggle(count !== undefined);
+    wrapper.find(".available-count").remove();
+    if (count !== undefined) {
+      label.append(`<span class="available-count">${count}</span>`);
+    }
+
+    items.push({wrapper, count: count ?? -1});
+  });
+
+  if (sortByCount) {
+    items.sort((a, b) => b.count - a.count)
+      .forEach(({wrapper}) => wrapper.parent().append(wrapper));
+  }
+}
+
 // Loads the callback, useful when a filter is removed using the cross chip
 export function configureFilterView({removeFilter}) {
   onRemoveFilter = removeFilter;
@@ -38,41 +114,9 @@ export function renderSurveys(surveys) {
   });
 }
 
-// Generates checkboxes of a group of dynamic options, then sync with filterState
-function renderOptions({container, options, type, className, idPrefix}) {
-  const html = options.map(option => `
-    <div class="form-check-custom">
-      <input
-        class="form-check-input ${className} checkbox-custom filter-checkbox"
-        data-filter-type="${type}"
-        type="checkbox"
-        value="${option.id}"
-        id="${idPrefix}-${option.id}"
-      >
-      <label class="form-check-label" for="${idPrefix}-${option.id}">
-        ${option.name}
-      </label>
-    </div>
-  `).join("");
-
-  $(container).html(html);
-  syncFilterCheckboxes(type);
-}
-
 // Sync all checkboxes families with filterState
 export function syncAllFilterCheckboxes() {
   Object.keys(FILTER_SELECTOR).forEach(syncFilterCheckboxes);
-}
-
-// Checks or unchecks checkboxes of a certain filter type, using filterState
-export function syncFilterCheckboxes(type) {
-  const selector = FILTER_SELECTOR[type];
-  if (!selector) return;
-
-  $(selector).each(function () {
-    const value = type === "years" ? Number(this.value) : String(this.value);
-    this.checked = filterState[type].has(value);
-  });
 }
 
 // Rebuilds the selected-filter chips (above the datatable) displayed for each active filter value.
@@ -105,20 +149,6 @@ export function renderFilterCounts() {
     const badge = $(`.accordion-item[data-filter-type="${type}"] .filter-count`);
     badge.text(count).toggle(count > 0);
   });
-}
-
-// Finds the name of a filter from a filter value using its checkbox
-function getFilterLabel(type, value) {
-  const selector = FILTER_SELECTOR[type];
-  const checkbox = selector
-    ? $(`${selector}[value="${CSS.escape(String(value))}"]`)
-    : $();
-
-  if (!checkbox.length) return String(value);
-
-  const label = checkbox.closest(".form-check-custom").find("label").first().clone();
-  label.find(".available-count").remove();
-  return label.text().trim();
 }
 
 // Updates the visibility, result counts, and display order of filter options using the aggregations returned by the latest search
@@ -173,34 +203,4 @@ export function renderFacetAvailability(aggregations, {hasSearchQuery}) {
   updateOptionAvailability(".subcollection-checkbox", subcollections, true);
   updateOptionAvailability(".survey-checkbox", surveys, true);
   updateOptionAvailability(".year-checkbox", years, false);
-}
-
-// Converts an aggregation from backend into a Map id -> number of results
-function aggregationMap(aggregations, key, idKey = "id") {
-  const source = aggregations?.[key] || [];
-  return new Map(source.map(item => [String(item[idKey]), item.count]));
-}
-
-// Displays available options, adds result counts et order them by frequency
-function updateOptionAvailability(selector, available, sortByCount) {
-  const items = [];
-
-  $(selector).each(function () {
-    const wrapper = $(this).closest(".form-check-custom");
-    const label = wrapper.find("label");
-    const count = available.get(String(this.value));
-
-    wrapper.toggle(count !== undefined);
-    wrapper.find(".available-count").remove();
-    if (count !== undefined) {
-      label.append(`<span class="available-count">${count}</span>`);
-    }
-
-    items.push({wrapper, count: count ?? -1});
-  });
-
-  if (sortByCount) {
-    items.sort((a, b) => b.count - a.count)
-      .forEach(({wrapper}) => wrapper.parent().append(wrapper));
-  }
 }

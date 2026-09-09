@@ -3,17 +3,6 @@ import {attachEventListeners} from "./events.js";
 import {initializeResultsTable} from "./results.js";
 import {updateTableContainerHeight} from "./utils.js";
 
-$(document).ready(async function () {
-  document.documentElement.style.setProperty("--selected-filters-container-height", "0px");
-
-  configureFilterController();
-  await restoreFiltersFromUrl(false, false);
-  initializeResultsTable();
-  attachEventListeners();
-  observeSelectedFiltersHeight();
-  updateTableContainerHeight();
-});
-
 function observeSelectedFiltersHeight() {
   const target = document.getElementById("selected-filters-container");
   if (!target) return;
@@ -25,6 +14,17 @@ function observeSelectedFiltersHeight() {
     childList: true,
   });
 }
+
+$(document).ready(async function () {
+  document.documentElement.style.setProperty("--selected-filters-container-height", "0px");
+
+  configureFilterController();
+  await restoreFiltersFromUrl(false, false);
+  initializeResultsTable();
+  attachEventListeners();
+  observeSelectedFiltersHeight();
+  updateTableContainerHeight();
+});
 
 document.querySelectorAll(".accordion-button").forEach(button => {
   button.addEventListener("click", function () {

@@ -15,13 +15,30 @@ export function showDecadesView() {
   currentView = {mode: "decades", decade: null};
 }
 
-// Recharges the actual opened view, either decades or years
-export async function refreshYearsView() {
-  if (currentView.mode === "years") {
-    await renderYears(currentView.decade);
-  } else {
-    await renderDecades();
-  }
+// Returns collections, subcollections and surveys used to filter years
+function currentParentFilters() {
+  return {
+    collectionIds: [...filterState.collection],
+    subcollectionIds: [...filterState.sub_collection],
+    surveyIds: [...filterState.survey],
+  };
+}
+
+// Adds the number of results of years belonging to a decade
+function getDecadeCount(years) {
+  if (facetState.baseYearCounts.size === 0) return null;
+  return years.reduce(
+    (total, year) => total + (facetState.baseYearCounts.get(String(year)) ?? 0),
+    0
+  );
+}
+
+// Removes selected years no longer available in current aggs
+function removeInvalidSelectedYears() {
+  if (facetState.baseYearCounts.size === 0) return;
+  [...filterState.years].forEach(year => {
+    if (!facetState.baseYearCounts.has(String(year))) filterState.years.delete(year);
+  });
 }
 
 // Calculates the state checked or intermediary of each decade from the selected years
@@ -116,6 +133,15 @@ async function renderYears(decade) {
     });
 }
 
+// Recharges the actual opened view, either decades or years
+export async function refreshYearsView() {
+  if (currentView.mode === "years") {
+    await renderYears(currentView.decade);
+  } else {
+    await renderDecades();
+  }
+}
+
 // Links decades events to carets and return button
 export function attachYearsEvents() {
   $(document)
@@ -132,30 +158,4 @@ export function attachYearsEvents() {
       showDecadesView();
       renderDecades();
     });
-}
-
-// Returns collections, subcollections and surveys used to filter years
-function currentParentFilters() {
-  return {
-    collectionIds: [...filterState.collection],
-    subcollectionIds: [...filterState.sub_collection],
-    surveyIds: [...filterState.survey],
-  };
-}
-
-// Adds the number of results of years belonging to a decade
-function getDecadeCount(years) {
-  if (facetState.baseYearCounts.size === 0) return null;
-  return years.reduce(
-    (total, year) => total + (facetState.baseYearCounts.get(String(year)) ?? 0),
-    0
-  );
-}
-
-// Removes selected years no longer available in current aggs
-function removeInvalidSelectedYears() {
-  if (facetState.baseYearCounts.size === 0) return;
-  [...filterState.years].forEach(year => {
-    if (!facetState.baseYearCounts.has(String(year))) filterState.years.delete(year);
-  });
 }

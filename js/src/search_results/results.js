@@ -10,6 +10,91 @@ function getTranslations() {
   return JSON.parse(sessionStorage.getItem("request_ddi_search_translations"));
 }
 
+// Transforms a search result into a complete HTML card
+function renderResultCard(row, translations) {
+  const searchParams = buildSearchUrlParams();
+  const url = `/question/${row.id}/?${searchParams.toString()}`;
+  const doiUrl = `https://doi.org/${row.survey_doi}`;
+  const hasHighlightedModalities = row.is_category_search
+    && row.categories
+    && row.categories.includes("<mark style=");
+  const caretIcon = hasHighlightedModalities
+    ? "<span class=\"background-red-caret\"><img src=\"/static/svg/buttons/caret_down.svg\" alt=\"Caret Down\" class=\"icon-caret\"></span>"
+    : "<img src=\"/static/svg/buttons/caret_down.svg\" alt=\"Caret Down\" class=\"icon-caret\">";
+
+  return `
+    <div class="custom-card-dt">
+      <div class="custom-content-card">
+        <div class="custom-card-first-part">
+          <div class="title-checkbox">
+            <input type="checkbox" class="form-check-input checkbox-custom" value="${row.id}">
+            <div class="custom-title-2 custom-title-2-bold">
+              <a class="custom-name-card color-black-1" type="button" href="${url}">${row.question_text || row.internal_label}</a>
+            </div>
+          </div>
+          <div class="custom-metadatas">
+            <div class="flex-grow-1 d-flex flex-column inner-container-metadatas custom-body">
+              <div class="card-subtitle">${translations.enquete}<span class="ft-600"> ${row.survey_name} </span></div>
+              <div class="card-subtitle">${translations.nomVariable}<span class="ft-600">${row.variable_name}</span></div>
+              <div class="card-subtitle">${translations.libelleVariable}<span class="ft-600">${row.internal_label}</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="custom-card-second-part">
+          <div class="container-buttons-card">
+            <span type="button" onclick="window.requestDdiJsHelpers.toggleCategories(this, 'categories-${row.id}')" class="button-card button-modalities-card">
+              <img src="/static/svg/icons/modalites.svg" alt="Modalités" class="icon-modalites">
+              <span>${translations.modalites}</span>
+              ${caretIcon}
+            </span>
+            <span type="button" onclick="window.open('${doiUrl}','_blank')" class="button-card button-access-data button-access-data-card-hover">
+              <img src="/static/svg/icons/doi.svg" alt="Données" class="icon-access-data">
+              <span>${translations.accederAuxDonnees}</span>
+            </span>
+          </div>
+          <div id="categories-${row.id}" class="categories-list mt-3" style="display: none;">
+            ${row.categories}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+
+// Handles received hits and aggregations, updates cache and returns rows to the datatable
+function processSearchResponse(json, translations) {
+  const currentQuery = getSearchQuery();
+
+  renderFacetAvailability(json.aggregations || {}, {
+    hasSearchQuery: currentQuery.length > 0,
+  });
+
+  if (resultState.cachedResults.length === 0) {
+    resultState.cachedResults = [...json.data];
+  } else {
+    resultState.cachedResults.push(...json.data);
+  }
+
+  resultState.totalRecords = json.recordsTotal;
+
+  $("#results-count").text(
+    `${resultState.totalRecords}${translations.resultats}`
+  );
+
+  $("#load-more").toggle(
+    resultState.cachedResults.length < resultState.totalRecords
+  );
+
+  refreshYearsView().catch(error => {
+    console.error(
+      "Erreur lors du rafraîchissement des années :",
+      error
+    );
+  });
+
+  return resultState.cachedResults;
+}
+
 export function initializeResultsTable() {
   const translations = getTranslations();
 
@@ -60,89 +145,4 @@ export function resetAndReloadResults() {
 export function loadMoreResults() {
   resultState.currentLimit += 10;
   reloadResults({keepExistingRows: true});
-}
-
-
-// Handles received hits and aggregations, updates cache and returns rows to the datatable
-function processSearchResponse(json, translations) {
-  const currentQuery = getSearchQuery();
-
-  renderFacetAvailability(json.aggregations || {}, {
-    hasSearchQuery: currentQuery.length > 0,
-  });
-
-  if (resultState.cachedResults.length === 0) {
-    resultState.cachedResults = [...json.data];
-  } else {
-    resultState.cachedResults.push(...json.data);
-  }
-
-  resultState.totalRecords = json.recordsTotal;
-
-  $("#results-count").text(
-    `${resultState.totalRecords}${translations.resultats}`
-  );
-
-  $("#load-more").toggle(
-    resultState.cachedResults.length < resultState.totalRecords
-  );
-
-  refreshYearsView().catch(error => {
-    console.error(
-      "Erreur lors du rafraîchissement des années :",
-      error
-    );
-  });
-
-  return resultState.cachedResults;
-}
-
-// Transforms a search result into a complete HTML card
-function renderResultCard(row, translations) {
-  const searchParams = buildSearchUrlParams();
-  const url = `/question/${row.id}/?${searchParams.toString()}`;
-  const doiUrl = `https://doi.org/${row.survey_doi}`;
-  const hasHighlightedModalities = row.is_category_search
-    && row.categories
-    && row.categories.includes("<mark style=");
-  const caretIcon = hasHighlightedModalities
-    ? "<span class=\"background-red-caret\"><img src=\"/static/svg/buttons/caret_down.svg\" alt=\"Caret Down\" class=\"icon-caret\"></span>"
-    : "<img src=\"/static/svg/buttons/caret_down.svg\" alt=\"Caret Down\" class=\"icon-caret\">";
-
-  return `
-    <div class="custom-card-dt">
-      <div class="custom-content-card">
-        <div class="custom-card-first-part">
-          <div class="title-checkbox">
-            <input type="checkbox" class="form-check-input checkbox-custom" value="${row.id}">
-            <div class="custom-title-2 custom-title-2-bold">
-              <a class="custom-name-card color-black-1" type="button" href="${url}">${row.question_text || row.internal_label}</a>
-            </div>
-          </div>
-          <div class="custom-metadatas">
-            <div class="flex-grow-1 d-flex flex-column inner-container-metadatas custom-body">
-              <div class="card-subtitle">${translations.enquete}<span class="ft-600"> ${row.survey_name} </span></div>
-              <div class="card-subtitle">${translations.nomVariable}<span class="ft-600">${row.variable_name}</span></div>
-              <div class="card-subtitle">${translations.libelleVariable}<span class="ft-600">${row.internal_label}</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="custom-card-second-part">
-          <div class="container-buttons-card">
-            <span type="button" onclick="window.requestDdiJsHelpers.toggleCategories(this, 'categories-${row.id}')" class="button-card button-modalities-card">
-              <img src="/static/svg/icons/modalites.svg" alt="Modalités" class="icon-modalites">
-              <span>${translations.modalites}</span>
-              ${caretIcon}
-            </span>
-            <span type="button" onclick="window.open('${doiUrl}','_blank')" class="button-card button-access-data button-access-data-card-hover">
-              <img src="/static/svg/icons/doi.svg" alt="Données" class="icon-access-data">
-              <span>${translations.accederAuxDonnees}</span>
-            </span>
-          </div>
-          <div id="categories-${row.id}" class="categories-list mt-3" style="display: none;">
-            ${row.categories}
-          </div>
-        </div>
-      </div>
-    </div>`;
 }

@@ -6,34 +6,15 @@ import {selectedIds} from "./state.js";
 import {updateTableContainerHeight} from "./utils.js";
 import {attachYearsEvents} from "./yearsView.js";
 
-// Attach all the user events of the results page towards appropriate actions (checkboxes, export, reset...)
-export function attachEventListeners() {
-  $(document)
-    .off("change.requestDdiFilter", ".filter-checkbox")
-    .on("change.requestDdiFilter", ".filter-checkbox", function () {
-      toggleFilter(this.dataset.filterType, this.value);
-    });
+function updateSelection() {
+  if (this.checked) selectedIds.add(this.value);
+  else selectedIds.delete(this.value);
 
-  attachYearsEvents();
-
-  $("#reset-filters").off("click").on("click", resetAllFilters);
-  $("#load-more").off("click").on("click", loadMoreResults);
-  $("#export-all").off("click").on("click", exportAll);
-  $("#export-selected").off("click").on("click", exportSelected);
-
-  $("#survey-table tbody")
-    .off("change.requestDdiSelection", "input[type='checkbox']")
-    .on("change.requestDdiSelection", "input[type='checkbox']", updateSelection);
-
-  $("form.search-bar")
-    .off("submit.requestDdiSearch")
-    .on("submit.requestDdiSearch", event => {
-      event.preventDefault();
-      resetFiltersForNewSearch();
-      window.location.reload();
-    });
-
-  $(window).off("resize.requestDdi").on("resize.requestDdi", updateTableContainerHeight);
+  const all = $("#survey-table tbody input[type='checkbox']");
+  const checked = $("#survey-table tbody input[type='checkbox']:checked");
+  $("#select-all")
+    .prop("checked", all.length > 0 && all.length === checked.length)
+    .prop("indeterminate", checked.length > 0 && all.length !== checked.length);
 }
 
 function exportAll() {
@@ -70,15 +51,35 @@ function exportSelected() {
   window.location.href = `/export/questions/?${params.toString()}`;
 }
 
-function updateSelection() {
-  if (this.checked) selectedIds.add(this.value);
-  else selectedIds.delete(this.value);
 
-  const all = $("#survey-table tbody input[type='checkbox']");
-  const checked = $("#survey-table tbody input[type='checkbox']:checked");
-  $("#select-all")
-    .prop("checked", all.length > 0 && all.length === checked.length)
-    .prop("indeterminate", checked.length > 0 && all.length !== checked.length);
+// Attach all the user events of the results page towards appropriate actions (checkboxes, export, reset...)
+export function attachEventListeners() {
+  $(document)
+    .off("change.requestDdiFilter", ".filter-checkbox")
+    .on("change.requestDdiFilter", ".filter-checkbox", function () {
+      toggleFilter(this.dataset.filterType, this.value);
+    });
+
+  attachYearsEvents();
+
+  $("#reset-filters").off("click").on("click", resetAllFilters);
+  $("#load-more").off("click").on("click", loadMoreResults);
+  $("#export-all").off("click").on("click", exportAll);
+  $("#export-selected").off("click").on("click", exportSelected);
+
+  $("#survey-table tbody")
+    .off("change.requestDdiSelection", "input[type='checkbox']")
+    .on("change.requestDdiSelection", "input[type='checkbox']", updateSelection);
+
+  $("form.search-bar")
+    .off("submit.requestDdiSearch")
+    .on("submit.requestDdiSearch", event => {
+      event.preventDefault();
+      resetFiltersForNewSearch();
+      window.location.reload();
+    });
+
+  $(window).off("resize.requestDdi").on("resize.requestDdi", updateTableContainerHeight);
 }
 
 window.addEventListener("popstate", async () => {
