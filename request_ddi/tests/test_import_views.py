@@ -1,3 +1,5 @@
+import zipfile
+from io import BytesIO
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -1011,6 +1013,27 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.login()
         xml_file = SimpleUploadedFile(
             "survey.xml", self.valid_xml.encode(), content_type="text/xml"
+        )
+
+        response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})
+
+        self.assertEqual(response.status_code, 200)
+        json_response = response.json()
+        self.assertEqual(json_response["status"], "success")
+        self.assertEqual(json_response["data"][0]["dois"], ["doi:5555/upload"])
+
+        uploaded = UploadedDDIXMLFile.objects.get(doi="doi:5555/upload")
+        self.assertEqual(uploaded.original_filename, "survey.xml")
+
+    def test_upload_valid_zip_creates_uploaded_file(self):
+        self.login()
+        # Write in memory zip file
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(file=zip_buffer, mode="w") as zip_archive:
+            zip_archive.writestr(zinfo_or_arcname="survey.xml", data=self.valid_xml)
+        zip_buffer.seek(0)
+        xml_file = SimpleUploadedFile(
+            "surveys.zip", zip_buffer.read(), content_type="application/zip"
         )
 
         response = self.client.post(reverse("request_ddi:import_xml"), {"xml_files": xml_file})

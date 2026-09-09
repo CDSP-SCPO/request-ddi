@@ -1,5 +1,6 @@
 # -- STDLIB
 import logging
+import zipfile
 
 # -- THIRDPARTY
 # -- DJANGO
@@ -49,7 +50,7 @@ class DDICImportViewCollection(StaffRequiredMixin, ImportViewMixin, View):
 
 @method_decorator(log_time, name="dispatch")
 class DDICXMLUploadView(StaffRequiredMixin, View):
-    """Dépose un ou plusieurs fichiers DDI-C XML dans le volume, indexés par DOI.
+    """Dépose un ou plusieurs fichiers DDI XML dans la DB, indexés par DOI.
 
     Une ligne CSV d'import (`DDICImportViewCollection`) dont la colonne `url` est
     vide sera résolue en cherchant ici le fichier correspondant au DOI, plutôt
@@ -57,6 +58,40 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
     """
 
     form_class = DDIXMLUploadForm
+
+    def handle_xml_file(self, file):
+        content = decode_xml_content(file.read(), file.name)
+        doi = extract_doi_from_xml(content)
+
+        existing = UploadedDDIXMLFile.objects.filter(doi=doi).first()
+        if existing:
+            logger.warning(
+                "Écrasement du fichier XML du DOI %s : '%s' (déposé le %s) remplacé par '%s'",
+                doi,
+                existing.original_filename,
+                existing.uploaded_at,
+                file.name,
+            )
+
+        UploadedDDIXMLFile.objects.update_or_create(
+            doi=doi,
+            defaults={
+                "original_filename": file.name,
+                "xml_content": content,
+            },
+        )
+        return doi
+
+    def handle_zip_file(self, zip_file):
+        dois = []
+        # Open the zip file in read mode
+        with zipfile.ZipFile(zip_file, mode="r") as archive:
+            # Iterate over all files in the zip
+            for file in archive.namelist():
+                if not file.endswith(".xml"):
+                    continue
+                dois.append(self.handle_xml_file(archive.open(file, "r")))
+        return dois
 
     def post(self, request, *args, **kwargs):
         files = request.FILES.getlist("xml_files")
@@ -68,32 +103,14 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
         uploaded_dois = []
         errors = []
         for file in files:
-            if not file.name.lower().endswith(".xml"):
-                errors.append(f"{file.name} : le fichier doit être au format XML.")
-                continue
-
             try:
-                content = decode_xml_content(file.read(), file.name)
-                doi = extract_doi_from_xml(content)
-
-                existing = UploadedDDIXMLFile.objects.filter(doi=doi).first()
-                if existing:
-                    logger.warning(
-                        "Écrasement du fichier XML du DOI %s : '%s' (déposé le %s) remplacé par '%s'",
-                        doi,
-                        existing.original_filename,
-                        existing.uploaded_at,
-                        file.name,
-                    )
-
-                UploadedDDIXMLFile.objects.update_or_create(
-                    doi=doi,
-                    defaults={
-                        "original_filename": file.name,
-                        "xml_content": content,
-                    },
-                )
-                uploaded_dois.append(doi)
+                if file.name.lower().endswith(".zip"):
+                    uploaded_dois.extend(self.handle_zip_file(file))
+                elif file.name.lower().endswith(".xml"):
+                    uploaded_dois.append(self.handle_xml_file(file))
+                else:
+                    errors.append(f"{file.name} : le fichier doit être au format XML ou zip.")
+                    continue
             except Exception as e:
                 errors.append(f"{file.name} : {e}")
                 continue

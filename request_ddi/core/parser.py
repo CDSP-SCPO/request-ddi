@@ -92,9 +92,10 @@ def extract_doi_from_xml(content):
     # version of DDI to include in XPath query, we use local-name function which parses
     # the XML locally in its own namespace
     # Ref: https://examples.javacodegeeks.com/java-development/core-java/xml/xpath/xpath-local-name-example/
-    for doi in root.xpath(_XML_XPATH_QUERY, name="IDNo"):
-        if doi.text.startswith("doi:"):
-            return doi.text.strip()
+    for ele in root.xpath(_XML_XPATH_QUERY, name="IDNo"):
+        doi = ele.text.strip()
+        if doi.startswith("doi:"):
+            return doi
 
     msg = "DOI introuvable"
     raise InvalidDOIError(msg)
