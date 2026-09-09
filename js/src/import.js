@@ -1,44 +1,107 @@
 import Swal from "sweetalert2";
 
-function initCsvUploadCollection() {
-  const csvForm = document.getElementById("csvUploadFormCollection");
-  if (!csvForm) return;
-
-  csvForm.addEventListener("submit", handleCsvUploadSubmit);
+function showOverlay(overlay) {
+  overlay?.classList.add("show");
 }
 
-function handleCsvUploadSubmit(event) {
-  event.preventDefault();
+function hideOverlay(overlay) {
+  overlay?.classList.remove("show");
+}
 
-  const csvForm = event.currentTarget;
-  const overlay = document.getElementById("overlay");
-  const csvFiles = getCsvFiles(csvForm);
+// Échappe une chaîne avant de l'injecter dans du HTML (Swal `html:`) — nécessaire
+// puisque certains messages d'erreur embarquent des chaînes fournies par
+// l'utilisateur (ex: nom de fichier uploadé), qui ne doivent jamais être interprétées
+// comme du HTML actif.
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
 
-  if (csvFiles.length === 0) {
-    showNoFileSelectedAlert("Veuillez sélectionner un fichier CSV avant d'envoyer.");
-    return;
+function showErrorAlert(data, overlay, modalId = "csvUploadModal") {
+  $(`#${modalId}`).off("hidden.bs.modal");
+  hideOverlay(overlay);
+
+  const errorDetails = data.errors?.length
+    ? data.errors.map(escapeHtml).join("<br>")
+    : escapeHtml(data.message);
+
+  Swal.fire({
+    icon: "error",
+    title: "Erreur",
+    html: `<strong>${escapeHtml(data.message)}</strong><br><br><strong>Erreurs :</strong><br>${errorDetails}`,
+  }).then(() => {
+    // Sans ça, la modale Bootstrap "Dépose des fichiers XML" reste affichée en
+    // arrière-plan une fois le Swal fermé, obligeant l'utilisateur à cliquer
+    // ailleurs pour la faire disparaître.
+    $(`#${modalId}`).modal("hide");
+  });
+}
+
+function showNoFileSelectedAlert(text) {
+  Swal.fire({
+    icon: "warning",
+    title: "Aucun fichier sélectionné",
+    text,
+  });
+}
+
+function formatDuplicatesHtml(duplicates) {
+  let html = "<ul style=\"text-align:left\">";
+
+  for (const doi of duplicates) {
+    html += `<li><strong>${doi}</strong><ul>`;
+    html += "</ul></li>";
   }
 
-  Promise.all(csvFiles.map(readFileAsText))
-    .then((contents) => {
-      const missingUrlDois = [...new Set(contents.flatMap(findDoisMissingUrl))];
+  html += "</ul>";
+  return html;
+}
 
-      if (missingUrlDois.length === 0) {
-        submitForm(csvForm, overlay, handleUploadResponse);
-        return;
-      }
+function showDuplicatesAlert(duplicates) {
+  Swal.fire({
+    title: "Doublons détectés",
+    html: formatDuplicatesHtml(duplicates),
+    icon: "warning",
+  });
+}
 
-      confirmMissingUrlDois(missingUrlDois).then((confirmed) => {
-        if (confirmed) {
-          submitForm(csvForm, overlay, handleUploadResponse);
-        }
-      });
-    })
-    .catch(() => {
-      // Lecture impossible côté client (encodage exotique, etc.) : on laisse le
-      // serveur faire foi et renvoyer l'erreur appropriée le cas échéant.
-      submitForm(csvForm, overlay, handleUploadResponse);
-    });
+function showSuccessAlert(message) {
+  Swal.fire({
+    icon: "success",
+    title: "Succès",
+    text: message,
+  }).then(() => {
+    window.location = "/import/status/";
+  });
+}
+
+function formatPartialSuccessHtml(message, importData, skippedErrors, otherErrors, successfulSurveys) {
+  return `
+    <strong>${message}</strong><br><br>
+    ${successfulSurveys.length > 0 ? `<strong>Enquêtes traitée(s) :</strong> ${successfulSurveys.join(", ")}<br><br>` : ""}
+    <strong>${importData.num_surveys} enquête(s) seront importée(s).<br><br></strong>
+    ${skippedErrors.length > 0 ? `<strong>⚠️ Doublons ignorés (cochez "Ignorer les doublons" pour forcer l'import) :</strong><br>${skippedErrors.map((e) => e.replace("Doublon ignoré : ", "")).join("<br>")}<br><br>` : ""}
+    ${otherErrors.length > 0 ? `<strong>Erreurs :</strong><br>${otherErrors.join("<br>")}` : ""}
+  `;
+}
+
+function showPartialSuccessAlert(data) {
+  const importData = data.data[0];
+  const allSkipped = importData.num_surveys === 0;
+  const skippedErrors = data.errors?.filter((e) => e.startsWith("Doublon ignoré")) ?? [];
+  const otherErrors = data.errors?.filter((e) => !e.startsWith("Doublon ignoré")) ?? [];
+  const successfulSurveys = importData.successful_surveys ?? [];
+
+  Swal.fire({
+    icon: "warning",
+    title: allSkipped ? "Aucun import effectué" : "Import partiel",
+    html: formatPartialSuccessHtml(data.message, importData, skippedErrors, otherErrors, successfulSurveys),
+  }).then(() => {
+    if (!allSkipped) {
+      window.location = "/import/status/";
+    }
+  });
 }
 
 function getCsvFiles(csvForm) {
@@ -52,29 +115,6 @@ function readFileAsText(file) {
     reader.onerror = () => reject(reader.error);
     reader.readAsText(file);
   });
-}
-
-// Détecte les lignes du CSV sans URL, pour prévenir l'utilisateur avant l'envoi que
-// l'import de ces DOIs dépend d'un fichier XML déjà déposé (voir DDICXMLUploadView).
-// Volontairement permissif : c'est un avertissement côté client, pas une validation —
-// le serveur reste seul juge de la validité réelle du fichier.
-function findDoisMissingUrl(csvText) {
-  const lines = csvText.split(/\r\n|\r|\n/).filter((line) => line.trim() !== "");
-  if (lines.length < 2) return [];
-
-  const delimiter = detectCsvDelimiter(lines[0]);
-  const headers = parseCsvLine(lines[0], delimiter).map((h) => h.trim().toLowerCase());
-  const doiIndex = headers.indexOf("doi");
-  const urlIndex = headers.indexOf("url");
-
-  if (doiIndex === -1) return [];
-
-  return lines
-    .slice(1)
-    .map((line) => parseCsvLine(line, delimiter))
-    .filter((fields) => urlIndex === -1 || !fields[urlIndex]?.trim())
-    .map((fields) => fields[doiIndex]?.trim())
-    .filter(Boolean);
 }
 
 function detectCsvDelimiter(headerLine) {
@@ -122,43 +162,27 @@ function parseCsvLine(line, delimiter) {
   return fields;
 }
 
-function confirmMissingUrlDois(dois) {
-  return Swal.fire({
-    icon: "warning",
-    title: "Fichiers XML déjà déposés ?",
-    html: `
-      <p style="text-align:left">Les enquêtes suivantes n'ont pas d'URL dans le CSV : l'import ira
-      chercher un fichier XML déjà déposé pour leur DOI. Assurez-vous de l'avoir déposé avant de
-      continuer, sinon l'import échouera pour ces enquêtes.</p>
-      <ul style="text-align:left">${dois.map((doi) => `<li>${escapeHtml(doi)}</li>`).join("")}</ul>
-    `,
-    showCancelButton: true,
-    confirmButtonText: "Continuer l'import",
-    cancelButtonText: "Annuler",
-  }).then((result) => result.isConfirmed);
-}
+// Détecte les lignes du CSV sans URL, pour prévenir l'utilisateur avant l'envoi que
+// l'import de ces DOIs dépend d'un fichier XML déjà déposé (voir DDICXMLUploadView).
+// Volontairement permissif : c'est un avertissement côté client, pas une validation —
+// le serveur reste seul juge de la validité réelle du fichier.
+function findDoisMissingUrl(csvText) {
+  const lines = csvText.split(/\r\n|\r|\n/).filter((line) => line.trim() !== "");
+  if (lines.length < 2) return [];
 
-function submitForm(form, overlay, onResponse) {
-  const formData = new FormData(form);
-  showOverlay(overlay);
+  const delimiter = detectCsvDelimiter(lines[0]);
+  const headers = parseCsvLine(lines[0], delimiter).map((h) => h.trim().toLowerCase());
+  const doiIndex = headers.indexOf("doi");
+  const urlIndex = headers.indexOf("url");
 
-  fetch(form.action, {
-    method: "POST",
-    body: formData,
-  })
-    .then((response) => response.json())
-    .then((data) => onResponse(data, overlay))
-    .catch((err) => handleUploadError(err, overlay));
-}
+  if (doiIndex === -1) return [];
 
-// Échappe une chaîne avant de l'injecter dans du HTML (Swal `html:`) — nécessaire
-// puisque certains messages d'erreur embarquent des chaînes fournies par
-// l'utilisateur (ex: nom de fichier uploadé), qui ne doivent jamais être interprétées
-// comme du HTML actif.
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str ?? "";
-  return div.innerHTML;
+  return lines
+    .slice(1)
+    .map((line) => parseCsvLine(line, delimiter))
+    .filter((fields) => urlIndex === -1 || !fields[urlIndex]?.trim())
+    .map((fields) => fields[doiIndex]?.trim())
+    .filter(Boolean);
 }
 
 function handleUploadResponse(data, overlay) {
@@ -182,73 +206,20 @@ function handleUploadResponse(data, overlay) {
   showErrorAlert(data, overlay);
 }
 
-function showNoFileSelectedAlert(text) {
-  Swal.fire({
+function confirmMissingUrlDois(dois) {
+  return Swal.fire({
     icon: "warning",
-    title: "Aucun fichier sélectionné",
-    text,
-  });
-}
-
-function showDuplicatesAlert(duplicates) {
-  Swal.fire({
-    title: "Doublons détectés",
-    html: formatDuplicatesHtml(duplicates),
-    icon: "warning",
-  });
-}
-
-function showSuccessAlert(message) {
-  Swal.fire({
-    icon: "success",
-    title: "Succès",
-    text: message,
-  }).then(() => {
-    window.location = "/import/status/";
-  });
-}
-
-function showPartialSuccessAlert(data) {
-  const importData = data.data[0];
-  const allSkipped = importData.num_surveys === 0;
-  const skippedErrors = data.errors?.filter((e) => e.startsWith("Doublon ignoré")) ?? [];
-  const otherErrors = data.errors?.filter((e) => !e.startsWith("Doublon ignoré")) ?? [];
-  const successfulSurveys = importData.successful_surveys ?? [];
-
-  Swal.fire({
-    icon: "warning",
-    title: allSkipped ? "Aucun import effectué" : "Import partiel",
-    html: formatPartialSuccessHtml(data.message, importData, skippedErrors, otherErrors, successfulSurveys),
-  }).then(() => {
-    if (!allSkipped) {
-      window.location = "/import/status/";
-    }
-  });
-}
-
-function formatPartialSuccessHtml(message, importData, skippedErrors, otherErrors, successfulSurveys) {
-  return `
-    <strong>${message}</strong><br><br>
-    ${successfulSurveys.length > 0 ? `<strong>Enquêtes traitée(s) :</strong> ${successfulSurveys.join(", ")}<br><br>` : ""}
-    <strong>${importData.num_surveys} enquête(s) seront importée(s).<br><br></strong>
-    ${skippedErrors.length > 0 ? `<strong>⚠️ Doublons ignorés (cochez "Ignorer les doublons" pour forcer l'import) :</strong><br>${skippedErrors.map((e) => e.replace("Doublon ignoré : ", "")).join("<br>")}<br><br>` : ""}
-    ${otherErrors.length > 0 ? `<strong>Erreurs :</strong><br>${otherErrors.join("<br>")}` : ""}
-  `;
-}
-
-function showErrorAlert(data, overlay, modalId = "csvUploadModal") {
-  $(`#${modalId}`).off("hidden.bs.modal");
-  hideOverlay(overlay);
-
-  const errorDetails = data.errors?.length
-    ? data.errors.map(escapeHtml).join("<br>")
-    : escapeHtml(data.message);
-
-  Swal.fire({
-    icon: "error",
-    title: "Erreur",
-    html: `<strong>${escapeHtml(data.message)}</strong><br><br><strong>Erreurs :</strong><br>${errorDetails}`,
-  });
+    title: "Fichiers XML déjà déposés ?",
+    html: `
+      <p style="text-align:left">Les enquêtes suivantes n'ont pas d'URL dans le CSV : l'import ira
+      chercher un fichier XML déjà déposé pour leur DOI. Assurez-vous de l'avoir déposé avant de
+      continuer, sinon l'import échouera pour ces enquêtes.</p>
+      <ul style="text-align:left">${dois.map((doi) => `<li>${escapeHtml(doi)}</li>`).join("")}</ul>
+    `,
+    showCancelButton: true,
+    confirmButtonText: "Continuer l'import",
+    cancelButtonText: "Annuler",
+  }).then((result) => result.isConfirmed);
 }
 
 function handleUploadError(err, overlay) {
@@ -261,46 +232,58 @@ function handleUploadError(err, overlay) {
   });
 }
 
-function showOverlay(overlay) {
-  overlay?.classList.add("show");
+function submitForm(form, overlay, onResponse) {
+  const formData = new FormData(form);
+  showOverlay(overlay);
+
+  fetch(form.action, {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => response.json())
+    .then((data) => onResponse(data, overlay))
+    .catch((err) => handleUploadError(err, overlay));
 }
 
-function hideOverlay(overlay) {
-  overlay?.classList.remove("show");
-}
-
-function formatDuplicatesHtml(duplicates) {
-  let html = "<ul style=\"text-align:left\">";
-
-  for (const doi of duplicates) {
-    html += `<li><strong>${doi}</strong><ul>`;
-    html += "</ul></li>";
-  }
-
-  html += "</ul>";
-  return html;
-}
-
-function initXmlUpload() {
-  const xmlForm = document.getElementById("xmlUploadForm");
-  if (!xmlForm) return;
-
-  xmlForm.addEventListener("submit", handleXmlUploadSubmit);
-}
-
-function handleXmlUploadSubmit(event) {
+function handleCsvUploadSubmit(event) {
   event.preventDefault();
 
-  const xmlForm = event.currentTarget;
+  const csvForm = event.currentTarget;
   const overlay = document.getElementById("overlay");
-  const xmlFiles = xmlForm.querySelector("input[name=\"xml_files\"]")?.files;
+  const csvFiles = getCsvFiles(csvForm);
 
-  if (!xmlFiles || xmlFiles.length === 0) {
-    showNoFileSelectedAlert("Veuillez sélectionner au moins un fichier XML avant d'envoyer.");
+  if (csvFiles.length === 0) {
+    showNoFileSelectedAlert("Veuillez sélectionner un fichier CSV avant d'envoyer.");
     return;
   }
 
-  submitForm(xmlForm, overlay, handleXmlUploadResponse);
+  Promise.all(csvFiles.map(readFileAsText))
+    .then((contents) => {
+      const missingUrlDois = [...new Set(contents.flatMap(findDoisMissingUrl))];
+
+      if (missingUrlDois.length === 0) {
+        submitForm(csvForm, overlay, handleUploadResponse);
+        return;
+      }
+
+      confirmMissingUrlDois(missingUrlDois).then((confirmed) => {
+        if (confirmed) {
+          submitForm(csvForm, overlay, handleUploadResponse);
+        }
+      });
+    })
+    .catch(() => {
+      // Lecture impossible côté client (encodage exotique, etc.) : on laisse le
+      // serveur faire foi et renvoyer l'erreur appropriée le cas échéant.
+      submitForm(csvForm, overlay, handleUploadResponse);
+    });
+}
+
+function initCsvUploadCollection() {
+  const csvForm = document.getElementById("csvUploadFormCollection");
+  if (!csvForm) return;
+
+  csvForm.addEventListener("submit", handleCsvUploadSubmit);
 }
 
 function handleXmlUploadResponse(data, overlay) {
@@ -328,6 +311,27 @@ function handleXmlUploadResponse(data, overlay) {
   showErrorAlert(data, overlay, "xmlUploadModal");
 }
 
+function handleXmlUploadSubmit(event) {
+  event.preventDefault();
+
+  const xmlForm = event.currentTarget;
+  const overlay = document.getElementById("overlay");
+  const xmlFiles = xmlForm.querySelector("input[name=\"xml_files\"]")?.files;
+
+  if (!xmlFiles || xmlFiles.length === 0) {
+    showNoFileSelectedAlert("Veuillez sélectionner au moins un fichier XML avant d'envoyer.");
+    return;
+  }
+
+  submitForm(xmlForm, overlay, handleXmlUploadResponse);
+}
+
+function initXmlUpload() {
+  const xmlForm = document.getElementById("xmlUploadForm");
+  if (!xmlForm) return;
+
+  xmlForm.addEventListener("submit", handleXmlUploadSubmit);
+}
+
 document.addEventListener("DOMContentLoaded", initCsvUploadCollection);
 document.addEventListener("DOMContentLoaded", initXmlUpload);
-
