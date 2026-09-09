@@ -238,74 +238,56 @@ class SearchResultsDataView(ListView):
 
 @method_decorator(log_time, name="dispatch")
 def search_results(request):
-    selected_surveys = request.GET.getlist("survey")
-    selected_sub_collection = request.GET.getlist("sub_collections")
-    selected_collection = request.GET.getlist("collections")
-    search_locations = validate_search_locations(request.GET.getlist("search_location"))
-    search_query = request.GET.get("q", "")
-
-    request.session["selected_surveys"] = selected_surveys
-    request.session["selected_sub_collection"] = selected_sub_collection
-    request.session["selected_collection"] = selected_collection
-    request.session["search_location"] = search_locations
-
     collections = Collection.objects.all().order_by("name")
     subcollections = Subcollection.objects.all().order_by("name")
     surveys = Survey.objects.all().order_by("name")
-
-    years = Survey.objects.values_list("start_date", flat=True).distinct()
-    years = [year.year for year in years if year is not None]
-    years.sort()
-
-    decades = {}
-    for year in years:
-        decade = (year // 10) * 10
-        if decade not in decades:
-            decades[decade] = []
-        decades[decade].append(year)
 
     context = {
         "collections": collections,
         "subcollections": subcollections,
         "surveys": surveys,
-        "search_location": search_locations,
-        "selected_surveys": selected_surveys,
-        "selected_sub_collection": selected_sub_collection,
-        "selected_collection": selected_collection,
         "show_search_bar": True,
-        "decades": decades,
-        "search_query": search_query,
     }
     return render(request, "search_results.html", context)
 
 
 def format_aggregations(response):
+    facets = response.aggregations.facets
+
     aggregations = {
         "surveys": [
             {"id": bucket.key, "count": bucket.doc_count}
-            for bucket in response.aggregations.surveys.buckets
+            for bucket in facets.surveys_scope.surveys.buckets
         ],
         "subcollections": [
             {"id": bucket.key, "count": bucket.doc_count}
-            for bucket in response.aggregations.subcollections.buckets
+            for bucket in facets.subcollections_scope.subcollections.buckets
         ],
         "collections": [
             {"id": bucket.key, "count": bucket.doc_count}
-            for bucket in response.aggregations.collections.buckets
+            for bucket in facets.collections_scope.collections.buckets
         ],
         "years": [
-            {"year": int(bucket.key_as_string), "count": bucket.doc_count}
-            for bucket in response.aggregations.years.buckets
+            {
+                "year": int(bucket.key_as_string),
+                "count": bucket.doc_count,
+            }
+            for bucket in facets.years_scope.years.buckets
         ],
         "search_location": [],
     }
 
-    for key in ["questions", "categories", "variable_name", "internal_label"]:
-        if hasattr(response.aggregations, key):
+    for key in [
+        "questions",
+        "categories",
+        "variable_name",
+        "internal_label",
+    ]:
+        if hasattr(facets, key):
             aggregations["search_location"].append(
                 {
                     "id": key,
-                    "count": getattr(response.aggregations, key).doc_count,
+                    "count": getattr(facets, key).doc_count,
                 }
             )
 
