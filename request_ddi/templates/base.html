@@ -160,25 +160,93 @@
                              alt="Guide">
                         <span>Guide</span>
                     </a>
-                    <a href="https://github.com/CDSP-SCPO/request-ddi" target="_blank" class="popover-link popover-link-flex">
+            
+                    <a href="https://github.com/CDSP-SCPO/request-ddi"
+                       target="_blank"
+                       class="popover-link popover-link-flex">
                         <img src="{% static 'svg/icons/github.png' %}"
                              class="popover-icon custom-width-icon"
                              alt="Github">
                         <span>Github</span>
                     </a>
                 </div>
+            
                 <hr class="popover-divider"/>
-                <a href="https://www.sciencespo.fr/fr/termes-legaux/" target="_blank"
-                   class="popover-link">{% trans "Mentions légales" %}</a>
+            
+                <a href="https://www.sciencespo.fr/fr/termes-legaux/"
+                   target="_blank"
+                   class="popover-link">
+                    {% trans "Mentions légales" %}
+                </a>
+            
+                <button type="button"
+                        id="analytics-preferences"
+                        class="popover-link analytics-preferences-link">
+                    <span>{% trans "Statistiques d'utilisation" %}</span>
+
+                    <span id="analytics-consent-status"
+                        class="analytics-consent-status"
+                        data-accepted="{% trans 'Accepté' %}"
+                        data-declined="{% trans 'Refusé' %}"
+                        data-unset="{% trans 'Non configuré' %}">
+                    </span>
+                </button>
+            
                 <hr class="popover-divider"/>
+            
                 <p class="popover-meta">Version: {{ APP_VERSION }}</p>
-                <p class="popover-meta">Copyright © 2025,<br> Sciences Po</p>
+                <p class="popover-meta">
+                    Copyright © 2025,<br>
+                    Sciences Po
+                </p>
             </div>
         </div>
     </div>
 </footer>
 
+<div id="analytics-consent-overlay"
+     class="analytics-consent-overlay"
+     hidden>
 
+     <div id="analytics-consent-modal"
+        class="analytics-consent-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="analytics-consent-title"
+        aria-describedby="analytics-consent-description">
+
+        <div class="analytics-consent-header">
+            <div>
+                <h2 id="analytics-consent-title">
+                    {% trans "Statistiques d'utilisation" %}
+                </h2>
+            </div>
+        </div>
+
+        <p id="analytics-consent-description"
+        class="analytics-consent-description">
+            {% trans "Nous utilisons Matomo pour collecter des statistiques d'utilisation anonymes. Cela nous aide à comprendre comment ReQuest est utilisé et à améliorer le service." %}
+        </p>
+
+        <p class="analytics-consent-info">
+            {% trans "Aucune statistique d'utilisation n'est collectée sans votre consentement." %}
+        </p>
+
+        <div class="analytics-consent-actions">
+            <button type="button"
+                    id="analytics-decline"
+                    class="analytics-consent-button analytics-consent-button-secondary">
+                {% trans "Refuser" %}
+            </button>
+
+            <button type="button"
+                    id="analytics-accept"
+                    class="analytics-consent-button analytics-consent-button-primary">
+                {% trans "Accepter" %}
+            </button>
+        </div>
+    </div>
+</div>
 
 {% block extra_js %}
 
@@ -197,19 +265,22 @@
 
 <!-- Matomo -->
 <script>
-    var _paq = window._paq = window._paq || [];
-    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-    _paq.push(['trackPageView']);
-    _paq.push(['enableLinkTracking']);
-    (function () {
-        var u = "//ws.sciences-po.fr/";
-        _paq.push(['setTrackerUrl', u + 'piwik.php']);
-        _paq.push(['setSiteId', '26']);
-        var d = document, g = d.createElement('script'), s = d.getElementsByTagName('script')[0];
-        g.async = true;
-        g.src = u + 'piwik.js';
-        s.parentNode.insertBefore(g, s);
-    })();
+    const analyticsConsent = localStorage.getItem("analyticsConsent");
+    if (analyticsConsent === "accepted") {
+        var _paq = window._paq = window._paq || [];
+        /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+        _paq.push(['trackPageView']);
+        _paq.push(['enableLinkTracking']);
+        (function () {
+            var u = "//ws.sciences-po.fr/";
+            _paq.push(['setTrackerUrl', u + 'piwik.php']);
+            _paq.push(['setSiteId', '26']);
+            var d = document, g = d.createElement('script'), s = d.getElementsByTagName('script')[0];
+            g.async = true;
+            g.src = u + 'piwik.js';
+            s.parentNode.insertBefore(g, s);
+        })();
+    }
 </script>
 <!-- End Matomo Code -->
 
