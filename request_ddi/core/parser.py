@@ -93,6 +93,8 @@ def extract_doi_from_xml(content):
     # the XML locally in its own namespace
     # Ref: https://examples.javacodegeeks.com/java-development/core-java/xml/xpath/xpath-local-name-example/
     for ele in root.xpath(_XML_XPATH_QUERY, name="IDNo"):
+        if ele.text is None:
+            continue
         doi = ele.text.strip()
         if doi.startswith("doi:"):
             return doi
