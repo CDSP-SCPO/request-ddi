@@ -84,14 +84,20 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
 
     def handle_zip_file(self, zip_file):
         dois = []
+        errors = []
         # Open the zip file in read mode
         with zipfile.ZipFile(zip_file, mode="r") as archive:
-            # Iterate over all files in the zip
+            # Iterate over all files in the zip, processing each one independently so
+            # that a single bad entry doesn't discard DOIs already imported from this
+            # zip nor skip the remaining entries.
             for file in archive.namelist():
                 if not file.endswith(".xml"):
                     continue
-                dois.append(self.handle_xml_file(archive.open(file, "r")))
-        return dois
+                try:
+                    dois.append(self.handle_xml_file(archive.open(file, "r")))
+                except Exception as e:
+                    errors.append(f"{zip_file.name}/{file} : {e}")
+        return dois, errors
 
     def post(self, request, *args, **kwargs):
         files = request.FILES.getlist("xml_files")
@@ -105,7 +111,9 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
         for file in files:
             try:
                 if file.name.lower().endswith(".zip"):
-                    uploaded_dois.extend(self.handle_zip_file(file))
+                    zip_dois, zip_errors = self.handle_zip_file(file)
+                    uploaded_dois.extend(zip_dois)
+                    errors.extend(zip_errors)
                 elif file.name.lower().endswith(".xml"):
                     uploaded_dois.append(self.handle_xml_file(file))
                 else:
