@@ -91,7 +91,7 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
             # that a single bad entry doesn't discard DOIs already imported from this
             # zip nor skip the remaining entries.
             for file in archive.namelist():
-                if not file.endswith(".xml"):
+                if not file.lower().endswith(".xml"):
                     continue
                 try:
                     dois.append(self.handle_xml_file(archive.open(file, "r")))
