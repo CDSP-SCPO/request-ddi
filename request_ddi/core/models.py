@@ -198,3 +198,26 @@ class BindingVariableCategoryStat(models.Model):
 
     def __str__(self):
         return f"{self.binding.variable_name} - {self.category.code}: {self.stat}"
+
+
+class UploadedDDIXMLFile(models.Model):
+    """Fichier DDI-C XML déposé directement par un utilisateur, sans passer par une URL.
+
+    Une ligne CSV d'import dont la colonne `url` est vide est résolue en cherchant
+    ici le fichier dont le DOI correspond, plutôt qu'en le téléchargeant. La ligne est
+    supprimée dès que l'import qui l'a consommée réussit : un force_import ultérieur sur
+    ce DOI échoue alors exactement comme si le fichier n'avait jamais été déposé, et
+    exige donc un nouveau dépôt.
+    """
+
+    doi = models.CharField(max_length=255, unique=True)
+    original_filename = models.CharField(max_length=255)
+    # TextField (Postgres `text`, jusqu'à 1 Go) plutôt qu'un fichier sur disque : évite
+    # d'avoir à échapper le "/" du DOI en nom de fichier, et pas d'infra de volume à
+    # maintenir. Vérifié contre l'ingress de prod (`proxy-body-size: 100m`, timeouts à
+    # 3600s) : suffisant même pour les futurs DDI-Lifecycle, plus volumineux que le DDI-C.
+    xml_content = models.TextField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.doi

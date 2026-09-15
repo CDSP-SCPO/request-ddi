@@ -1,8 +1,10 @@
 # -- STDLIB
 import logging
+import zipfile
 
 # -- THIRDPARTY
 # -- DJANGO
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
@@ -11,7 +13,9 @@ from django.views import View
 from request_ddi.core.data_importer import IMPORT_FORMAT_DDIC
 
 # -- LOCAL
-from request_ddi.core.forms import DDICImportFormCollection
+from request_ddi.core.forms import DDICImportFormCollection, DDIXMLUploadForm
+from request_ddi.core.models import UploadedDDIXMLFile
+from request_ddi.core.parser import decode_xml_content, extract_doi_from_xml
 from request_ddi.utils.csv import read_csv_file
 from request_ddi.utils.timer import log_time
 from request_ddi.views.mixins import ImportViewMixin, StaffRequiredMixin
@@ -42,3 +46,108 @@ class DDICImportViewCollection(StaffRequiredMixin, ImportViewMixin, View):
             for row in read_csv_file(content):
                 data.append(row)
         return data
+
+
+@method_decorator(log_time, name="dispatch")
+class DDICXMLUploadView(StaffRequiredMixin, View):
+    """Dépose un ou plusieurs fichiers DDI XML dans la DB, indexés par DOI.
+
+    Une ligne CSV d'import (`DDICImportViewCollection`) dont la colonne `url` est
+    vide sera résolue en cherchant ici le fichier correspondant au DOI, plutôt
+    qu'en le téléchargeant.
+    """
+
+    form_class = DDIXMLUploadForm
+
+    def handle_xml_file(self, file):
+        content = decode_xml_content(file.read(), file.name)
+        doi = extract_doi_from_xml(content)
+
+        existing = UploadedDDIXMLFile.objects.filter(doi=doi).first()
+        if existing:
+            logger.warning(
+                "Écrasement du fichier XML du DOI %s : '%s' (déposé le %s) remplacé par '%s'",
+                doi,
+                existing.original_filename,
+                existing.uploaded_at,
+                file.name,
+            )
+
+        UploadedDDIXMLFile.objects.update_or_create(
+            doi=doi,
+            defaults={
+                "original_filename": file.name,
+                "xml_content": content,
+            },
+        )
+        return doi
+
+    def handle_zip_file(self, zip_file):
+        dois = []
+        errors = []
+        # Open the zip file in read mode
+        with zipfile.ZipFile(zip_file, mode="r") as archive:
+            # Iterate over all files in the zip, processing each one independently so
+            # that a single bad entry doesn't discard DOIs already imported from this
+            # zip nor skip the remaining entries.
+            for file in archive.namelist():
+                if not file.lower().endswith(".xml"):
+                    continue
+                try:
+                    dois.append(self.handle_xml_file(archive.open(file, "r")))
+                except Exception as e:
+                    errors.append(f"{zip_file.name}/{file} : {e}")
+        return dois, errors
+
+    def post(self, request, *args, **kwargs):
+        files = request.FILES.getlist("xml_files")
+        if not files:
+            return JsonResponse(
+                {"status": "error", "message": "Aucun fichier XML sélectionné."}, status=400
+            )
+
+        uploaded_dois = []
+        errors = []
+        for file in files:
+            try:
+                if file.name.lower().endswith(".zip"):
+                    zip_dois, zip_errors = self.handle_zip_file(file)
+                    uploaded_dois.extend(zip_dois)
+                    errors.extend(zip_errors)
+                elif file.name.lower().endswith(".xml"):
+                    uploaded_dois.append(self.handle_xml_file(file))
+                else:
+                    errors.append(f"{file.name} : le fichier doit être au format XML ou zip.")
+                    continue
+            except Exception as e:
+                errors.append(f"{file.name} : {e}")
+                continue
+
+        if not uploaded_dois:
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "Aucun fichier n'a pu être déposé.",
+                    "errors": errors,
+                },
+                status=400,
+            )
+
+        if errors:
+            return JsonResponse(
+                {
+                    "status": "partial_success",
+                    "message": f"{len(uploaded_dois)} fichier(s) déposé(s), {len(errors)} erreur(s).",
+                    "data": [{"dois": uploaded_dois}],
+                    "errors": errors,
+                },
+                status=207,
+            )
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "message": f"{len(uploaded_dois)} fichier(s) XML déposé(s) avec succès.",
+                "data": [{"dois": uploaded_dois}],
+            }
+        )
