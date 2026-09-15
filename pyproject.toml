@@ -105,6 +105,14 @@ version-file = "request_ddi/_version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["request_ddi"]
 
+[tool.hatch.build]
+# We need to include list of FILES that are ignored by VCS by default that
+# are needed to be included in the static/js. Else files in the static/js
+# will be simply ignored
+artifacts = [
+  "request_ddi/static/js/*",
+]
+
 [tool.hatch.build.targets.wheel.shared-data]
 "share/locale" = "share/request_ddi/locale"
 

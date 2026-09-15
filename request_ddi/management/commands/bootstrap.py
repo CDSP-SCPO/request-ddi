@@ -14,6 +14,7 @@ from django.utils.autoreload import DJANGO_AUTORELOAD_ENV
 from gunicorn.app.wsgiapp import WSGIApplication
 from requests.auth import HTTPBasicAuth
 
+import request_ddi
 from request_ddi.core.documents import BindingSurveyDocument
 
 # Default timeout
@@ -200,7 +201,9 @@ class Command(BaseCommand):
     def create_symlinks(self):
         try:
             os.symlink(
-                os.path.join(os.getcwd(), "request_ddi", "manage.py"),
+                os.path.join(
+                    os.path.relpath(os.path.dirname(request_ddi.__file__), os.getcwd()), "manage.py"
+                ),
                 os.path.join(os.getcwd(), "manage.py"),
             )
             self.stdout.write(self.style.NOTICE("Created symlink to manage.py"))
