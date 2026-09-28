@@ -183,3 +183,40 @@ msgstr "Reset"
 
 #~ msgid "Fermer"
 #~ msgstr "Close"
+
+#: app/templates/base.html
+msgid "Accepté"
+msgstr "Accepted"
+
+#: app/templates/base.html
+msgid "Refusé"
+msgstr "Declined"
+
+#: app/templates/base.html
+msgid "Non configuré"
+msgstr "Not configured"
+
+#: app/templates/base.html
+msgid "Statistiques d'utilisation"
+msgstr "Usage statistics"
+
+#: app/templates/base.html
+msgid ""
+"Nous utilisons Matomo pour collecter des statistiques d'utilisation "
+"anonymes. Cela nous aide à comprendre comment ReQuest est utilisé et à "
+"améliorer le service."
+msgstr ""
+"We use Matomo to collect anonymous usage statistics. This helps us understand "
+"how ReQuest is used and improve the service."
+
+#: app/templates/base.html
+msgid "Aucune statistique d'utilisation n'est collectée sans votre consentement."
+msgstr "No usage statistics are collected unless you accept."
+
+#: app/templates/base.html
+msgid "Refuser"
+msgstr "Decline"
+
+#: app/templates/base.html
+msgid "Accepter"
+msgstr "Accept"
