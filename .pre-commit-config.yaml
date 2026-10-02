@@ -12,5 +12,6 @@ repos:
       - id: eslint
         name: eslint
         entry: bash -c 'cd js && exec npm run lint:check'
-        language: node
+        language: unsupported
+        files: js/
         types_or: [ts, tsx, javascript, jsx]

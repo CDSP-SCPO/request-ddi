@@ -6,21 +6,10 @@ Currently ReQuest app supports input data file in CSV format that must have foll
 columns:
 
 - doi
-- xml_lang
 - collection
-- sous-collection
-- title
-- author
-- producer
-- distributor
-- start_date
-- geographic_coverage
-- geographic_unit
-- unit_of_analysis
-- contact
-- date_last_version
-- url
+- sub_collection
 
+In addition to above three columns, an optional column `url` can be provided.
 The significance of all columns except `url` can be found in this [document](https://docs.google.com/spreadsheets/d/e/2PACX-1vTqH1js1tPp9y15FZzrYSvUEIsqWHt-gITP9jfjSbI2ch-SJqMQ4zvPi-2B37JqD-wJb9aGul4UAsiW/pubhtml?gid=1610368963&single=true).
 The column `url` must provide a **direct URL** to fetch the DDI-C XML file from the underlying
 data cataloging software. Finding the URL of the XML file is data cataloging software
@@ -32,7 +21,10 @@ page `https://<DATAVERSE_URL>/api/datasets/export?exporter=ddi&persistentId=<DOI
 `DOI` must be a valid DOI (_e.g._ `doi:10.21410/7E4/AAZEFB`). This will present a DDI-C
 XML file where the element `otherMat` will contain the URL for XML containing
 variable level metadata.
-For instance, by navigating to `https://data.sciencespo.fr/api/datasets/export?exporter=ddi&persistentId=doi%3A10.21410/7E4/AAZEFB` and inspecting `otherMat` elements, following XML file element can be found.
+
+For instance, by navigating to
+`https://data.sciencespo.fr/api/datasets/export?exporter=ddi&persistentId=doi%3A10.21410/7E4/AAZEFB`
+and inspecting `otherMat` elements, following XML file element can be found.
 
 ```xml
 <otherMat ID="f9219" URI="https://data.sciencespo.fr/api/access/datafile/9219" level="datafile">
@@ -44,28 +36,53 @@ For instance, by navigating to `https://data.sciencespo.fr/api/datasets/export?e
 The URL in the attribute `URI` is the URL from where the XML file containing variable
 level metadata can be fetched.
 
-A sample CSV file can be found in the repository in [data](../data/) folder and it can
+If finding URL of the XML file is not possible or feasible, there is a possibility of
+uploading individual XML files or a ZIP archive of XML files. It is described in detail
+in the following sections.
+
+A [sample CSV](../data/surveys.csv) file can be found in the repository and it can
 be used to import sample data into the application for developmental purposes.
 
 ## Importing survey data
 
 Once the application is running in the local environment, sample data can be imported
-by visiting [`http://localhost:8000/upload-csv-collection/`](http://localhost:8000/upload-csv-collection/).
+by visiting [`import page`](https://request-pprd.sciencespo.fr/import/ddic).
 This page will request the admin credentials and for the default Docker environment, the
 username and password are `request-ddi` and `request-ddi-secret`. Once the user has been
 successfully authenticated, following page will be rendered:
 
 ![Import CSV](../docs/imgs/request-import.png)
 
-By clicking `Importer un fichier CSV` and choosing the [surveys.csv](../data/surveys.csv)
-file provided in the repo, survey data can be imported into the application. At the
-end of import process, a dialogue appears showing the stats of imported surveys as
-shown below:
+If we look into [surveys.csv](../data/surveys.csv) file, the `url` column is empty for
+few entries. When there is no possibility to fetch the XML file from the remote data
+repository, it is **compulsory** to upload the XML files before uploading the CSV file
+with the list of surveys. Therefore, first step is to upload XML files that are
+provided in [xmls](../data/xmls/) folder by clicking `Déposer les fichiers XML et/ou ZIP`
 
-![Import CSV Success](../docs/imgs/request-import-success.png)
+> [!TIP]
+> Note that it is possible to upload either multiple XML files or a ZIP file containing
+all the XML files. We recommend to use ZIP file when there are more than 10 XML files
+to upload. At the end of import process, a dialogue appears showing the stats of
+imported surveys as shown below:
 
-The import process is asynchronous which means the application will create a background
-task for each survey in the CSV file. When users click "Ok" in the above screenshot, they
+![Import XML Success](../docs/imgs/request-import-xml-success.png)
+
+Once the necessary XML files have been uploaded, we can upload the CSV file which will
+create asynchronous tasks in the background to fetch XML (either from remote or local),
+parse XML and populate the DB. This can be done by clicking `Importer un fichier CSV`
+and choosing the [surveys.csv](../data/surveys.csv) file provided in the repo. If there
+are surveys in the CSV that do not have URL column, there will be a reminder to the
+users to upload the XML files for those surveys, if not already done as follows:
+
+![Import XML Upload Reminder](../docs/imgs/request-import-xml-reminder.png)
+
+If the XML files have already been imported, this reminder can be safely ignored and
+the import process can be continued by clicking `Continuer l'import`. The following message
+will nb returned on successful import:
+
+![Import CSV Success](../docs/imgs/request-import-csv-success.png)
+
+When users click "Ok" in the above screenshot, they
 will be redirected to a status page that shows the progress of importing data.
 
 ![Import Status](../docs/imgs/request-import-status.png)

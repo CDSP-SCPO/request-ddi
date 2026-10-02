@@ -58,12 +58,12 @@ The following columns are required to be present in the CSV file:
 
 - doi
 - collection
-- sub-collection
+- sub_collection
 - url
 
 `url` is the URL at which the XML file can be downloaded where as `collection` and
-`sub-collection` are the abstract hierarchial structures for organizing the surveys. The
-`collection` and `sub-collection` are organization dependent and they are solely
+`sub_collection` are the abstract hierarchial structures for organizing the surveys. The
+`collection` and `sub_collection` are organization dependent and they are solely
 responsible for providing logical entries.
 
 Example of CSV file:
@@ -84,49 +84,49 @@ This import format uses CSV for both survey metadata and variable level metadata
 is relevant for the surveys that have no DDI-C documentation available. In this format,
 each CSV file contains metadata of one survey.
 
-The first line of the CSV must contain the headers of survey metadata and then second line
-contains the values of these headers. The first two lines must contain following
-columns:
+The first line of the CSV is ignored and it can contain form of metadata. The second line
+must contain the headers of survey metadata and then third line
+contains the values of these headers.
 
-- doi
-- lang
-- collection
-- sub-collection
-- title
-- author
-- producer
-- distributor
-- start_date
-- geographic_coverage
-- geographic_unit
-- unit_of_analysis
-- contact
-- date_last_version
+- Id: DOI of the survey
+- Lang: Language of the survey
+- Title: Title of the survey
+- Producer: Producer of the survey
+- Distributor: Distributor of the survey
+- StartDate: Start date of the survey
+- GeographicCoverage: Geographic coverage of the survey
+- GeographicUnit: Geographic unit of the survey
+- UnitOfAnalysis: Unit of analysis of the survey
+- Contact: Contact information of the survey
+- Group: Group of the survey
+- SubGroup: Sub-group of the survey
 
-Third line must contain the headers of the variable level metadata and fourth line
+Fourth line is ignored again to indicate a "line break". Fifth line must contain
+the headers of the variable level metadata and sixth line
 onwards, variables must be documented. Here are the columns that must be included
 for variable level metadata. Optional columns are indicated.
 
-- name
-- label
-- type (optional)
-- notes (optional)
-- univers (optional)
-- question_name (optional)
-- question_text
-- codes
-- missing_value_codes (optional)
+- QuestionName
+- QuestionText
+- RepresentationType (optional)
+- CodeList
+- MissingValue
+- VariableName
+- VariableLabel
+- Univers (optional)
+- Notes (optional)
 
-An example file for the CSV format can be found [here](csv_format_template.csv). Columns
+Absence of columns which are marked as optional **should not** block the import process.
+An example file for the CSV format can be found [here](request_csv_import_template.csv). Columns
 `codes` and `missing_value_codes` must have following format:
 
-```
+```bash
 <CodeNumber>,<CodeLabel>,<NumberOfResponses>
 ```
 
 where `NumberOfResponses` is optional. Each code must be delimited by `|` as follows:
 
-```
+```bash
 <Code1>,<CodeLabel1>,<CodeResponses1>|<Code2>,<CodeLabel2>,<CodeResponses2>|...
 ```
 
@@ -155,12 +155,12 @@ server. The purpose of this query parameter is discussed in the [Backend](#backe
 Each import format should have its dedicated page with instructions on the page on formats of
 the input file(s). For the moment, following two endpoints must be implemented:
 
-- `/import/ddic` - For importing via DDI-C XML files and using CSV to define list of surveys
+- `/import/ddi` - For importing via DDI-C XML files and using CSV to define list of surveys
 - `/import/csv` - For importing variable level metadata using CSV
 
 Finally, **it is desirable** to support uploading multiple files in each format. This gives
 more freedom for the end users to organize their input files to their needs. In case of
-`/import/ddic` endpoint this translates to importing multiple CSV files that contains
+`/import/ddi` endpoint this translates to importing multiple CSV files that contains
 list of surveys where in case of `/import/csv` it is importing multiple CSV files where
 each file corresponds to one survey.
 
@@ -173,12 +173,12 @@ should be validated as per [Django Form field validation](https://docs.djangopro
 The following elements must be validated in the form class:
 
 - First check the provided input file has the expected file extension. For instance, for
-both `/import/ddic` and `/import/csv` endpoints the input file must have `.csv` extension.
+both `/import/ddi` and `/import/csv` endpoints the input file must have `.csv` extension.
 If not return a [`ValidationError`](https://docs.djangoproject.com/en/6.0/ref/forms/validation/#raising-validationerror)
 with an appropriate error message.
 
 - Then check if input files have all the [required columns](#required-columns-in-the-csv-file) for
-`/import/ddic` endpoint or [required columns](#variable-level-metadata-and-survey-metadata-with-csv) for
+`/import/ddi` endpoint or [required columns](#variable-level-metadata-and-survey-metadata-with-csv) for
 `/import/csv` endpoint. If there is any missing columns in the input file, stop processing and
 return a [`ValidationError`](https://docs.djangoproject.com/en/6.0/ref/forms/validation/#raising-validationerror)
 with an appropriate error message.
