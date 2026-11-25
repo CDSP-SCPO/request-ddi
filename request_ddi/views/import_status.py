@@ -54,28 +54,28 @@ class ImportStatusView(StaffRequiredMixin, View):
             ).order_by("-enqueued_at")
         )
 
-        # Construire un index DOI → tâche la plus récente pour savoir
-        # si une tâche plus récente existe pour le même DOI.
+        # Construire un index Id → tâche la plus récente pour savoir
+        # si une tâche plus récente existe pour le même Id.
         # Les résultats étant déjà triés par -enqueued_at, le premier
-        # qu'on rencontre pour un DOI est le plus récent.
-        most_recent_id_by_doi: dict[str, str] = {}
+        # qu'on rencontre pour un Id est le plus récent.
+        most_recent_id_by_survey_id: dict[str, str] = {}
         for r in results:
             try:
                 survey_data = r.args_kwargs.get("args", [None])[0]
-                doi = survey_data.get("doi") if isinstance(survey_data, dict) else None
+                survey_id = survey_data.get("id") if isinstance(survey_data, dict) else None
             except (IndexError, AttributeError, TypeError):
-                doi = None
-            if doi and doi not in most_recent_id_by_doi:
-                most_recent_id_by_doi[doi] = str(r.id)
+                survey_id = None
+            if survey_id and survey_id not in most_recent_id_by_survey_id:
+                most_recent_id_by_survey_id[survey_id] = str(r.id)
 
         tasks = []
         for r in results:
-            doi = None
+            survey_id = None
             survey_data_raw = None
             try:
                 survey_data_raw = r.args_kwargs.get("args", [None])[0]
                 if isinstance(survey_data_raw, dict):
-                    doi = survey_data_raw.get("doi")
+                    survey_id = survey_data_raw.get("id")
             except (IndexError, AttributeError, TypeError):
                 pass
 
@@ -94,18 +94,18 @@ class ImportStatusView(StaffRequiredMixin, View):
             traceback_excerpt, error_message = _parse_traceback(r.traceback, r.exception_class_path)
 
             # Bouton relancer : uniquement si FAILED et qu'aucune tâche
-            # plus récente n'existe pour ce même DOI
+            # plus récente n'existe pour ce même Id
             task_id = str(r.id)
             can_retry = (
                 r.status == "FAILED"
-                and doi is not None
-                and most_recent_id_by_doi.get(doi) == task_id
+                and survey_id is not None
+                and most_recent_id_by_survey_id.get(survey_id) == task_id
             )
 
             tasks.append(
                 {
                     "id": task_id,
-                    "doi": doi,
+                    "survey_id": survey_id,
                     "status": r.status,
                     "enqueued_at": r.enqueued_at.isoformat() if r.enqueued_at else None,
                     "started_at": r.started_at.isoformat() if r.started_at else None,
@@ -120,7 +120,7 @@ class ImportStatusView(StaffRequiredMixin, View):
                     "error_message": error_message,
                     "traceback": traceback_excerpt,
                     "can_retry": can_retry,
-                    # On passe le survey_data pour pouvoir le re-enqueue sans retaper le DOI
+                    # On passe le survey_data pour pouvoir le re-enqueue sans retaper l'Id
                     "_survey_data": survey_data_raw if can_retry else None,
                 }
             )
@@ -164,34 +164,36 @@ class ImportRetryView(StaffRequiredMixin, View):
                 {"error": "Seules les tâches en échec peuvent être relancées"}, status=400
             )
 
-        # Vérifier qu'il n'existe pas déjà une tâche plus récente pour ce DOI
+        # Vérifier qu'il n'existe pas déjà une tâche plus récente pour cet Id
         try:
             survey_data = original.args_kwargs["args"][0]
-            doi = survey_data.get("doi") if isinstance(survey_data, dict) else None
+            survey_id = survey_data.get("id") if isinstance(survey_data, dict) else None
         except (IndexError, KeyError, TypeError):
             return JsonResponse({"error": "Impossible de lire le survey_data"}, status=500)
 
-        if doi:
+        if survey_id:
             newer_exists = DBTaskResult.objects.filter(
                 task_path=IMPORT_TASK_PATH,
                 enqueued_at__gt=original.enqueued_at,
             ).exists()
-            # Vérifier que la tâche plus récente concerne bien le même DOI
+            # Vérifier que la tâche plus récente concerne bien le même Id
             if newer_exists:
                 for r in DBTaskResult.objects.filter(
                     task_path=IMPORT_TASK_PATH,
                     enqueued_at__gt=original.enqueued_at,
                 ):
                     try:
-                        d = r.args_kwargs["args"][0].get("doi")
+                        d = r.args_kwargs["args"][0].get("id")
                     except Exception:
                         d = None
-                    if d == doi:
+                    if d == survey_id:
                         return JsonResponse(
-                            {"error": "Une tâche plus récente existe déjà pour ce DOI"},
+                            {"error": "Une tâche plus récente existe déjà pour cet Id"},
                             status=409,
                         )
 
-        import_data.enqueue(*original.args_kwargs["args"])
+        # Les tâches enqueued avant la détection du schéma dans la tâche portaient un
+        # 2e argument (import_format) : on ne garde que le survey_data.
+        import_data.enqueue(original.args_kwargs["args"][0])
 
-        return JsonResponse({"status": "enqueued", "doi": doi})
+        return JsonResponse({"status": "enqueued", "id": survey_id})

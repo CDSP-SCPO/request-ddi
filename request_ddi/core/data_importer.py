@@ -36,24 +36,21 @@ from .parser import fetch_and_parse_xml
 logger = logging.getLogger("performance")
 
 
-IMPORT_FORMAT_DDIC = "ddic"
-
-
 @task(takes_context=True)
-def import_data(context, survey, import_format):
-    # If import_format is ddic, fetch XML and parse it
-    if import_format == IMPORT_FORMAT_DDIC:
-        survey_data = fetch_and_parse_xml(survey)
+def import_data(context, survey):
+    # The same endpoint handles DDI-C and DDI-L: the schema is detected here from the
+    # XML namespace and the data are parsed accordingly.
+    survey_data = fetch_and_parse_xml(survey)
 
     # Conversion de survey_start_date en objet date (année uniquement)
     for d in ("start_date", "date_last_version"):
         if survey_data[d]:
-            survey_data[d] = parse_date(survey_data[d], survey_data["doi"])
+            survey_data[d] = parse_date(survey_data[d], survey_data["id"])
         else:
             survey_data[d] = None
 
     num_questions = len(survey_data["variables"])
-    doi = survey_data["doi"]
+    survey_id = survey_data["id"]
     start_time = time.time()
     try:
         # Validate survey_data
@@ -65,18 +62,18 @@ def import_data(context, survey, import_format):
             distributor_name = survey_data["distributor"]
             distributor, _ = Distributor.objects.update_or_create(name=distributor_name)
 
-            collection_name = survey_data["collection"]
+            collection_name = survey_data["group"]
             collection, _ = Collection.objects.update_or_create(
                 name=collection_name, distributor=distributor
             )
 
-            subcollection_name = survey_data["sub_collection"]
+            subcollection_name = survey_data["subGroup"]
             subcollection, _ = Subcollection.objects.update_or_create(
                 name=subcollection_name, collection=collection
             )
 
             survey, _ = Survey.objects.update_or_create(
-                external_ref=doi,
+                external_ref=survey_id,
                 defaults={
                     "name": survey_data["title"],
                     "subcollection": subcollection,
@@ -97,27 +94,26 @@ def import_data(context, survey, import_format):
                 survey, survey_data["variables"]
             )
     except Exception as e:
-        msg = f"DOI '{doi}': Erreur inattendue : {e!s}"
+        msg = f"Id '{survey_id}': Erreur inattendue : {e!s}"
         raise ValueError(msg) from e
     finally:
         duration = time.time() - start_time
         duration_per_question = duration / num_questions
         logger.debug(
-            "⏱ Temps d'import — Survey '%s', DOI '%s', %d Variables : Total %.2f s, Temps per question %.2f s",
+            "⏱ Temps d'import — Survey '%s', Id '%s', %d Variables : Total %.2f s, Temps per question %.2f s",
             survey,
-            doi,
+            survey_id,
             num_questions,
             duration,
             duration_per_question,
         )
 
-    # Delete any XML previously uploaded for this DOI now that the whole import
+    # Delete any XML previously uploaded for this Id now that the whole import
     # (including the DB transaction) has succeeded — regardless of whether this
     # particular import used that uploaded file or fetched from a URL instead, so a
     # stale upload can never be picked up by a later import. A later force_import on
-    # this DOI will require a fresh upload, exactly as if none had ever been made.
-    if import_format == IMPORT_FORMAT_DDIC:
-        UploadedDDIXMLFile.objects.filter(doi=doi).delete()
+    # this Id will require a fresh upload, exactly as if none had ever been made.
+    UploadedDDIXMLFile.objects.filter(ddi_id=survey_id).delete()
 
     return {
         "num_records": num_questions,

@@ -17,13 +17,13 @@ class DDIXMLUploadForm(forms.Form):
     xml_files = forms.FileField(label="Sélectionnez un ou plusieurs fichiers XML")
 
 
-class DDICImportFormCollection(forms.Form):
+class DDIImportForm(forms.Form):
     csv_file = forms.FileField(label="Sélectionnez un fichier CSV")
 
     required_columns = [  # noqa: RUF012
-        "doi",
-        "collection",
-        "sub_collection",
+        "id",
+        "group",
+        "subGroup",
     ]
     validate_duplicates = True
 

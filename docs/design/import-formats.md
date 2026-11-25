@@ -56,15 +56,23 @@ the URL provided in the CSV file.
 
 The following columns are required to be present in the CSV file:
 
-- doi
-- collection
-- sub_collection
+- id
+- group
+- subGroup
 - url
 
-`url` is the URL at which the XML file can be downloaded where as `collection` and
-`sub_collection` are the abstract hierarchial structures for organizing the surveys. The
-`collection` and `sub_collection` are organization dependent and they are solely
+`url` is the URL at which the XML file can be downloaded where as `group` and
+`subGroup` are the abstract hierarchial structures for organizing the surveys. The
+`group` and `subGroup` are organization dependent and they are solely
 responsible for providing logical entries.
+
+`id` is either a DOI (`doi:...`) or, when the survey has none, `local:request/<unique
+identifier>` where the identifier is strictly alphanumeric (no spaces, hyphens,
+underscores, etc.), _e.g._ the short name of the survey.
+
+The import endpoint (`/import/ddi`) is the same for DDI-C and DDI-L: the schema is
+detected inside the import task from the XML namespace. DDI-L parsing is not yet
+implemented.
 
 Example of CSV file:
 

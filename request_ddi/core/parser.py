@@ -15,7 +15,9 @@ from .exceptions import (
     InvalidDDICError,
     InvalidDOIError,
     MissingAttributeError,
+    UnsupportedDDISchemaError,
 )
+from .identifiers import is_valid_survey_id
 from .models import UploadedDDIXMLFile
 
 logger = logging.getLogger(__name__)
@@ -26,29 +28,65 @@ _XML_ENCODING_DECLARATION_RE = re.compile(
 _XML_DECLARATION_RE = re.compile(r"^\s*<\?xml[^>]*\?>")
 _XML_XPATH_QUERY = "//*[local-name() = $name]"
 
+DDI_SCHEMA_CODEBOOK = "ddic"
+DDI_SCHEMA_LIFECYCLE = "ddil"
+
+_DDI_NAMESPACE_PREFIXES = {
+    "ddi:codebook:": DDI_SCHEMA_CODEBOOK,
+    "ddi:instance:": DDI_SCHEMA_LIFECYCLE,
+}
+
 
 @timed
 def fetch_and_parse_xml(data):
     try:
         survey_url = data.get("url", "").strip()
         content = (
-            fetch_xml_from_remote(survey_url) if survey_url else fetch_xml_from_local(data["doi"])
+            fetch_xml_from_remote(survey_url) if survey_url else fetch_xml_from_local(data["id"])
         )
-        ddic = parse_codebook_xml_file(content)
 
-        # Check if DOI in XML matches with the DOI in CSV file
-        if ddic["doi"] != data["doi"]:
-            msg = f"Le XML téléchargé ne correspond pas à cette enquête (DOIs trouvés dans le XML : {ddic['doi']})"
+        # The same import endpoint accepts DDI-C and DDI-L: pick the parser from the
+        # schema namespace of the XML itself.
+        schema = detect_ddi_schema(content)
+        if schema == DDI_SCHEMA_LIFECYCLE:
+            msg = "L'import de fichiers DDI-L (DDI-Lifecycle) n'est pas encore supporté."
+            raise UnsupportedDDISchemaError(msg)
+        parsed = parse_codebook_xml_file(content)
+
+        # Check if Id in XML matches with the Id in CSV file
+        if parsed["id"] != data["id"]:
+            msg = f"Le XML téléchargé ne correspond pas à cette enquête (Ids trouvés dans le XML : {parsed['id']})"
             raise InvalidDDICError(msg)
 
-        # Merge DDIC data with survey study data
-        data = {**data, **ddic}
+        # Merge parsed XML data with survey study data
+        data = {**data, **parsed}
         return data
     except Exception as e:
         logger.error(
-            "Erreur lors de la récupération du DDI-C de l'enquête %s: %s", data["doi"], str(e)
+            "Erreur lors de la récupération du DDI de l'enquête %s: %s", data["id"], str(e)
         )
         raise e
+
+
+def detect_ddi_schema(content):
+    """Retourne `DDI_SCHEMA_CODEBOOK` (DDI-C) ou `DDI_SCHEMA_LIFECYCLE` (DDI-L) selon
+    l'espace de noms de l'élément racine du XML.
+
+    Un XML sans espace de noms reconnu, ou illisible, est traité comme du DDI-C : le
+    parser DDI-C se charge alors de remonter l'erreur précise (Id manquant, XML invalide...).
+    Seul un espace de noms DDI-L déclenche le chemin DDI-L.
+    """
+    stripped = _XML_DECLARATION_RE.sub("", content, count=1)
+    try:
+        root = etree.fromstring(stripped.encode("utf-8"))
+    except etree.XMLSyntaxError:
+        return DDI_SCHEMA_CODEBOOK
+
+    namespace = etree.QName(root).namespace or ""
+    for prefix, schema in _DDI_NAMESPACE_PREFIXES.items():
+        if namespace.startswith(prefix):
+            return schema
+    return DDI_SCHEMA_CODEBOOK
 
 
 def decode_xml_content(raw_bytes, filename):
@@ -74,8 +112,8 @@ def decode_xml_content(raw_bytes, filename):
     return str(match)
 
 
-def extract_doi_from_xml(content):
-    """Extrait uniquement le DOI d'un fichier XML DDI, via xpath (lxml), sans parser
+def extract_id_from_xml(content):
+    """Extrait uniquement l'Id (DOI ou identifiant local `local:request/...`) d'un fichier XML DDI, via xpath (lxml), sans parser
     l'intégralité du codebook. Utile pour un DDI-L volumineux, où un parsing complet
     juste pour identifier le fichier serait inutilement coûteux.
     """
@@ -95,22 +133,22 @@ def extract_doi_from_xml(content):
     for ele in root.xpath(_XML_XPATH_QUERY, name="IDNo"):
         if ele.text is None:
             continue
-        doi = ele.text.strip()
-        if doi.startswith("doi:"):
-            return doi
+        survey_id = ele.text.strip()
+        if is_valid_survey_id(survey_id):
+            return survey_id
 
-    msg = "DOI introuvable"
+    msg = "Id introuvable"
     raise InvalidDOIError(msg)
 
 
-def fetch_xml_from_local(doi):
-    uploaded = UploadedDDIXMLFile.objects.filter(doi=doi).first()
+def fetch_xml_from_local(survey_id):
+    uploaded = UploadedDDIXMLFile.objects.filter(ddi_id=survey_id).first()
     if not uploaded:
         # Vaut aussi bien pour "jamais déposé" que pour "déjà importé" : la ligne est
         # supprimée dès qu'un import la consomme avec succès, donc les deux cas sont
         # indiscernables ici, volontairement — même erreur, même remède (redéposer).
         msg = (
-            f"Aucun fichier XML n'a été déposé pour l'enquête {doi}. Déposez-le via la page "
+            f"Aucun fichier XML n'a été déposé pour l'enquête {survey_id}. Déposez-le via la page "
             "d'import XML avant de relancer l'import."
         )
         raise DDIXMLFileNotFoundError(msg)
@@ -122,21 +160,24 @@ def parse_codebook_xml_file(content):  # noqa: PLR0915,C901
     try:
         soup = BeautifulSoup(content, "xml")
 
-        doi_tag = soup.find("IDNo", attrs={"agency": "DataCite"}) or soup.find("IDNo")
-        doi = doi_tag.text.strip() if doi_tag else None
+        id_tag = soup.find("IDNo", attrs={"agency": "DataCite"}) or soup.find("IDNo")
+        survey_id = id_tag.text.strip() if id_tag else None
 
-        if not doi or not doi.startswith("doi:"):
-            msg = f"DOI {doi} invalide (doit commencer par 'doi:')"
+        if not is_valid_survey_id(survey_id):
+            msg = (
+                f"Id {survey_id} invalide (doit commencer par 'doi:' ou être de la forme "
+                "'local:request/<identifiant alphanumérique>')"
+            )
             raise InvalidDOIError(msg)
 
         # Intialise data
-        data = {"doi": doi, "variables": []}
+        data = {"id": survey_id, "variables": []}
 
         # Get title
         title = soup.find("titl")
         data["title"] = title.text.strip() if title else ""
         if not data["title"]:
-            msg = f"L'attribut titl n'a pas été trouvé dans le fichier XML de l'enquête {doi}"
+            msg = f"L'attribut titl n'a pas été trouvé dans le fichier XML de l'enquête {survey_id}"
             raise MissingAttributeError(msg)
 
         # Get language
@@ -229,12 +270,14 @@ def parse_codebook_xml_file(content):  # noqa: PLR0915,C901
             )
 
         if not data["variables"]:
-            msg = f"Aucune variable (balise var) trouvée dans le fichier XML de l'enquête {doi}"
+            msg = (
+                f"Aucune variable (balise var) trouvée dans le fichier XML de l'enquête {survey_id}"
+            )
             raise MissingAttributeError(msg)
 
         return data
     except Exception as e:
-        logger.error("Erreur lors de la lecture du DDI-C de l'enquête %s: %s", doi, str(e))
+        logger.error("Erreur lors de la lecture du DDI-C de l'enquête %s: %s", survey_id, str(e))
         raise e
 
 

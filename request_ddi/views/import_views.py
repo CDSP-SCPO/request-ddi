@@ -10,12 +10,10 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from request_ddi.core.data_importer import IMPORT_FORMAT_DDIC
-
 # -- LOCAL
-from request_ddi.core.forms import DDICImportFormCollection, DDIXMLUploadForm
+from request_ddi.core.forms import DDIImportForm, DDIXMLUploadForm
 from request_ddi.core.models import UploadedDDIXMLFile
-from request_ddi.core.parser import decode_xml_content, extract_doi_from_xml
+from request_ddi.core.parser import decode_xml_content, extract_id_from_xml
 from request_ddi.utils.csv import read_csv_file
 from request_ddi.utils.timer import log_time
 from request_ddi.views.mixins import ImportViewMixin, StaffRequiredMixin
@@ -25,11 +23,10 @@ perf_logger = logging.getLogger("performance")
 
 
 @method_decorator(log_time, name="dispatch")
-class DDICImportViewCollection(StaffRequiredMixin, ImportViewMixin, View):
-    template_name = "import_ddic.html"
-    form_class = DDICImportFormCollection
-    success_url = reverse_lazy("request_ddi:import_ddic")
-    import_format = IMPORT_FORMAT_DDIC
+class DDIImportView(StaffRequiredMixin, ImportViewMixin, View):
+    template_name = "import_ddi.html"
+    form_class = DDIImportForm
+    success_url = reverse_lazy("request_ddi:import_ddi")
 
     def get(self, request, *args, **kwargs):
         context = {"csv_form": self.form_class()}
@@ -39,7 +36,7 @@ class DDICImportViewCollection(StaffRequiredMixin, ImportViewMixin, View):
         data = []
         for file in self.request.FILES.getlist("csv_file"):
             # This file has already been read in the clean_csv_file() method of
-            # DDICImportFormCollection. So, we need to seek the file to the begining
+            # DDIImportForm. So, we need to seek the file to the begining
             # to be able to read again
             file.seek(0)
             content = file.read().decode("utf-8").splitlines()
@@ -49,11 +46,11 @@ class DDICImportViewCollection(StaffRequiredMixin, ImportViewMixin, View):
 
 
 @method_decorator(log_time, name="dispatch")
-class DDICXMLUploadView(StaffRequiredMixin, View):
-    """Dépose un ou plusieurs fichiers DDI XML dans la DB, indexés par DOI.
+class DDIXMLUploadView(StaffRequiredMixin, View):
+    """Dépose un ou plusieurs fichiers DDI XML dans la DB, indexés par Id.
 
-    Une ligne CSV d'import (`DDICImportViewCollection`) dont la colonne `url` est
-    vide sera résolue en cherchant ici le fichier correspondant au DOI, plutôt
+    Une ligne CSV d'import (`DDIImportView`) dont la colonne `url` est
+    vide sera résolue en cherchant ici le fichier correspondant à l'Id, plutôt
     qu'en le téléchargeant.
     """
 
@@ -61,43 +58,43 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
 
     def handle_xml_file(self, file):
         content = decode_xml_content(file.read(), file.name)
-        doi = extract_doi_from_xml(content)
+        ddi_id = extract_id_from_xml(content)
 
-        existing = UploadedDDIXMLFile.objects.filter(doi=doi).first()
+        existing = UploadedDDIXMLFile.objects.filter(ddi_id=ddi_id).first()
         if existing:
             logger.warning(
-                "Écrasement du fichier XML du DOI %s : '%s' (déposé le %s) remplacé par '%s'",
-                doi,
+                "Écrasement du fichier XML de l'Id %s : '%s' (déposé le %s) remplacé par '%s'",
+                ddi_id,
                 existing.original_filename,
                 existing.uploaded_at,
                 file.name,
             )
 
         UploadedDDIXMLFile.objects.update_or_create(
-            doi=doi,
+            ddi_id=ddi_id,
             defaults={
                 "original_filename": file.name,
                 "xml_content": content,
             },
         )
-        return doi
+        return ddi_id
 
     def handle_zip_file(self, zip_file):
-        dois = []
+        ids = []
         errors = []
         # Open the zip file in read mode
         with zipfile.ZipFile(zip_file, mode="r") as archive:
             # Iterate over all files in the zip, processing each one independently so
-            # that a single bad entry doesn't discard DOIs already imported from this
+            # that a single bad entry doesn't discard Ids already imported from this
             # zip nor skip the remaining entries.
             for file in archive.namelist():
                 if not file.lower().endswith(".xml"):
                     continue
                 try:
-                    dois.append(self.handle_xml_file(archive.open(file, "r")))
+                    ids.append(self.handle_xml_file(archive.open(file, "r")))
                 except Exception as e:
                     errors.append(f"{zip_file.name}/{file} : {e}")
-        return dois, errors
+        return ids, errors
 
     def post(self, request, *args, **kwargs):
         files = request.FILES.getlist("xml_files")
@@ -106,16 +103,16 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
                 {"status": "error", "message": "Aucun fichier XML sélectionné."}, status=400
             )
 
-        uploaded_dois = []
+        uploaded_ids = []
         errors = []
         for file in files:
             try:
                 if file.name.lower().endswith(".zip"):
-                    zip_dois, zip_errors = self.handle_zip_file(file)
-                    uploaded_dois.extend(zip_dois)
+                    zip_ids, zip_errors = self.handle_zip_file(file)
+                    uploaded_ids.extend(zip_ids)
                     errors.extend(zip_errors)
                 elif file.name.lower().endswith(".xml"):
-                    uploaded_dois.append(self.handle_xml_file(file))
+                    uploaded_ids.append(self.handle_xml_file(file))
                 else:
                     errors.append(f"{file.name} : le fichier doit être au format XML ou zip.")
                     continue
@@ -123,7 +120,7 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
                 errors.append(f"{file.name} : {e}")
                 continue
 
-        if not uploaded_dois:
+        if not uploaded_ids:
             return JsonResponse(
                 {
                     "status": "error",
@@ -137,8 +134,8 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
             return JsonResponse(
                 {
                     "status": "partial_success",
-                    "message": f"{len(uploaded_dois)} fichier(s) déposé(s), {len(errors)} erreur(s).",
-                    "data": [{"dois": uploaded_dois}],
+                    "message": f"{len(uploaded_ids)} fichier(s) déposé(s), {len(errors)} erreur(s).",
+                    "data": [{"ids": uploaded_ids}],
                     "errors": errors,
                 },
                 status=207,
@@ -147,7 +144,7 @@ class DDICXMLUploadView(StaffRequiredMixin, View):
         return JsonResponse(
             {
                 "status": "success",
-                "message": f"{len(uploaded_dois)} fichier(s) XML déposé(s) avec succès.",
-                "data": [{"dois": uploaded_dois}],
+                "message": f"{len(uploaded_ids)} fichier(s) XML déposé(s) avec succès.",
+                "data": [{"ids": uploaded_ids}],
             }
         )

@@ -1,4 +1,4 @@
-doi,collection,sub_collection,url
+id,group,subGroup,url
 doi:10.21410/7E4/DDDHXW,Données de recherche,Agoramétrie,https://data.sciencespo.fr/api/access/datafile/116
 doi:10.21410/7E4/MFVUFA,Données de recherche,Baromètre de suivi de l'environnement,https://data.sciencespo.fr/api/access/datafile/9033
 doi:10.21410/7E4/TIGPOW,Données de recherche,Enquête interrégionale des phénomènes politiques,

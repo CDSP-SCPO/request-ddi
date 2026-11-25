@@ -5,11 +5,20 @@
 Currently ReQuest app supports input data file in CSV format that must have following
 columns:
 
-- doi
-- collection
-- sub_collection
+- id
+- group
+- subGroup
 
 In addition to above three columns, an optional column `url` can be provided.
+
+The column `id` is the identifier of the survey. It is either a DOI (_e.g._
+`doi:10.21410/7E4/AAZEFB`) or, when the survey has no DOI, a local identifier of the form
+`local:request/<unique identifier>`. The `<unique identifier>` must be strictly
+alphanumeric, without any spaces, hyphens, underscores, etc. (_e.g._
+`local:request/ENEF2017`, for instance the short name of the survey). This prefix
+allows the application to tell real DOIs, for which a link to the source is created,
+from internal identifiers. The identifier in the CSV must match the one found in the
+`IDNo` element of the XML file.
 The significance of all columns except `url` can be found in this [document](https://docs.google.com/spreadsheets/d/e/2PACX-1vTqH1js1tPp9y15FZzrYSvUEIsqWHt-gITP9jfjSbI2ch-SJqMQ4zvPi-2B37JqD-wJb9aGul4UAsiW/pubhtml?gid=1610368963&single=true).
 The column `url` must provide a **direct URL** to fetch the DDI-C XML file from the underlying
 data cataloging software. Finding the URL of the XML file is data cataloging software
@@ -46,7 +55,7 @@ be used to import sample data into the application for developmental purposes.
 ## Importing survey data
 
 Once the application is running in the local environment, sample data can be imported
-by visiting [`import page`](https://request-pprd.sciencespo.fr/import/ddic).
+by visiting [`import page`](https://request-pprd.sciencespo.fr/import/ddi).
 This page will request the admin credentials and for the default Docker environment, the
 username and password are `request-ddi` and `request-ddi-secret`. Once the user has been
 successfully authenticated, following page will be rendered:
