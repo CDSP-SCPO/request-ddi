@@ -41,7 +41,7 @@ class BaseUploadTest(TestCase):
         self.client.force_login(self.user)
 
 
-class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
+class DDIImportViewTest(MockElasticsearchMixin, BaseUploadTest):
     """For the following unit tests if we need to debug the tests to understand
     which SQL statements are being executed, we can use the following snippet:
 
@@ -60,7 +60,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
     def test_form_valid_with_valid_csv_and_xml(self, mock_download):
         self.login()
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey Test,fr,Author,Producer,2020,France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
         )
@@ -89,7 +89,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
 
         mock_download.return_value = xml_content
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -105,7 +105,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:5678/test,Survey Test 2,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
@@ -113,7 +113,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {
                 "csv_file": csv_file,
                 "delimiter": ",",
@@ -141,14 +141,14 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         )
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey Test,fr,Author,Producer,2020,France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
         self.assertEqual(response.status_code, 207)
@@ -161,7 +161,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,1234/test,Survey Test,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
@@ -169,7 +169,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {
                 "csv_file": csv_file,
                 "delimiter": ",",
@@ -186,7 +186,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:9999/test,Survey Test,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/\n"
@@ -197,7 +197,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         mock_download.return_value = "<root><unclosed>"
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {
                 "csv_file": csv_file,
                 "delimiter": ",",
@@ -215,11 +215,11 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         """Teste l'import avec des colonnes manquantes dans le CSV"""
         self.login()
 
-        csv_content = "doi,title\ndoi:1234/test,Survey Test\n"
+        csv_content = "id,title\ndoi:1234/test,Survey Test\n"
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -233,7 +233,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
@@ -285,7 +285,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         mock_download.side_effect = lambda url: xml_content_1 if "1234" in url else xml_content_2
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -304,13 +304,13 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content_1 = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
         )
         csv_content_2 = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:5678/test,Survey 2,fr,Author,Producer,2021,"
             "France,,Individual,Contact,2021-01-01,https://example.com/xml/5678\n"
@@ -365,7 +365,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         mock_download.side_effect = lambda url: xml_content_1 if "1234" in url else xml_content_2
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": [csv_file_1, csv_file_2], "delimiter": ","},
         )
 
@@ -384,7 +384,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
@@ -423,7 +423,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         mock_download.return_value = xml_content
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -442,7 +442,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
@@ -494,7 +494,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         mock_download.side_effect = lambda url: xml_content_1 if "1234" in url else xml_content_2
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -514,7 +514,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
@@ -542,7 +542,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         """
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -557,7 +557,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         # Make another request with force_import
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ",", "force_import": "on"},
         )
 
@@ -575,7 +575,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
@@ -615,7 +615,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         mock_download.return_value = xml_content
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -634,7 +634,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
@@ -663,7 +663,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         """
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -682,7 +682,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,start_date,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,start_date,"
             "geographic_coverage,geographic_unit,unit_of_analysis,contact,date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/test,Survey 1,fr,Author,Producer,2020,"
             "France,,Individual,Contact,2020-01-01,https://example.com/xml/1234\n"
@@ -711,7 +711,7 @@ class DDICImportViewCollectionTest(MockElasticsearchMixin, BaseUploadTest):
         """
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
 
@@ -753,14 +753,14 @@ class CheckDuplicatesTest(MockElasticsearchMixin, BaseUploadTest):
         """
 
         csv_content = (
-            "distributor;collection;sub_collection;doi;title;xml_lang;author;producer;start_date;"
+            "distributor;group;subGroup;id;title;xml_lang;author;producer;start_date;"
             "geographic_coverage;geographic_unit;unit_of_analysis;contact;date_last_version;url\n"
             "Distrib;Collection;Subcollection;doi:1234/test;Survey Test;fr;Author;Producer;2020;"
             "France;;Individual;Contact;2020-01-01;https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
-        response = self.client.post(reverse("request_ddi:import_ddic"), {"csv_file": csv_file})
+        response = self.client.post(reverse("request_ddi:import_ddi"), {"csv_file": csv_file})
         self.assertEqual(response.status_code, 207)
         json_response = response.json()
         self.assertEqual(json_response["status"], "partial_success")
@@ -783,14 +783,14 @@ class CheckDuplicatesTest(MockElasticsearchMixin, BaseUploadTest):
             """
 
         csv_content = (
-            "distributor;collection;sub_collection;doi;title;xml_lang;author;producer;start_date;"
+            "distributor;group;subGroup;id;title;xml_lang;author;producer;start_date;"
             "geographic_coverage;geographic_unit;unit_of_analysis;contact;date_last_version;url\n"
             "Distrib;Collection;Subcollection;doi:9999/test;Survey Test;fr;Author;Producer;2020;"
             "France;;Individual;Contact;2020-01-01;https://example.com/xml/\n"
         )
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
         response = self.client.post(
-            reverse("request_ddi:import_ddic"), {"csv_file": csv_file, "delimiter": ";"}
+            reverse("request_ddi:import_ddi"), {"csv_file": csv_file, "delimiter": ";"}
         )
 
         # Wait for task to finish
@@ -825,7 +825,7 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
 
     def csv_with_empty_url(self, doi):
         content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,"
             "start_date,geographic_coverage,geographic_unit,unit_of_analysis,contact,"
             "date_last_version,url\n"
             f"Distrib,Collection,Subcollection,{doi},Survey Test,fr,Author,Producer,2020,"
@@ -835,7 +835,7 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
 
     def csv_without_url_column(self, doi):
         content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,"
             "start_date,geographic_coverage,geographic_unit,unit_of_analysis,contact,"
             "date_last_version\n"
             f"Distrib,Collection,Subcollection,{doi},Survey Test,fr,Author,Producer,2020,"
@@ -850,13 +850,13 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         """
         self.login()
         UploadedDDIXMLFile.objects.create(
-            doi="doi:1234/volume",
+            ddi_id="doi:1234/volume",
             original_filename="survey.xml",
             xml_content=self.xml_content,
         )
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": self.csv_without_url_column("doi:1234/volume"), "delimiter": ","},
         )
         task_status, _ = wait_task()
@@ -869,13 +869,13 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
     def test_import_with_empty_url_and_uploaded_file_succeeds(self):
         self.login()
         UploadedDDIXMLFile.objects.create(
-            doi="doi:1234/volume",
+            ddi_id="doi:1234/volume",
             original_filename="survey.xml",
             xml_content=self.xml_content,
         )
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": self.csv_with_empty_url("doi:1234/volume"), "delimiter": ","},
         )
         task_status, _ = wait_task()
@@ -886,7 +886,7 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/volume").exists())
 
         # La ligne est supprimée dès que l'import réussit, plus de trace en base
-        self.assertFalse(UploadedDDIXMLFile.objects.filter(doi="doi:1234/volume").exists())
+        self.assertFalse(UploadedDDIXMLFile.objects.filter(ddi_id="doi:1234/volume").exists())
 
     @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_import_with_url_deletes_stale_uploaded_file_for_same_doi(self, mock_download):
@@ -897,14 +897,14 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         """
         self.login()
         UploadedDDIXMLFile.objects.create(
-            doi="doi:1234/volume",
+            ddi_id="doi:1234/volume",
             original_filename="survey.xml",
             xml_content=self.xml_content,
         )
         mock_download.return_value = self.xml_content
 
         csv_content = (
-            "distributor,collection,sub_collection,doi,title,xml_lang,author,producer,"
+            "distributor,group,subGroup,id,title,xml_lang,author,producer,"
             "start_date,geographic_coverage,geographic_unit,unit_of_analysis,contact,"
             "date_last_version,url\n"
             "Distrib,Collection,Subcollection,doi:1234/volume,Survey Test,fr,Author,Producer,"
@@ -913,7 +913,7 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         csv_file = SimpleUploadedFile("test.csv", csv_content.encode(), content_type="text/csv")
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": csv_file, "delimiter": ","},
         )
         task_status, _ = wait_task()
@@ -921,7 +921,7 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(task_status, TaskResultStatus.SUCCESSFUL)
         self.assertTrue(Survey.objects.filter(external_ref="doi:1234/volume").exists())
-        self.assertFalse(UploadedDDIXMLFile.objects.filter(doi="doi:1234/volume").exists())
+        self.assertFalse(UploadedDDIXMLFile.objects.filter(ddi_id="doi:1234/volume").exists())
 
     def test_force_import_without_new_upload_after_first_import_fails(self):
         """Une fois consommé par un premier import, un force_import sur ce DOI doit
@@ -929,18 +929,18 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         """
         self.login()
         UploadedDDIXMLFile.objects.create(
-            doi="doi:1234/volume",
+            ddi_id="doi:1234/volume",
             original_filename="survey.xml",
             xml_content=self.xml_content,
         )
         self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": self.csv_with_empty_url("doi:1234/volume"), "delimiter": ","},
         )
         wait_task()
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {
                 "csv_file": self.csv_with_empty_url("doi:1234/volume"),
                 "delimiter": ",",
@@ -966,13 +966,13 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
             </root>
             """
         UploadedDDIXMLFile.objects.create(
-            doi="doi:1234/no-variables",
+            ddi_id="doi:1234/no-variables",
             original_filename="no-variables.xml",
             xml_content=xml_content,
         )
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": self.csv_with_empty_url("doi:1234/no-variables"), "delimiter": ","},
         )
         task_status, traceback = wait_task()
@@ -986,7 +986,7 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         self.login()
 
         response = self.client.post(
-            reverse("request_ddi:import_ddic"),
+            reverse("request_ddi:import_ddi"),
             {"csv_file": self.csv_with_empty_url("doi:9999/missing"), "delimiter": ","},
         )
         task_status, traceback = wait_task()
@@ -998,8 +998,8 @@ class DDICImportFromVolumeTest(MockElasticsearchMixin, BaseUploadTest):
         self.assertFalse(Survey.objects.filter(external_ref="doi:9999/missing").exists())
 
 
-class DDICXMLUploadViewTest(BaseUploadTest):
-    """Teste l'endpoint /import/ddic/xml de dépôt direct de fichiers XML dans le volume."""
+class DDIXMLUploadViewTest(BaseUploadTest):
+    """Teste l'endpoint /import/ddi/xml de dépôt direct de fichiers XML dans le volume."""
 
     valid_xml = """
         <root>
@@ -1020,9 +1020,9 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.assertEqual(response.status_code, 200)
         json_response = response.json()
         self.assertEqual(json_response["status"], "success")
-        self.assertEqual(json_response["data"][0]["dois"], ["doi:5555/upload"])
+        self.assertEqual(json_response["data"][0]["ids"], ["doi:5555/upload"])
 
-        uploaded = UploadedDDIXMLFile.objects.get(doi="doi:5555/upload")
+        uploaded = UploadedDDIXMLFile.objects.get(ddi_id="doi:5555/upload")
         self.assertEqual(uploaded.original_filename, "survey.xml")
 
     def test_upload_valid_zip_creates_uploaded_file(self):
@@ -1041,9 +1041,9 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.assertEqual(response.status_code, 200)
         json_response = response.json()
         self.assertEqual(json_response["status"], "success")
-        self.assertEqual(json_response["data"][0]["dois"], ["doi:5555/upload"])
+        self.assertEqual(json_response["data"][0]["ids"], ["doi:5555/upload"])
 
-        uploaded = UploadedDDIXMLFile.objects.get(doi="doi:5555/upload")
+        uploaded = UploadedDDIXMLFile.objects.get(ddi_id="doi:5555/upload")
         self.assertEqual(uploaded.original_filename, "survey.xml")
 
     def test_upload_non_utf8_xml_is_decoded_correctly(self):
@@ -1068,7 +1068,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
 
-        uploaded = UploadedDDIXMLFile.objects.get(doi="doi:6666/latin1")
+        uploaded = UploadedDDIXMLFile.objects.get(ddi_id="doi:6666/latin1")
         self.assertIn("Enquête générationnelle âgée", uploaded.xml_content)
 
     def test_upload_without_staff_permission_is_rejected(self):
@@ -1095,7 +1095,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
         self.assertFalse(UploadedDDIXMLFile.objects.exists())
 
     def test_upload_xml_without_variables_succeeds(self):
-        """L'upload n'extrait que le DOI (voir extract_doi_from_xml) et ne parse plus
+        """L'upload n'extrait que le DOI (voir extract_id_from_xml) et ne parse plus
         tout le codebook : un DDI-C sans balise <var> est donc accepté ici. Il sera
         rejeté plus tard, au moment de l'import CSV qui le consomme (voir
         DDICImportFromVolumeTest.test_import_survey_with_no_variables_fails), où le
@@ -1116,7 +1116,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
-        self.assertTrue(UploadedDDIXMLFile.objects.filter(doi="doi:7777/no-variables").exists())
+        self.assertTrue(UploadedDDIXMLFile.objects.filter(ddi_id="doi:7777/no-variables").exists())
 
     def test_upload_non_xml_file_is_rejected(self):
         self.login()
@@ -1155,7 +1155,7 @@ class DDICXMLUploadViewTest(BaseUploadTest):
     def test_upload_overwrites_existing_doi(self):
         self.login()
         existing = UploadedDDIXMLFile.objects.create(
-            doi="doi:5555/upload",
+            ddi_id="doi:5555/upload",
             original_filename="old.xml",
             xml_content=self.valid_xml,
         )

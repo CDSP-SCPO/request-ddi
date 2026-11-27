@@ -14,7 +14,15 @@ function getTranslations() {
 function renderResultCard(row, translations) {
   const searchParams = buildSearchUrlParams();
   const url = `/question/${row.id}/?${searchParams.toString()}`;
+  // Only real DOIs can be linked to their source; "local:request/..." Ids cannot.
+  const hasDoi = typeof row.survey_doi === "string" && row.survey_doi.startsWith("doi:");
   const doiUrl = `https://doi.org/${row.survey_doi}`;
+  const accessDataButton = hasDoi
+    ? `<span type="button" onclick="window.open('${doiUrl}','_blank')" class="button-card button-access-data button-access-data-card-hover">
+              <img src="/static/svg/icons/doi.svg" alt="Données" class="icon-access-data">
+              <span>${translations.accederAuxDonnees}</span>
+            </span>`
+    : "";
   const hasHighlightedModalities = row.is_category_search
     && row.categories
     && row.categories.includes("<mark style=");
@@ -47,10 +55,7 @@ function renderResultCard(row, translations) {
               <span>${translations.modalites}</span>
               ${caretIcon}
             </span>
-            <span type="button" onclick="window.open('${doiUrl}','_blank')" class="button-card button-access-data button-access-data-card-hover">
-              <img src="/static/svg/icons/doi.svg" alt="Données" class="icon-access-data">
-              <span>${translations.accederAuxDonnees}</span>
-            </span>
+            ${accessDataButton}
           </div>
           <div id="categories-${row.id}" class="categories-list mt-3" style="display: none;">
             ${row.categories}

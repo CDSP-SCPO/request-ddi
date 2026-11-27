@@ -11,7 +11,7 @@ from request_ddi.core.exceptions import (
 )
 from request_ddi.core.models import UploadedDDIXMLFile
 from request_ddi.core.parser import (
-    extract_doi_from_xml,
+    extract_id_from_xml,
     fetch_and_parse_xml,
     parse_codebook_xml_file,
 )
@@ -46,7 +46,7 @@ class XMLParserTests(TestCase):
         data = parse_codebook_xml_file(file)
         self.assertIsNotNone(data)
         self.assertEqual(len(data["variables"]), 1)
-        self.assertEqual(data["doi"], "doi:10.1234/test")
+        self.assertEqual(data["id"], "doi:10.1234/test")
         self.assertEqual(data["lang"], "en")
         self.assertEqual(data["authors"], "surname1, name1 (aff1); surname2, name2 (aff2)")
 
@@ -113,7 +113,7 @@ class DoiExtractorTests(TestCase):
             <titl>Test</titl>
         </root>
         """
-        self.assertEqual(extract_doi_from_xml(xml_content), "doi:10.1234/test")
+        self.assertEqual(extract_id_from_xml(xml_content), "doi:10.1234/test")
 
     def test_extract_doi_falls_back_to_any_idno(self):
         xml_content = """
@@ -122,7 +122,7 @@ class DoiExtractorTests(TestCase):
             <titl>Test</titl>
         </root>
         """
-        self.assertEqual(extract_doi_from_xml(xml_content), "doi:10.1234/test")
+        self.assertEqual(extract_id_from_xml(xml_content), "doi:10.1234/test")
 
     def test_extract_doi_ignores_rest_of_a_large_codebook(self):
         """La fonction ne doit pas exiger de variables ni d'autres attributs : elle
@@ -133,27 +133,27 @@ class DoiExtractorTests(TestCase):
             <IDNo agency="DataCite">doi:10.1234/huge</IDNo>
         </codeBook>
         """
-        self.assertEqual(extract_doi_from_xml(xml_content), "doi:10.1234/huge")
+        self.assertEqual(extract_id_from_xml(xml_content), "doi:10.1234/huge")
 
     def test_extract_doi_missing_raises(self):
         xml_content = "<root><titl>No DOI here</titl></root>"
         with self.assertRaises(InvalidDOIError):
-            extract_doi_from_xml(xml_content)
+            extract_id_from_xml(xml_content)
 
     def test_extract_doi_invalid_prefix_raises(self):
         xml_content = "<root><IDNo>not-a-doi</IDNo></root>"
         with self.assertRaises(InvalidDOIError):
-            extract_doi_from_xml(xml_content)
+            extract_id_from_xml(xml_content)
 
     def test_extract_doi_malformed_xml_raises(self):
         with self.assertRaises(InvalidDDICError):
-            extract_doi_from_xml("<root><unclosed></root>")
+            extract_id_from_xml("<root><unclosed></root>")
 
 
 class XMLFetcherTests(TestCase):
     def test_fetch_xml_with_no_url_and_no_uploaded_file(self):
         """Test when survey has no URL and no XML was uploaded to the volume for its DOI"""
-        data = {"url": "", "doi": "doi:9999/test"}
+        data = {"url": "", "id": "doi:9999/test"}
         with self.assertRaises(DDIXMLFileNotFoundError):
             fetch_and_parse_xml(data)
 
@@ -171,19 +171,19 @@ class XMLFetcherTests(TestCase):
         </codeBook>
         """
         UploadedDDIXMLFile.objects.create(
-            doi="doi:9999/test",
+            ddi_id="doi:9999/test",
             original_filename="test.xml",
             xml_content=xml_content,
         )
 
-        data = fetch_and_parse_xml({"url": "", "doi": "doi:9999/test"})
+        data = fetch_and_parse_xml({"url": "", "id": "doi:9999/test"})
 
         self.assertEqual(data["title"], "Test depuis le volume")
 
     @patch("request_ddi.core.parser.fetch_xml_from_remote")
     def test_fetch_xml_with_mismatching_dois(self, mock_download):
         """Test when survey DDIC DOI does not match with DOI in CSV"""
-        data = {"url": "https://example.com/1", "doi": "doi:9999/test"}
+        data = {"url": "https://example.com/1", "id": "doi:9999/test"}
 
         mock_download.return_value = """
         <root>

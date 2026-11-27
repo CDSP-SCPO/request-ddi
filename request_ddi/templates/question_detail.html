@@ -26,11 +26,13 @@
                     <img src="{% static 'svg/icons/export.svg' %}">
                     <span>{% trans "Exporter les métadonnées" %}</span>
                 </div>
+                {% if question_survey.has_doi %}
                 <span type="button" onclick="window.open('https://doi.org/{{ question_survey.external_ref }}','_blank')"
                       class="button-card button-access-data button-access-data-card-hover">
                 <img src="{% static 'svg/icons/doi.svg' %}" alt="Données" class="icon-access-data">
                 <span>{% trans "Accéder aux données" %}</span>
             </span>
+                {% endif %}
             </div>
         </div>
         <div class="details-variable-container">
@@ -147,6 +149,7 @@
                                                         <div class="">{% trans "Nom de la variable : " %}<span
                                                                 class="ft-600">{{ question.variable_name }}</span></div>
                                                     </div>
+                                                    {% if question.survey.has_doi %}
                                                     <span type="button"
                                                           onclick="window.open('https://doi.org/{{ question.survey.external_ref }}','_blank')"
                                                           class="button-card button-access-data-card button-access-data-card-hover">
@@ -154,6 +157,7 @@
                                                      class="icon-access-data">
                                                 <span>{% trans "Accéder aux données" %}</span>
                                             </span>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         </div>
@@ -225,6 +229,7 @@
                                                     <img src="{% static 'svg/buttons/caret_down.svg' %}"
                                                          alt="Caret Down" class="icon-caret">
                                                 </span>
+                                                        {% if question.survey.has_doi %}
                                                         <span type="button"
                                                               onclick="window.open('https://doi.org/{{ question.survey.external_ref }}','_blank')"
                                                               class="button-card button-access-data-card button-access-data-card-hover">
@@ -232,6 +237,7 @@
                                                          class="icon-access-data">
                                                     <span>{% trans "Accéder aux données" %}</span>
                                                 </span>
+                                                        {% endif %}
                                                     </div>
                                                     <div id="categories-{{ question.id }}" class="categories-list mt-3"
                                                          style="display: none;">

@@ -16,6 +16,7 @@ from request_ddi.core.exceptions import (
     InvalidDOIError,
     PartialDataImportError,
 )
+from request_ddi.core.identifiers import is_valid_survey_id
 from request_ddi.core.models import (
     Survey,
 )
@@ -63,7 +64,7 @@ def staff_required_html(view_func):
 
 
 class ImportViewMixin:
-    """Mixin for importing data using DDI-C and native CSV formats"""
+    """Mixin for importing data (DDI-C and DDI-L) described by a CSV file"""
 
     def post(self, request, *args, **kwargs):
         form = self.form_class(request.POST, request.FILES)
@@ -98,8 +99,8 @@ class ImportViewMixin:
             if not force_import:
                 duplicates = self.check_duplicates(survey_datas)
 
-            num_surveys, skipped_dois = self.process_data(survey_datas, skip_dois=duplicates)
-            if skipped_dois:
+            num_surveys, skipped_ids = self.process_data(survey_datas, skip_ids=duplicates)
+            if skipped_ids:
                 all_skipped = num_surveys == 0
                 raise PartialDataImportError(
                     "Toutes les enquêtes existent déjà en base, aucun import effectué."
@@ -110,7 +111,7 @@ class ImportViewMixin:
                             "num_surveys": num_surveys,
                         }
                     ],
-                    errors=[f"Doublon ignoré : {doi}" for doi in skipped_dois],
+                    errors=[f"Doublon ignoré : {survey_id}" for survey_id in skipped_ids],
                 )
             return JsonResponse(
                 {
@@ -165,8 +166,8 @@ class ImportViewMixin:
                 status=500,
             )
 
-    def process_data(self, survey_datas, skip_dois=None):
-        skip_dois = skip_dois or set()
+    def process_data(self, survey_datas, skip_ids=None):
+        skip_ids = skip_ids or set()
         errors = []
         successful_surveys = []
         skipped_surveys = []
@@ -174,23 +175,27 @@ class ImportViewMixin:
 
         for survey_data in survey_datas:
             try:
-                survey_doi = survey_data["doi"]
-                if not survey_doi.startswith("doi:"):
-                    msg = f"Le DOI {survey_doi} n'est pas dans le bon format"
+                survey_id = survey_data["id"]
+                if not is_valid_survey_id(survey_id):
+                    msg = (
+                        f"L'Id {survey_id} n'est pas dans le bon format (attendu : 'doi:...' "
+                        "ou 'local:request/<identifiant alphanumérique>')"
+                    )
                     raise InvalidDOIError(msg)
-                if survey_doi in skip_dois:
-                    skipped_surveys.append(survey_doi)
+                if survey_id in skip_ids:
+                    skipped_surveys.append(survey_id)
                     continue
 
-                # Submit tasks to background worker
-                import_data.enqueue(survey_data, self.import_format)
+                # Submit tasks to background worker. The schema (DDI-C or DDI-L) is
+                # detected inside the task from the XML namespace.
+                import_data.enqueue(survey_data)
 
                 # Increment counters to send them back in the response
-                successful_surveys.append(survey_doi)
+                successful_surveys.append(survey_id)
                 num_surveys += 1
 
             except Exception as e:
-                errors.append(f"Erreur pour l'enquête de DOI {survey_doi} : {e}")
+                errors.append(f"Erreur pour l'enquête d'Id {survey_id} : {e}")
 
         if errors:
             if successful_surveys:
@@ -218,13 +223,13 @@ class ImportViewMixin:
         """Vérifie si des enquêtes du CSV existent déjà en base."""
         duplicates = []
         for row in survey_datas:
-            survey_doi = row.get("doi", "").strip()
-            if not survey_doi.startswith("doi:"):
+            survey_id = row.get("id", "").strip()
+            if not is_valid_survey_id(survey_id):
                 continue
             try:
-                if Survey.objects.filter(external_ref=survey_doi).exists():
-                    duplicates.append(survey_doi)
+                if Survey.objects.filter(external_ref=survey_id).exists():
+                    duplicates.append(survey_id)
             except Exception as e:
-                logger.error("Erreur récupération XML %s: %s", survey_doi, e)
+                logger.error("Erreur récupération XML %s: %s", survey_id, e)
                 continue
         return duplicates

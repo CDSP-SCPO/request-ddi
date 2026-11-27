@@ -77,8 +77,8 @@ function iconSvg(status) {
 
 function taskCardHtml(t) {
   const statusLow = t.status.toLowerCase();
-  const doiLabel  = t.doi || "DOI inconnu";
-  const doiClass  = t.doi ? "" : " task-card__doi--unknown";
+  const doiLabel  = t.survey_id || "Id inconnu";
+  const doiClass  = t.survey_id ? "" : " task-card__doi--unknown";
 
   const icon  = iconSvg(t.status);
   const badge = `<span class="status-badge status-badge--${statusLow}">${STATUS_LABELS[t.status] || t.status}</span>`;
@@ -139,7 +139,7 @@ function taskCardHtml(t) {
 
 // ── Modal traceback ──
 function openTraceback(task) {
-  modalDoi.textContent = task.doi || "DOI inconnu";
+  modalDoi.textContent = task.survey_id || "Id inconnu";
   modalContent.textContent = task.traceback || "(pas de traceback disponible)";
   modal.hidden = false;
   document.body.style.overflow = "hidden";

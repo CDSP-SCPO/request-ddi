@@ -5,6 +5,7 @@ from collections import defaultdict
 from django.db import models
 
 # -- REQUEST_DDI (LOCAL)
+from request_ddi.core.identifiers import is_doi
 from request_ddi.utils.normalize_string import normalize_string_for_comparison
 
 
@@ -33,6 +34,12 @@ class Subcollection(models.Model):
 
 
 class Survey(models.Model):
+    @property
+    def has_doi(self):
+        """True si `external_ref` est un vrai DOI (et non un `local:request/...`), seul cas
+        où l'on peut construire un lien vers la source."""
+        return is_doi(self.external_ref)
+
     subcollection = models.ForeignKey(Subcollection, on_delete=models.CASCADE, null=True)
     external_ref = models.CharField(max_length=255, unique=True)
     name = models.TextField()
@@ -204,20 +211,20 @@ class UploadedDDIXMLFile(models.Model):
     """Fichier DDI-C XML déposé directement par un utilisateur, sans passer par une URL.
 
     Une ligne CSV d'import dont la colonne `url` est vide est résolue en cherchant
-    ici le fichier dont le DOI correspond, plutôt qu'en le téléchargeant. La ligne est
+    ici le fichier dont l'Id correspond, plutôt qu'en le téléchargeant. La ligne est
     supprimée dès que l'import qui l'a consommée réussit : un force_import ultérieur sur
-    ce DOI échoue alors exactement comme si le fichier n'avait jamais été déposé, et
+    cet Id échoue alors exactement comme si le fichier n'avait jamais été déposé, et
     exige donc un nouveau dépôt.
     """
 
-    doi = models.CharField(max_length=255, unique=True)
+    ddi_id = models.CharField(max_length=255, unique=True)
     original_filename = models.CharField(max_length=255)
     # TextField (Postgres `text`, jusqu'à 1 Go) plutôt qu'un fichier sur disque : évite
-    # d'avoir à échapper le "/" du DOI en nom de fichier, et pas d'infra de volume à
+    # d'avoir à échapper le "/" de l'Id en nom de fichier, et pas d'infra de volume à
     # maintenir. Vérifié contre l'ingress de prod (`proxy-body-size: 100m`, timeouts à
     # 3600s) : suffisant même pour les futurs DDI-Lifecycle, plus volumineux que le DDI-C.
     xml_content = models.TextField()
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.doi
+        return self.ddi_id

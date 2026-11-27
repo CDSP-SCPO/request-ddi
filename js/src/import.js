@@ -49,8 +49,8 @@ function showNoFileSelectedAlert(text) {
 function formatDuplicatesHtml(duplicates) {
   let html = "<ul style=\"text-align:left\">";
 
-  for (const doi of duplicates) {
-    html += `<li><strong>${doi}</strong><ul>`;
+  for (const surveyId of duplicates) {
+    html += `<li><strong>${surveyId}</strong><ul>`;
     html += "</ul></li>";
   }
 
@@ -163,25 +163,25 @@ function parseCsvLine(line, delimiter) {
 }
 
 // Détecte les lignes du CSV sans URL, pour prévenir l'utilisateur avant l'envoi que
-// l'import de ces DOIs dépend d'un fichier XML déjà déposé (voir DDICXMLUploadView).
+// l'import de ces Ids dépend d'un fichier XML déjà déposé (voir DDIXMLUploadView).
 // Volontairement permissif : c'est un avertissement côté client, pas une validation —
 // le serveur reste seul juge de la validité réelle du fichier.
-function findDoisMissingUrl(csvText) {
+function findIdsMissingUrl(csvText) {
   const lines = csvText.split(/\r\n|\r|\n/).filter((line) => line.trim() !== "");
   if (lines.length < 2) return [];
 
   const delimiter = detectCsvDelimiter(lines[0]);
   const headers = parseCsvLine(lines[0], delimiter).map((h) => h.trim().toLowerCase());
-  const doiIndex = headers.indexOf("doi");
+  const idIndex = headers.indexOf("id");
   const urlIndex = headers.indexOf("url");
 
-  if (doiIndex === -1) return [];
+  if (idIndex === -1) return [];
 
   return lines
     .slice(1)
     .map((line) => parseCsvLine(line, delimiter))
     .filter((fields) => urlIndex === -1 || !fields[urlIndex]?.trim())
-    .map((fields) => fields[doiIndex]?.trim())
+    .map((fields) => fields[idIndex]?.trim())
     .filter(Boolean);
 }
 
@@ -206,15 +206,15 @@ function handleUploadResponse(data, overlay) {
   showErrorAlert(data, overlay);
 }
 
-function confirmMissingUrlDois(dois) {
+function confirmMissingUrlIds(ids) {
   return Swal.fire({
     icon: "warning",
     title: "Fichiers XML déjà déposés ?",
     html: `
       <p style="text-align:left">Les enquêtes suivantes n'ont pas d'URL dans le CSV : l'import ira
-      chercher un fichier XML déjà déposé pour leur DOI. Assurez-vous de l'avoir déposé avant de
+      chercher un fichier XML déjà déposé pour leur Id. Assurez-vous de l'avoir déposé avant de
       continuer, sinon l'import échouera pour ces enquêtes.</p>
-      <ul style="text-align:left">${dois.map((doi) => `<li>${escapeHtml(doi)}</li>`).join("")}</ul>
+      <ul style="text-align:left">${ids.map((surveyId) => `<li>${escapeHtml(surveyId)}</li>`).join("")}</ul>
     `,
     showCancelButton: true,
     confirmButtonText: "Continuer l'import",
@@ -259,14 +259,14 @@ function handleCsvUploadSubmit(event) {
 
   Promise.all(csvFiles.map(readFileAsText))
     .then((contents) => {
-      const missingUrlDois = [...new Set(contents.flatMap(findDoisMissingUrl))];
+      const missingUrlIds = [...new Set(contents.flatMap(findIdsMissingUrl))];
 
-      if (missingUrlDois.length === 0) {
+      if (missingUrlIds.length === 0) {
         submitForm(csvForm, overlay, handleUploadResponse);
         return;
       }
 
-      confirmMissingUrlDois(missingUrlDois).then((confirmed) => {
+      confirmMissingUrlIds(missingUrlIds).then((confirmed) => {
         if (confirmed) {
           submitForm(csvForm, overlay, handleUploadResponse);
         }
@@ -290,13 +290,13 @@ function handleXmlUploadResponse(data, overlay) {
   hideOverlay(overlay);
 
   if (data.status === "success" || data.status === "partial_success") {
-    const dois = data.data?.[0]?.dois ?? [];
+    const ids = data.data?.[0]?.ids ?? [];
     Swal.fire({
       icon: data.status === "success" ? "success" : "warning",
       title: data.status === "success" ? "Succès" : "Dépôt partiel",
       html: `
         <strong>${escapeHtml(data.message)}</strong><br><br>
-        ${dois.length > 0 ? `<strong>Fichier(s) déposé(s) :</strong> ${dois.map(escapeHtml).join(", ")}<br><br>` : ""}
+        ${ids.length > 0 ? `<strong>Fichier(s) déposé(s) :</strong> ${ids.map(escapeHtml).join(", ")}<br><br>` : ""}
         ${data.errors?.length ? `<strong>Erreurs :</strong><br>${data.errors.map(escapeHtml).join("<br>")}` : ""}
       `,
     }).then(() => {

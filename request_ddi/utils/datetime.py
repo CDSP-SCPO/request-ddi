@@ -4,7 +4,7 @@ from datetime import datetime
 from request_ddi.core.exceptions import InvalidDateError
 
 
-def parse_date(d, doi):
+def parse_date(d, survey_id):
     """Attempts to parse date in different formats and raises Exception if none of
     the formats work"""
     for fmt in ("%Y", "%Y-%m", "%Y-%m-%d"):
@@ -12,5 +12,5 @@ def parse_date(d, doi):
             return datetime.strptime(d, fmt).date()  # noqa: DTZ007
         except ValueError:
             pass
-    msg = f"La date {d} pour l'enquête {doi} n'est pas valide : {d}"
+    msg = f"La date {d} pour l'enquête {survey_id} n'est pas valide : {d}"
     raise InvalidDateError(msg) from None

@@ -11,7 +11,7 @@ from .views.detail_views import QuestionDetailView
 from .views.export_views import export_page
 
 # -- REQUEST_DDI (LOCAL)
-from .views.import_views import DDICImportViewCollection, DDICXMLUploadView
+from .views.import_views import DDIImportView, DDIXMLUploadView
 from .views.search_views import (
     RepresentedVariableSearchView,
     search_results,
@@ -24,13 +24,13 @@ app_name = "request_ddi"
 urlpatterns = [
     # === Upload de fichiers ===
     path(
-        "import/ddic",
-        DDICImportViewCollection.as_view(),
-        name="import_ddic",
+        "import/ddi",
+        DDIImportView.as_view(),
+        name="import_ddi",
     ),
     path(
-        "import/ddic/xml",
-        DDICXMLUploadView.as_view(),
+        "import/ddi/xml",
+        DDIXMLUploadView.as_view(),
         name="import_xml",
     ),
     # === Recherche de variables représentées ===

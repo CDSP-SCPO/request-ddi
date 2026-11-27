@@ -7,7 +7,7 @@ class InvalidDateError(Exception):
 
 
 class InvalidDOIError(Exception):
-    """Exception raised for invalid DOI in import views."""
+    """Exception raised for an invalid survey Id (neither a DOI nor a local Id)."""
 
     def __init__(self, message):
         self.message = message
@@ -16,6 +16,14 @@ class InvalidDOIError(Exception):
 
 class MissingAttributeError(Exception):
     """Exception raised for missing attributes in XML in import views."""
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
+class UnsupportedDDISchemaError(Exception):
+    """Exception raised when the XML namespace is not a supported DDI schema."""
 
     def __init__(self, message):
         self.message = message
